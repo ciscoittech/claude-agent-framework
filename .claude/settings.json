@@ -1,0 +1,27 @@
+{
+  "project_name": "Claude Agent Framework",
+  "description": "Comprehensive system for building intelligent multi-agent development systems",
+  "version": "1.0.0",
+  "tech_stack": {
+    "primary": "Documentation Framework",
+    "languages": ["Markdown"],
+    "frameworks": ["Claude Code Agent System"],
+    "tools": ["Claude Code", "Git"],
+    "domains": ["Agent Architecture", "Workflow Orchestration", "Parallel Execution"]
+  },
+  "development_focus": {
+    "primary": "Framework Development",
+    "specializations": [
+      "Agent Pattern Creation",
+      "Documentation Enhancement",
+      "Example Generation",
+      "Framework Validation",
+      "Performance Optimization"
+    ]
+  },
+  "auto_load": {
+    "enabled": true,
+    "max_size_kb": 10,
+    "cache_agents": true
+  }
+}
