@@ -6,20 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The Claude Agent Framework is a comprehensive system for building intelligent multi-agent development systems. It provides templates, patterns, and prompts to create optimized agent systems that leverage Claude Code's parallel execution capabilities.
 
+## 🎯 PRIMARY PRINCIPLE: Simplicity First
+
+**CRITICAL**: This framework follows "simplest approach first" - always try simple solutions before complex ones. Start minimal, grow only when proven necessary. Complexity is earned, not assumed.
+
 ## Key Framework Components
 
 ### Core Documentation Files (In Order of Use)
 
-1. **SYSTEM_GENERATOR_PROMPT.md**: Auto-generation prompt for instant agent system setup (start here for 2-minute setup)
-2. **CLAUDE_AGENT_FRAMEWORK.md**: Complete framework guide with architecture, principles, and workflow patterns
-3. **AGENT_PATTERNS.md**: Real-world implementation patterns for parallel execution, TDD workflows, and error handling
-4. **AGENT_SYSTEM_TEMPLATE.md**: Quick-start templates for manual agent system setup (30-60 minute alternative)
+1. **SIMPLICITY_ENFORCEMENT.md**: ⚠️ READ FIRST - Circuit breakers against over-engineering
+2. **SYSTEM_GENERATOR_PROMPT.md**: Auto-generation prompt with simplicity checks (2-minute setup)
+3. **CLAUDE_AGENT_FRAMEWORK.md**: Complete framework guide with architecture principles
+4. **AGENT_PATTERNS.md**: Implementation patterns (use sparingly, only when needed)
+5. **AGENT_SYSTEM_TEMPLATE.md**: Manual templates with minimal/standard/full options
 
 ### Specialized Documentation
 
-- **PROJECT_ANALYZER_PROMPT.md**: Intelligent project analysis for complex codebases - use when the basic generator needs more sophisticated analysis
-- **AGENT_REFERENCE_PATTERNS.md**: Combines Anthropic's "Building Effective Agents" principles with framework patterns - explains workflows vs agents distinction and provides decision trees
-- **ANTHROPIC_TEAM_PATTERNS.md**: Real-world production patterns from Anthropic teams - includes parallel instance strategies, auto-accept modes, and team-specific workflows
+- **PROJECT_ANALYZER_PROMPT.md**: For complex codebases only (>10K lines)
+- **AGENT_REFERENCE_PATTERNS.md**: Theory and decision trees for complexity assessment
+- **ANTHROPIC_TEAM_PATTERNS.md**: Production patterns (study but don't over-apply)
 
 ## Working with the Framework
 
@@ -60,11 +65,12 @@ When users want to create an agent system for their project:
 
 ### Framework Architecture
 
-The framework follows these principles:
-- **Minimal auto-loading**: `.claude/` folder < 10KB, `.claude-library/` for on-demand loading
-- **Agent specialization**: Each agent has single responsibility with clear boundaries
-- **Parallel execution**: Leverages Claude Code's Task tool for 3-6x performance gains
-- **Progressive complexity**: Start simple, scale as needed
+The framework follows these principles (in priority order):
+1. **Simplicity first**: Try direct commands → workflows → agents (in that order)
+2. **Minimal by default**: Start with 3 agents, 1 command, 7 files total
+3. **Complexity on demand**: Only add features when current approach fails
+4. **Minimal auto-loading**: `.claude/` folder < 5KB initially (not 10KB)
+5. **Progressive complexity**: Earn each level of complexity through necessity
 
 ### Agent System Structure
 
