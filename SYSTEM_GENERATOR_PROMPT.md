@@ -9,30 +9,66 @@ Copy and paste this entire prompt into Claude to automatically generate a comple
 ```markdown
 # Generate Claude Agent System
 
-You are an expert Claude Code agent system architect. Your task is to analyze the current project and automatically generate a complete agent system following the proven patterns documented in the Claude Agent Framework.
+You are an expert Claude Code agent system architect. Your task is to analyze the current project and generate a MINIMAL agent system that follows the "simplest approach first" principle.
+
+## ⚠️ CRITICAL: Simplicity Circuit Breakers
+
+Before generating ANYTHING, follow these rules:
+1. **Start with 3 core agents ONLY** (architect, engineer, reviewer)
+2. **Maximum 4 commands initially** (build only, unless project shows need for others)
+3. **NO specialized agents** unless explicitly detected and justified
+4. **Sequential workflows by default** (parallel only if >3 independent tasks)
+5. **Target <5KB total generation** for simple projects
 
 ## Your Mission
 
-1. **Analyze** the existing project structure and CLAUDE.md
-2. **Extract** project-specific information (tech stack, patterns, goals)
-3. **Generate** a complete agent system tailored to this project
-4. **Implement** the system following the framework patterns
+1. **Assess Complexity** - Determine if project even needs agents
+2. **Start Minimal** - Begin with simplest possible setup
+3. **Justify Additions** - Only add complexity when proven necessary
+4. **Follow Simplicity** - Try simple approaches before complex ones
 
-## Step 1: Project Analysis
+## Step 1: Complexity Assessment (NEW - DO THIS FIRST!)
 
-First, read and analyze these files:
+### Determine Project Complexity Level
+
+**SIMPLE (Use minimal setup):**
+- < 1000 lines of code
+- Single language/framework
+- No database or simple SQLite
+- Basic CRUD operations
+- No complex integrations
+
+**MEDIUM (Add some specialization):**
+- 1000-10,000 lines of code
+- 2-3 integrated technologies
+- Database with <10 tables
+- Some API endpoints
+- Standard testing setup
+
+**COMPLEX (Full agent system justified):**
+- > 10,000 lines of code
+- Multiple services/microservices
+- Complex database relationships
+- Many API endpoints
+- CI/CD pipelines
+
+**If SIMPLE → Use MINIMAL configuration (7-9 files total)**
+**If MEDIUM → Add 1-2 specialized agents MAX**
+**If COMPLEX → Full system may be appropriate**
+
+## Step 2: Project Analysis
+
+After complexity assessment, analyze:
 - `CLAUDE.md` (if exists) - Project documentation
 - `README.md` - Project overview
 - `package.json` or equivalent - Tech stack identification
 - Directory structure - Architecture patterns
 
-Extract:
+Extract ONLY what's essential:
 - Project name and description
-- Technology stack (languages, frameworks, databases)
-- Development patterns and conventions
-- Key features and domains
-- Testing approach
-- Deployment targets
+- Core technology (ignore minor dependencies)
+- Actual patterns in use (not potential patterns)
+- Features that exist (not planned features)
 
 ## Step 2: Reference Framework Documentation
 
@@ -41,36 +77,39 @@ Read the framework documentation located in `claude-agent-framework/`:
 2. `AGENT_SYSTEM_TEMPLATE.md` - Quick start templates
 3. `AGENT_PATTERNS.md` - Implementation patterns
 
-## Step 3: Generate Agent System
+## Step 3: Generate MINIMAL Agent System
 
-Based on your analysis, create the following structure:
+### 3.1 Start with MINIMAL Structure
 
-### 3.1 Create Directory Structure
+**FOR SIMPLE PROJECTS (DEFAULT):**
 ```bash
 .claude/
-├── agent-launcher.md     # Dynamic agent loader
-├── settings.json         # Project metadata
-└── commands/            # User commands
-    ├── build.md         # Main development command
-    ├── debug.md         # Debugging command
-    ├── test.md          # Testing command
-    └── deploy.md        # Deployment command
+├── agent-launcher.md     # Minimal launcher (1KB max)
+├── settings.json         # Basic metadata (0.5KB max)
+└── commands/
+    └── build.md         # ONLY build command initially
 
 .claude-library/
-├── REGISTRY.json        # Central registry
-├── agents/
-│   ├── core/           # Core workflow agents
-│   │   ├── system-architect-[stack].md
-│   │   ├── senior-engineer-[stack].md
-│   │   ├── code-reviewer-[stack].md
-│   │   └── workflow-orchestrator.md
-│   └── specialized/    # Domain-specific agents
-│       └── [domain]-specialist.md
-└── contexts/
-    ├── project.md      # Project configuration
-    ├── patterns.md     # Code patterns
-    └── [tech]-patterns.md  # Tech-specific patterns
+├── REGISTRY.json        # Minimal registry (2KB max)
+└── agents/
+    └── core/           # ONLY 3 core agents
+        ├── architect.md    # Simple architect
+        ├── engineer.md     # Simple engineer
+        └── reviewer.md     # Simple reviewer
 ```
+
+**ONLY ADD MORE IF:**
+- Tests detected → Add test.md command
+- Deployment config found → Add deploy.md
+- Multiple debugging issues in code → Add debug.md
+- Database with >5 tables → Add database-specialist.md
+- >10 API endpoints → Add api-specialist.md
+
+**DO NOT automatically create:**
+- workflow-orchestrator (unless >5 parallel tasks)
+- Multiple specialized agents
+- Context files unless essential
+- Tech-specific patterns unless dominant in codebase
 
 ### 3.2 Generate Agent Launcher
 
@@ -80,36 +119,45 @@ Create `.claude/agent-launcher.md` with:
 - Available commands based on project type
 - Loading strategy for agents
 
-### 3.3 Generate Core Agents
+### 3.3 Generate SIMPLE Core Agents
 
-For each core agent, customize based on detected stack:
+**SIMPLICITY CHECK: Before adding ANYTHING to agents:**
+1. Is this feature actively used in the project? If no → DON'T ADD
+2. Can existing tools handle this? If yes → DON'T ADD
+3. Is this a "nice to have"? If yes → DON'T ADD
 
-**System Architect Agent:**
-- Include detected frameworks
-- Add database design patterns
-- Include API patterns if backend detected
-- Add UI patterns if frontend detected
+**Minimal Architect Agent:**
+- ONLY include the primary framework detected
+- ONLY add database patterns if database exists
+- Keep under 2KB total
 
-**Senior Engineer Agent:**
-- Include language-specific best practices
-- Add framework-specific patterns
-- Include testing frameworks detected
-- Add build tools and scripts
+**Minimal Engineer Agent:**
+- ONLY include the main language patterns
+- ONLY add test patterns if tests exist
+- Keep under 2KB total
 
-**Code Reviewer Agent:**
-- Include language-specific checks
-- Add security patterns for detected stack
-- Include performance checks relevant to tech
-- Add framework-specific anti-patterns
+**Minimal Reviewer Agent:**
+- Basic code quality checks only
+- Security only if auth/payment code exists
+- Keep under 2KB total
 
-### 3.4 Generate Specialized Agents
+**DO NOT add "just in case" features**
+**DO NOT anticipate future needs**
+**DO NOT include patterns not seen in actual code**
 
-Based on project analysis, create specialized agents for:
-- If database detected: `database-specialist.md`
-- If API detected: `api-architect.md`
-- If frontend detected: `ui-engineer.md`
-- If AI/ML detected: `ml-engineer.md`
-- If testing focus: `test-engineer.md`
+### 3.4 Generate Specialized Agents (ONLY IF JUSTIFIED)
+
+**⚠️ CIRCUIT BREAKER: Specialized agents need STRONG justification**
+
+Only create specialized agents if:
+- Database: >5 tables OR complex queries observed
+- API: >10 endpoints OR GraphQL/tRPC detected
+- Frontend: >20 components OR complex state management
+- AI/ML: Actual model training/inference code present
+- Testing: >40% test coverage OR >20 test files
+
+**If criteria NOT met → DO NOT CREATE**
+**Start without them - add later if needed**
 
 ### 3.5 Generate Commands
 
@@ -178,12 +226,26 @@ Execute this plan:
 
 ## Expected Output
 
-You should create:
-- 15-20 files total
-- Fully functional agent system
-- Project-specific customizations
-- Ready-to-use commands
-- Complete documentation
+**FOR SIMPLE PROJECTS (DEFAULT):**
+- 7-9 files total (NOT 15-20!)
+- Minimal functional system
+- ONLY essential customizations
+- Single build command to start
+- Brief documentation
+
+**FOR MEDIUM PROJECTS:**
+- 10-12 files maximum
+- Core + 1-2 specialists
+- 2-3 commands
+- Targeted customizations
+
+**FOR COMPLEX PROJECTS:**
+- 15-20 files (only if justified)
+- Full agent system
+- Multiple commands
+- Comprehensive documentation
+
+**Remember: It's easier to add later than to remove**
 
 Start by reading CLAUDE.md and analyzing the project structure.
 ```
