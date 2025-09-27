@@ -190,7 +190,7 @@ def comprehensive_network_test():
 
 ### **Docker Integration**
 ```yaml
-# docker-compose.yml
+# infrastructure/docker-compose.yml
 services:
   claude-framework:
     image: claude-network-framework:latest
@@ -240,15 +240,15 @@ services:
 ## 📖 Documentation Structure
 
 ### **Implementation Guides**
-- [`ISE_TOOLKIT_INTEGRATION.md`](ISE_TOOLKIT_INTEGRATION.md) - Complete ISE troubleshooting guide
-- [`VOIP_WIRESHARK_INTEGRATION.md`](VOIP_WIRESHARK_INTEGRATION.md) - VoIP analysis workflows
-- [`PYATS_FRAMEWORK_GUIDE.md`](PYATS_FRAMEWORK_GUIDE.md) - Enterprise automation integration
-- [`EXPERT_CONSULTATION_WORKFLOW.md`](EXPERT_CONSULTATION_WORKFLOW.md) - Knowledge-driven troubleshooting
+- [`ISE_TOOLKIT_INTEGRATION.md`](docs/network-engineering/ISE_TOOLKIT_INTEGRATION.md) - Complete ISE troubleshooting guide
+- [`VOIP_WIRESHARK_INTEGRATION.md`](docs/network-engineering/VOIP_WIRESHARK_INTEGRATION.md) - VoIP analysis workflows
+- [`PYATS_FRAMEWORK_GUIDE.md`](docs/network-engineering/PYATS_FRAMEWORK_GUIDE.md) - Enterprise automation integration
+- [`EXPERT_CONSULTATION_WORKFLOW.md`](docs/operations/EXPERT_CONSULTATION_WORKFLOW.md) - Knowledge-driven troubleshooting
 
 ### **Best Practices**
-- [`INFRASTRUCTURE_KNOWLEDGE_SOURCES.md`](INFRASTRUCTURE_KNOWLEDGE_SOURCES.md) - Documentation patterns
-- [`VENDOR_DOCUMENTATION_PATTERNS.md`](VENDOR_DOCUMENTATION_PATTERNS.md) - Cisco integration
-- [`DEPLOYMENT.md`](DEPLOYMENT.md) - Production deployment guide
+- [`INFRASTRUCTURE_KNOWLEDGE_SOURCES.md`](docs/network-engineering/INFRASTRUCTURE_KNOWLEDGE_SOURCES.md) - Documentation patterns
+- [`VENDOR_DOCUMENTATION_PATTERNS.md`](docs/network-engineering/VENDOR_DOCUMENTATION_PATTERNS.md) - Cisco integration
+- [`DEPLOYMENT.md`](docs/operations/DEPLOYMENT.md) - Production deployment guide
 
 ---
 
@@ -292,10 +292,10 @@ cd claude-agent-framework
 git checkout network-engineering
 
 # Initialize environment
-./setup.sh
+./scripts/setup.sh
 
 # Start framework
-docker-compose up -d
+docker-compose -f infrastructure/docker-compose.yml up -d
 
 # Access framework
 claude-code  # Use the framework in your IDE
