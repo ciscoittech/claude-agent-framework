@@ -34,6 +34,7 @@ Transform your network operations with AI-powered agents that provide expert-lev
 - **Configuration Management**: Change tracking and compliance validation
 - **Expert Consultation**: Knowledge-driven troubleshooting workflows
 - **Vendor Integration**: Cisco documentation and best practices
+- **Claude Code Research**: Real-time access to official Claude Code documentation and patterns
 
 ---
 
@@ -44,17 +45,20 @@ Transform your network operations with AI-powered agents that provide expert-lev
 ├── commands/
 │   ├── ise-toolkit.md            # ISE troubleshooting workflows
 │   ├── voip-toolkit.md           # VoIP diagnostic capabilities
-│   └── load-cisco-docs.md        # Vendor documentation integration
+│   ├── load-cisco-docs.md        # Vendor documentation integration
+│   └── claude-docs.md            # Claude Code documentation research
 
 .claude-library/                   # Specialized Agents (On-demand)
 ├── agents/specialized/
 │   ├── ise-specialist.md         # ISE infrastructure expert
 │   ├── authentication-analyzer.md # RADIUS and auth flow analysis
 │   ├── voip-specialist.md        # Voice infrastructure expert
-│   └── packet-analyzer.md        # Network traffic analysis
+│   ├── packet-analyzer.md        # Network traffic analysis
+│   └── claude-docs-researcher.md # Claude Code documentation research
 └── contexts/
     ├── ise-infrastructure.md     # ISE deployment knowledge
-    └── voip-infrastructure.md    # Voice network patterns
+    ├── voip-infrastructure.md    # Voice network patterns
+    └── claude-code-patterns.md   # Claude Code platform knowledge
 ```
 
 ### **Agent Coordination Matrix**
@@ -65,6 +69,7 @@ Transform your network operations with AI-powered agents that provide expert-lev
 | **VoIP Diagnostics** | VoIP Specialist | Packet Analyzer | Call quality, SIP flows, CUCM integration |
 | **Network Automation** | pyATS Manager | Test Orchestrator | Automated testing, state validation |
 | **Infrastructure Analysis** | Network Architect | Config Manager | Topology discovery, compliance checking |
+| **Platform Research** | Claude Docs Researcher | All Specialists | Current best practices, agent patterns, platform capabilities |
 
 ---
 
@@ -105,6 +110,19 @@ python pyats_launcher.py run-health-check infrastructure.yaml
 🔍 Interface status, routing tables, system health
 ⚠️  4 critical issues requiring immediate attention
 📈 Performance baselines established
+```
+
+### **Claude Code Platform Research**
+```bash
+# Research current sub-agent coordination patterns
+/claude-docs sub-agents "multi-agent network monitoring system"
+
+# Real-time documentation analysis:
+📚 Latest sub-agent architecture patterns
+🏗️ Recommended coordination strategies for network monitoring
+🔒 Security best practices for agent systems
+🚀 Performance optimization patterns
+💡 Integration guidance for existing infrastructure
 ```
 
 ---
