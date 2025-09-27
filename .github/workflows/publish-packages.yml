@@ -1,0 +1,111 @@
+name: Publish NPM and PyPI Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish-npm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install NPM dependencies
+        run: npm ci
+
+      - name: Run NPM tests
+        run: |
+          npm run install-agents
+          node scripts/install-agents.js
+
+      - name: Check versions are synchronized
+        run: ./scripts/check-versions.sh
+
+      - name: Publish to NPM
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-pypi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Update PyPI templates
+        run: ./scripts/update-templates.sh
+
+      - name: Check versions are synchronized
+        run: ./scripts/check-versions.sh
+
+      - name: Build Python package
+        run: python -m build
+
+      - name: Check package with twine
+        run: twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+  create-release:
+    needs: [publish-npm, publish-pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Claude Agent Framework v${{ steps.get_version.outputs.version }}
+          body: |
+            ## Claude Agent Framework - Network Engineering Edition v${{ steps.get_version.outputs.version }}
+
+            ### 📦 Installation
+            ```bash
+            # NPM
+            npm install -g @claude-agent/network-engineering
+
+            # PyPI
+            pip install claude-agent-network-engineering[network,pyats]
+            ```
+
+            ### 🚀 Setup
+            ```bash
+            claude-network-setup
+            claude-code
+            /ise-toolkit auth-troubleshoot "test"
+            ```
+
+            See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
+          draft: false
+          prerelease: false
