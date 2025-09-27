@@ -1,0 +1,36 @@
+name: Test pyATS Infrastructure Framework
+
+on:
+  push:
+    branches: [ main, pyats-integration ]
+  pull_request:
+    branches: [ main, pyats-integration ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build Docker image
+      run: docker-compose build
+
+    - name: Test pyATS installation
+      run: docker-compose run --rm pyats pyats version
+
+    - name: Test Genie library
+      run: docker-compose run --rm pyats python -c "from genie.libs.parser.utils.common import get_parser; print('✅ Genie library working')"
+
+    - name: Test framework structure
+      run: |
+        docker-compose run --rm pyats python -c "
+        import os
+        assert os.path.exists('/workspace/PYATS_FRAMEWORK_GUIDE.md'), 'Framework guide missing'
+        assert os.path.exists('/workspace/examples'), 'Examples directory missing'
+        print('✅ Framework structure valid')
+        "
+
+    - name: Clean up
+      run: docker-compose down --volumes

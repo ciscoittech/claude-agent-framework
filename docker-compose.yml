@@ -1,0 +1,16 @@
+# Simple Docker Compose for pyATS Infrastructure Framework
+version: '3.8'
+
+services:
+  pyats:
+    build: .
+    container_name: pyats-infrastructure
+    volumes:
+      - .:/workspace
+      - ~/.ssh:/home/pyats/.ssh:ro
+    environment:
+      - PYTHONPATH=/workspace
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    # No exposed ports - keep it simple and secure

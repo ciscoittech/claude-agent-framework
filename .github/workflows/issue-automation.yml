@@ -1,0 +1,334 @@
+name: Framework Issue Automation
+
+on:
+  issues:
+    types: [opened, labeled, assigned, reopened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  auto-label:
+    runs-on: ubuntu-latest
+    name: Auto-Label Issues
+    if: github.event.action == 'opened'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Auto-label based on content
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { issue } = context.payload;
+          const title = issue.title.toLowerCase();
+          const body = issue.body.toLowerCase();
+
+          const labels = [];
+
+          // Framework component detection
+          if (title.includes('agent') || body.includes('agent')) {
+            labels.push('component: agents');
+          }
+          if (title.includes('workflow') || body.includes('workflow')) {
+            labels.push('component: workflows');
+          }
+          if (title.includes('context') || body.includes('context')) {
+            labels.push('component: context');
+          }
+          if (title.includes('tool') || body.includes('tool')) {
+            labels.push('component: tools');
+          }
+          if (title.includes('parallel') || body.includes('parallel')) {
+            labels.push('component: parallel-execution');
+          }
+
+          // Issue type detection
+          if (title.includes('bug') || title.includes('error') || title.includes('issue')) {
+            labels.push('type: bug');
+          } else if (title.includes('feature') || title.includes('enhancement')) {
+            labels.push('type: enhancement');
+          } else if (title.includes('doc') || title.includes('documentation')) {
+            labels.push('type: documentation');
+          } else if (title.includes('question') || title.includes('help')) {
+            labels.push('type: question');
+          }
+
+          // Priority detection
+          if (title.includes('critical') || title.includes('urgent') || body.includes('blocking')) {
+            labels.push('priority: critical');
+          } else if (title.includes('high') || body.includes('important')) {
+            labels.push('priority: high');
+          }
+
+          // Framework area detection
+          if (body.includes('performance') || body.includes('slow')) {
+            labels.push('area: performance');
+          }
+          if (body.includes('security') || body.includes('vulnerability')) {
+            labels.push('area: security');
+          }
+          if (body.includes('ux') || body.includes('user experience')) {
+            labels.push('area: user-experience');
+          }
+
+          // Apply labels
+          if (labels.length > 0) {
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: labels
+            });
+          }
+
+  framework-assistance:
+    runs-on: ubuntu-latest
+    name: Framework Assistance
+    if: contains(github.event.issue.labels.*.name, 'type: question') || contains(github.event.comment.body, '/help')
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Provide Framework Guidance
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+
+          // Read framework documentation
+          const frameworkContent = fs.readFileSync('CLAUDE_AGENT_FRAMEWORK.md', 'utf8');
+
+          let comment = '';
+
+          if (context.eventName === 'issue_comment') {
+            const commentBody = context.payload.comment.body.toLowerCase();
+
+            if (commentBody.includes('/help')) {
+              comment = `## 🤖 Claude Agent Framework Help
+
+              Here are some quick resources to help you:
+
+              ### 📚 Core Documentation
+              - [Complete Framework Guide](./CLAUDE_AGENT_FRAMEWORK.md)
+              - [Agent Design Patterns](./AGENT_PATTERNS.md)
+              - [Simplicity Enforcement](./SIMPLICITY_ENFORCEMENT.md)
+
+              ### 🚀 Quick Start
+              1. Create \`.claude/\` directory with agent-launcher.md
+              2. Build \`.claude-library/\` structure for agents
+              3. Use parallel execution patterns for performance
+
+              ### 💡 Common Commands
+              \`\`\`bash
+              /feature "description"  # Build new feature
+              /debug "issue"         # Debug problems
+              /review               # Review code
+              \`\`\`
+
+              ### 🏗️ Framework Structure
+              \`\`\`
+              project/
+              ├── .claude/                  # Minimal auto-loaded config
+              │   ├── agent-launcher.md    # Dynamic agent loader
+              │   └── commands/            # User commands
+              └── .claude-library/         # Agent library
+                  ├── agents/             # Specialized agents
+                  └── contexts/           # Shared knowledge
+              \`\`\`
+
+              ### 🎯 Key Benefits
+              - **97% reduction** in auto-loaded context
+              - **3x faster execution** through parallel agents
+              - **Project-agnostic** design
+              - **Progressive complexity** scaling
+
+              Need specific help? Please describe your use case!`;
+            }
+          } else if (context.payload.issue) {
+            const issueTitle = context.payload.issue.title.toLowerCase();
+            const issueBody = context.payload.issue.body.toLowerCase();
+
+            if (issueTitle.includes('how to') || issueBody.includes('how do i')) {
+              comment = `## 👋 Welcome to Claude Agent Framework!
+
+              Thanks for your question! Here are some helpful starting points:
+
+              ### 📖 First Steps
+              1. Review the [Framework Guide](./CLAUDE_AGENT_FRAMEWORK.md)
+              2. Check [Agent Patterns](./AGENT_PATTERNS.md) for examples
+              3. Look at the [Implementation Checklist](./CLAUDE_AGENT_FRAMEWORK.md#implementation-checklist)
+
+              ### 🔍 Common Questions
+              - **Agent Setup**: See "Agent Design Principles" section
+              - **Parallel Execution**: Check "Parallel Execution" section
+              - **Tool Configuration**: Review "Tool Configuration" section
+              - **Performance**: See "Performance Optimization" section
+
+              ### 💬 Getting Help
+              - Use \`/help\` in comments for quick assistance
+              - Label your issue with specific components
+              - Include your project structure for context
+
+              We'll provide more specific guidance based on your question!`;
+            }
+          }
+
+          if (comment) {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue?.number || context.payload.issue.number,
+              body: comment
+            });
+          }
+
+  project-board-automation:
+    runs-on: ubuntu-latest
+    name: Project Board Automation
+    if: github.event.action == 'opened' || github.event.action == 'labeled'
+
+    steps:
+    - name: Add to Framework Project Board
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Get project boards
+          const projects = await github.rest.projects.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo
+          });
+
+          // Find "Framework Development" project or create it
+          let project = projects.data.find(p => p.name === 'Framework Development');
+
+          if (!project) {
+            // Create project if it doesn't exist
+            const newProject = await github.rest.projects.createForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Framework Development',
+              body: 'Claude Agent Framework development tracking'
+            });
+            project = newProject.data;
+          }
+
+          // Get project columns
+          const columns = await github.rest.projects.listColumns({
+            project_id: project.id
+          });
+
+          // Find or create "Backlog" column
+          let backlogColumn = columns.data.find(c => c.name === 'Backlog');
+          if (!backlogColumn) {
+            const newColumn = await github.rest.projects.createColumn({
+              project_id: project.id,
+              name: 'Backlog'
+            });
+            backlogColumn = newColumn.data;
+          }
+
+          // Create project card for the issue
+          await github.rest.projects.createCard({
+            column_id: backlogColumn.id,
+            content_id: context.payload.issue.id,
+            content_type: 'Issue'
+          });
+
+  framework-metrics:
+    runs-on: ubuntu-latest
+    name: Update Framework Metrics
+    if: github.event.action == 'opened' || github.event.action == 'labeled'
+
+    steps:
+    - name: Calculate Issue Metrics
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Get all issues
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'all',
+            per_page: 100
+          });
+
+          // Calculate metrics
+          const totalIssues = issues.data.length;
+          const openIssues = issues.data.filter(i => i.state === 'open').length;
+          const closedIssues = issues.data.filter(i => i.state === 'closed').length;
+
+          // Count by type
+          const bugs = issues.data.filter(i =>
+            i.labels.some(l => l.name === 'type: bug')
+          ).length;
+          const enhancements = issues.data.filter(i =>
+            i.labels.some(l => l.name === 'type: enhancement')
+          ).length;
+          const questions = issues.data.filter(i =>
+            i.labels.some(l => l.name === 'type: question')
+          ).length;
+
+          // Count by component
+          const agentIssues = issues.data.filter(i =>
+            i.labels.some(l => l.name === 'component: agents')
+          ).length;
+          const workflowIssues = issues.data.filter(i =>
+            i.labels.some(l => l.name === 'component: workflows')
+          ).length;
+
+          // Create metrics comment
+          const metrics = \`## 📊 Framework Issue Metrics
+
+          **Total Issues**: \${totalIssues}
+          - Open: \${openIssues}
+          - Closed: \${closedIssues}
+          - Resolution Rate: \${totalIssues > 0 ? Math.round((closedIssues / totalIssues) * 100) : 0}%
+
+          **By Type**:
+          - Bugs: \${bugs}
+          - Enhancements: \${enhancements}
+          - Questions: \${questions}
+
+          **By Component**:
+          - Agent Issues: \${agentIssues}
+          - Workflow Issues: \${workflowIssues}
+
+          *Updated: \${new Date().toISOString().split('T')[0]}*\`;
+
+          console.log(metrics);
+
+  stale-issue-management:
+    runs-on: ubuntu-latest
+    name: Stale Issue Management
+    if: github.event.action == 'opened'
+
+    steps:
+    - name: Mark Stale Issues
+      uses: actions/stale@v9
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        stale-issue-message: |
+          This issue has been automatically marked as stale because it has not had recent activity.
+
+          If this is still relevant to the Claude Agent Framework, please:
+          - Add a comment explaining the current status
+          - Update any labels if needed
+          - Provide additional context if helpful
+
+          This issue will be closed in 7 days if no further activity occurs.
+        stale-pr-message: |
+          This pull request has been automatically marked as stale because it has not had recent activity.
+
+          Please update this PR if it's still relevant to the framework development.
+        close-issue-message: |
+          This issue has been automatically closed due to inactivity.
+
+          If you believe this issue is still relevant, please reopen it with updated information.
+        days-before-stale: 30
+        days-before-close: 7
+        stale-issue-label: 'status: stale'
+        stale-pr-label: 'status: stale'
+        exempt-issue-labels: 'priority: critical,priority: high,status: in-progress'

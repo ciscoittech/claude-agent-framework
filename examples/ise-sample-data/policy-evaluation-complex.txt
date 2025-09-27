@@ -1,0 +1,163 @@
+# ISE Policy Evaluation Complex Issue
+# Scenario: Subtle policy logic problems causing inconsistent authorization results
+
+# User getting unexpected authorization results
+2024-09-27 16:30:15,123 INFO [Authorization-Policy-Agent]:[Thread-4567] - Authorization request for user: mwilliams@company.com
+2024-09-27 16:30:15,124 DEBUG [Policy-Engine]:[Thread-4567] - User attributes:
+  - Username: mwilliams@company.com
+  - IdentityGroup: Domain Users, Employees, Marketing
+  - AuthenticationMethod: EAP-TLS
+  - CertificateCommonName: mwilliams@company.com
+  - EndpointProfile: Windows-Workstation
+  - Location: Building-A-Floor-2
+  - TimeOfDay: 16:30:15
+  - DayOfWeek: Friday
+
+2024-09-27 16:30:15,125 DEBUG [Policy-Engine]:[Thread-4567] - Network device attributes:
+  - DeviceType: Switch
+  - DeviceGroup: Access-Switches
+  - Location: Building-A
+  - Model: Cisco-2960X
+
+# Policy evaluation starts - checking in order
+2024-09-27 16:30:15,126 INFO [Policy-Engine]:[Thread-4567] - Starting authorization policy evaluation
+2024-09-27 16:30:15,127 DEBUG [Policy-Engine]:[Thread-4567] - Policy 1: "VIP-Executive-Access" (Rank: 1)
+2024-09-27 16:30:15,128 DEBUG [Policy-Engine]:[Thread-4567] - Condition: IdentityGroup EQUALS "Executives" - NOT MATCHED
+2024-09-27 16:30:15,129 DEBUG [Policy-Engine]:[Thread-4567] - Policy "VIP-Executive-Access" skipped
+
+2024-09-27 16:30:15,130 DEBUG [Policy-Engine]:[Thread-4567] - Policy 2: "IT-Admin-FullAccess" (Rank: 2)
+2024-09-27 16:30:15,131 DEBUG [Policy-Engine]:[Thread-4567] - Condition: IdentityGroup EQUALS "IT-Admins" - NOT MATCHED
+2024-09-27 16:30:15,132 DEBUG [Policy-Engine]:[Thread-4567] - Policy "IT-Admin-FullAccess" skipped
+
+2024-09-27 16:30:15,133 DEBUG [Policy-Engine]:[Thread-4567] - Policy 3: "Finance-Department-Access" (Rank: 3)
+2024-09-27 16:30:15,134 DEBUG [Policy-Engine]:[Thread-4567] - Condition: IdentityGroup EQUALS "Finance" - NOT MATCHED
+2024-09-27 16:30:15,135 DEBUG [Policy-Engine]:[Thread-4567] - Policy "Finance-Department-Access" skipped
+
+# Problem policy with complex boolean logic
+2024-09-27 16:30:15,136 DEBUG [Policy-Engine]:[Thread-4567] - Policy 4: "Marketing-BusinessHours-Access" (Rank: 4)
+2024-09-27 16:30:15,137 DEBUG [Policy-Engine]:[Thread-4567] - Complex condition evaluation:
+2024-09-27 16:30:15,138 DEBUG [Policy-Engine]:[Thread-4567] - (IdentityGroup EQUALS "Marketing" AND TimeOfDay BETWEEN "08:00:00" AND "17:00:00" AND DayOfWeek IN ["Monday","Tuesday","Wednesday","Thursday","Friday"]) OR (IdentityGroup EQUALS "Marketing-Extended" AND EndpointProfile EQUALS "Windows-Workstation")
+
+# Breaking down the complex condition
+2024-09-27 16:30:15,139 DEBUG [Policy-Engine]:[Thread-4567] - Sub-condition 1: IdentityGroup EQUALS "Marketing" - MATCHED
+2024-09-27 16:30:15,140 DEBUG [Policy-Engine]:[Thread-4567] - Sub-condition 2: TimeOfDay BETWEEN "08:00:00" AND "17:00:00" - MATCHED (16:30:15 is within range)
+2024-09-27 16:30:15,141 DEBUG [Policy-Engine]:[Thread-4567] - Sub-condition 3: DayOfWeek IN ["Monday","Tuesday","Wednesday","Thursday","Friday"] - MATCHED (Friday)
+2024-09-27 16:30:15,142 DEBUG [Policy-Engine]:[Thread-4567] - First OR branch: (TRUE AND TRUE AND TRUE) = TRUE
+2024-09-27 16:30:15,143 DEBUG [Policy-Engine]:[Thread-4567] - Overall condition: TRUE OR (anything) = TRUE
+2024-09-27 16:30:15,144 INFO [Policy-Engine]:[Thread-4567] - Policy "Marketing-BusinessHours-Access" MATCHED
+
+# Authorization profile applied
+2024-09-27 16:30:15,145 DEBUG [Policy-Engine]:[Thread-4567] - Applying authorization profile: "Marketing-Standard-Access"
+2024-09-27 16:30:15,146 DEBUG [Authorization-Profile]:[Thread-4567] - Profile attributes:
+  - VLAN: 200
+  - Filter-ID: MARKETING_ACL
+  - Session-Timeout: 28800
+  - SGT: 15
+
+# But wait - let's check what should have happened for after-hours access
+2024-09-27 16:30:15,147 DEBUG [Policy-Engine]:[Thread-4567] - Policy evaluation complete, but reviewing for accuracy...
+
+# The issue: Time validation has a subtle bug
+2024-09-27 16:30:15,148 WARN [Policy-Engine]:[Thread-4567] - Time validation review:
+2024-09-27 16:30:15,149 DEBUG [Time-Validator]:[Thread-4567] - Current time: 16:30:15 (4:30:15 PM)
+2024-09-27 16:30:15,150 DEBUG [Time-Validator]:[Thread-4567] - Business hours end: 17:00:00 (5:00:00 PM)
+2024-09-27 16:30:15,151 DEBUG [Time-Validator]:[Thread-4567] - Time check: 16:30:15 < 17:00:00 = TRUE
+2024-09-27 16:30:15,152 INFO [Time-Validator]:[Thread-4567] - User should have business hours access
+
+# Different user same time getting different result due to policy ordering issue
+2024-09-27 16:32:45,234 INFO [Authorization-Policy-Agent]:[Thread-4578] - Authorization request for user: jdoe@company.com
+2024-09-27 16:32:45,235 DEBUG [Policy-Engine]:[Thread-4578] - User attributes:
+  - Username: jdoe@company.com
+  - IdentityGroup: Domain Users, Employees, Marketing, Marketing-Managers
+  - AuthenticationMethod: EAP-TLS
+  - EndpointProfile: Windows-Workstation
+  - Location: Building-A-Floor-2
+  - TimeOfDay: 16:32:45
+
+# This user has Marketing-Managers group which triggers different policy
+2024-09-27 16:32:45,236 DEBUG [Policy-Engine]:[Thread-4578] - Policy 5: "Marketing-Manager-Extended" (Rank: 5)
+2024-09-27 16:32:45,237 DEBUG [Policy-Engine]:[Thread-4578] - Condition: IdentityGroup EQUALS "Marketing-Managers" - MATCHED
+2024-09-27 16:32:45,238 INFO [Policy-Engine]:[Thread-4578] - Policy "Marketing-Manager-Extended" MATCHED
+2024-09-27 16:32:45,239 DEBUG [Authorization-Profile]:[Thread-4578] - Applying profile: "Marketing-Manager-Access"
+2024-09-27 16:32:45,240 DEBUG [Authorization-Profile]:[Thread-4578] - Profile attributes:
+  - VLAN: 100
+  - Filter-ID: MARKETING_MANAGER_ACL
+  - Session-Timeout: 86400
+  - SGT: 10
+
+# But this creates inconsistency - different marketing users getting different access
+2024-09-27 16:32:45,241 WARN [Policy-Engine]:[Thread-4578] - Policy precedence issue: Marketing managers getting different VLAN than regular marketing users
+
+# Certificate-based condition failing due to attribute case sensitivity
+2024-09-27 16:45:12,345 INFO [Authorization-Policy-Agent]:[Thread-4589] - Authorization request for user: contractor@external.com
+2024-09-27 16:45:12,346 DEBUG [Policy-Engine]:[Thread-4589] - User attributes:
+  - Username: contractor@external.com
+  - IdentityGroup: External-Users
+  - AuthenticationMethod: EAP-TLS
+  - CertificateCommonName: contractor@external.com
+  - CertificateIssuer: CN=External-CA, DC=external, DC=com
+  - EndpointProfile: Windows-Workstation
+
+2024-09-27 16:45:12,347 DEBUG [Policy-Engine]:[Thread-4589] - Policy 8: "External-Contractor-Access" (Rank: 8)
+2024-09-27 16:45:12,348 DEBUG [Policy-Engine]:[Thread-4589] - Condition: CertificateIssuer EQUALS "CN=external-ca, DC=external, DC=com" - NOT MATCHED
+2024-09-27 16:45:12,349 ERROR [Policy-Engine]:[Thread-4589] - Certificate issuer case mismatch:
+  Expected: "CN=external-ca, DC=external, DC=com" (lowercase)
+  Actual: "CN=External-CA, DC=external, DC=com" (uppercase)
+2024-09-27 16:45:12,350 DEBUG [Policy-Engine]:[Thread-4589] - Policy "External-Contractor-Access" failed due to case sensitivity
+
+# Device profiling condition with incorrect logic operator
+2024-09-27 16:50:33,567 INFO [Authorization-Policy-Agent]:[Thread-4601] - Authorization request for user: deviceuser@company.com
+2024-09-27 16:50:33,568 DEBUG [Policy-Engine]:[Thread-4601] - Device attributes:
+  - MAC: 00-50-56-12-34-56
+  - EndpointProfile: VMware-Virtual-Machine
+  - Operating-System: Windows-10
+  - DeviceRegistrationStatus: Registered
+
+2024-09-27 16:50:33,569 DEBUG [Policy-Engine]:[Thread-4601] - Policy 10: "BYOD-Device-Access" (Rank: 10)
+2024-09-27 16:50:33,570 DEBUG [Policy-Engine]:[Thread-4601] - Condition: (EndpointProfile EQUALS "Windows-Workstation" OR EndpointProfile EQUALS "MacBook") AND DeviceRegistrationStatus EQUALS "Registered"
+2024-09-27 16:50:33,571 DEBUG [Policy-Engine]:[Thread-4601] - Sub-condition 1: EndpointProfile EQUALS "Windows-Workstation" - NOT MATCHED (is VMware-Virtual-Machine)
+2024-09-27 16:50:33,572 DEBUG [Policy-Engine]:[Thread-4601] - Sub-condition 2: EndpointProfile EQUALS "MacBook" - NOT MATCHED
+2024-09-27 16:50:33,573 DEBUG [Policy-Engine]:[Thread-4601] - OR condition: (FALSE OR FALSE) = FALSE
+2024-09-27 16:50:33,574 DEBUG [Policy-Engine]:[Thread-4601] - AND condition: FALSE AND TRUE = FALSE
+2024-09-27 16:50:33,575 WARN [Policy-Engine]:[Thread-4601] - Virtual machines not handled by BYOD policy due to missing endpoint profile condition
+
+# Date/time condition with timezone confusion
+2024-09-27 17:15:45,678 INFO [Authorization-Policy-Agent]:[Thread-4612] - Authorization request for user: nightshift@company.com
+2024-09-27 17:15:45,679 DEBUG [Policy-Engine]:[Thread-4612] - Time attributes:
+  - Local-Time: 17:15:45
+  - UTC-Time: 21:15:45
+  - Timezone: EST (UTC-5, but currently EDT UTC-4 due to daylight saving)
+  - DayOfWeek: Friday
+
+2024-09-27 17:15:45,680 DEBUG [Policy-Engine]:[Thread-4612] - Policy 12: "After-Hours-Access" (Rank: 12)
+2024-09-27 17:15:45,681 DEBUG [Policy-Engine]:[Thread-4612] - Condition: TimeOfDay NOT BETWEEN "08:00:00" AND "17:00:00"
+2024-09-27 17:15:45,682 ERROR [Policy-Engine]:[Thread-4612] - Time comparison using wrong timezone: Comparing 21:15:45 (UTC) against 08:00:00-17:00:00 (local)
+2024-09-27 17:15:45,683 DEBUG [Policy-Engine]:[Thread-4612] - Incorrect evaluation: 21:15:45 NOT BETWEEN 08:00:00 AND 17:00:00 = TRUE (wrong)
+2024-09-27 17:15:45,684 WARN [Policy-Engine]:[Thread-4612] - User incorrectly granted after-hours access due to timezone confusion
+
+# AD group membership caching causing stale results
+2024-09-27 17:20:12,789 INFO [Authorization-Policy-Agent]:[Thread-4623] - Authorization request for user: newemployee@company.com
+2024-09-27 17:20:12,790 DEBUG [AD-Lookup]:[Thread-4623] - Checking cached group membership for newemployee@company.com
+2024-09-27 17:20:12,791 DEBUG [AD-Cache]:[Thread-4623] - Cache entry found: Age=6 hours, Groups=Domain Users, Temp-Users
+2024-09-27 17:20:12,792 DEBUG [Policy-Engine]:[Thread-4623] - Using cached groups: Domain Users, Temp-Users
+2024-09-27 17:20:12,793 DEBUG [Policy-Engine]:[Thread-4623] - Policy 15: "Employee-Standard-Access" (Rank: 15)
+2024-09-27 17:20:12,794 DEBUG [Policy-Engine]:[Thread-4623] - Condition: IdentityGroup EQUALS "Employees" - NOT MATCHED (user shows as Temp-Users)
+2024-09-27 17:20:12,795 WARN [Policy-Engine]:[Thread-4623] - User denied employee access due to stale AD group cache
+
+# Real-time AD lookup for comparison
+2024-09-27 17:20:15,890 DEBUG [AD-Lookup]:[Thread-4623] - Performing real-time AD lookup for verification
+2024-09-27 17:20:16,234 DEBUG [AD-Lookup]:[Thread-4623] - Real-time groups: Domain Users, Employees, Engineering
+2024-09-27 17:20:16,235 ERROR [AD-Cache]:[Thread-4623] - Cache mismatch detected: Cached groups outdated by 6 hours
+2024-09-27 17:20:16,236 INFO [AD-Cache]:[Thread-4623] - Cache entry invalidated and refreshed
+
+# Summary of policy evaluation issues:
+# 1. Complex boolean logic in policies creating unexpected results
+# 2. Policy ranking causing inconsistent access for similar users
+# 3. Case-sensitive string matching failing certificate conditions
+# 4. Missing endpoint profiles in device access policies
+# 5. Timezone confusion in time-based conditions
+# 6. Stale Active Directory group membership cache
+# 7. Inconsistent VLAN assignments between related policies
+# 8. Time validation logic errors
+# 9. Certificate issuer string format mismatches
+# 10. Policy precedence not aligned with business requirements

@@ -1,0 +1,104 @@
+# ISE Profiling Issue Logs
+# Scenario: Devices not being profiled correctly, causing authorization failures
+
+# Unknown device attempting to connect
+2024-09-27 10:45:12,234 INFO [Profiling-Service]:[Thread-2134] - New endpoint detected: MAC=E4-A4-71-12-34-56, IP=192.168.20.145
+2024-09-27 10:45:12,235 DEBUG [Profiling-Service]:[Thread-2134] - Starting profiling process for endpoint E4-A4-71-12-34-56
+2024-09-27 10:45:12,236 DEBUG [DHCP-Probe]:[Thread-2134] - DHCP fingerprinting enabled, waiting for DHCP traffic...
+2024-09-27 10:45:12,237 DEBUG [HTTP-Probe]:[Thread-2134] - HTTP User-Agent probing enabled, waiting for HTTP traffic...
+2024-09-27 10:45:12,238 DEBUG [SNMP-Query]:[Thread-2134] - SNMP query enabled, attempting device query...
+2024-09-27 10:45:12,456 ERROR [SNMP-Query]:[Thread-2134] - SNMP query failed for E4-A4-71-12-34-56: No response (timeout)
+2024-09-27 10:45:12,457 DEBUG [NMAP-Scan]:[Thread-2134] - NMAP scanning disabled in policy
+2024-09-27 10:45:15,678 DEBUG [DHCP-Probe]:[Thread-2134] - DHCP discover captured from E4-A4-71-12-34-56
+2024-09-27 10:45:15,679 DEBUG [DHCP-Probe]:[Thread-2134] - DHCP attributes collected:
+  - DHCP-Class-Identifier: "MSFT 5.0"
+  - DHCP-Parameter-Request-List: "1,15,3,6,44,46,47,31,33,121,249,43"
+  - DHCP-Client-Identifier: "01-e4-a4-71-12-34-56"
+  - DHCP-Vendor-Class-Identifier: "MSFT 5.0"
+
+# Profiling engine evaluation
+2024-09-27 10:45:15,890 DEBUG [Profiling-Engine]:[Thread-2134] - Evaluating profiling policies for E4-A4-71-12-34-56
+2024-09-27 10:45:15,891 DEBUG [Profiling-Engine]:[Thread-2134] - Checking policy: Windows-Workstation
+2024-09-27 10:45:15,892 DEBUG [Profiling-Engine]:[Thread-2134] - Condition: DHCP-Class-Identifier CONTAINS "MSFT" - MATCHED
+2024-09-27 10:45:15,893 DEBUG [Profiling-Engine]:[Thread-2134] - Condition: HTTP-User-Agent CONTAINS "Windows" - NOT MATCHED (no HTTP traffic)
+2024-09-27 10:45:15,894 DEBUG [Profiling-Engine]:[Thread-2134] - Policy Windows-Workstation: Certainty Factor = 40 (threshold: 80)
+2024-09-27 10:45:15,895 DEBUG [Profiling-Engine]:[Thread-2134] - Checking policy: Windows-Server
+2024-09-27 10:45:15,896 DEBUG [Profiling-Engine]:[Thread-2134] - Condition: DHCP-Class-Identifier CONTAINS "MSFT" - MATCHED
+2024-09-27 10:45:15,897 DEBUG [Profiling-Engine]:[Thread-2134] - Condition: SNMP-SysObjectID STARTS_WITH "1.3.6.1.4.1.311" - NOT MATCHED (no SNMP response)
+2024-09-27 10:45:15,898 DEBUG [Profiling-Engine]:[Thread-2134] - Policy Windows-Server: Certainty Factor = 30 (threshold: 80)
+2024-09-27 10:45:15,899 DEBUG [Profiling-Engine]:[Thread-2134] - Checking policy: Unknown-Device
+2024-09-27 10:45:15,900 DEBUG [Profiling-Engine]:[Thread-2134] - Default policy always matches
+2024-09-27 10:45:15,901 INFO [Profiling-Engine]:[Thread-2134] - Endpoint E4-A4-71-12-34-56 profiled as: Unknown-Device
+
+# Authentication attempt with unknown device profile
+2024-09-27 10:45:20,123 INFO [Authentication-Policy-Agent]:[Thread-2156] - Authentication Request Details: UserName=jdoe@company.com, CallingStationId=E4-A4-71-12-34-56, NASIPAddress=192.168.10.8, NASPortId=GigabitEthernet2/0/12, AuthenticationMethod=dot1x
+2024-09-27 10:45:20,124 DEBUG [Authentication-Policy-Agent]:[Thread-2156] - User authentication successful
+2024-09-27 10:45:20,125 DEBUG [Authorization-Policy-Agent]:[Thread-2156] - Authorization policy evaluation started
+2024-09-27 10:45:20,126 DEBUG [Authorization-Policy-Agent]:[Thread-2156] - Endpoint profile: Unknown-Device
+2024-09-27 10:45:20,127 DEBUG [Authorization-Policy-Agent]:[Thread-2156] - Checking policy: Employee-Workstation-Access
+2024-09-27 10:45:20,128 DEBUG [Authorization-Policy-Agent]:[Thread-2156] - Condition: EndPointProfile EQUALS "Windows-Workstation" - NOT MATCHED
+2024-09-27 10:45:20,129 DEBUG [Authorization-Policy-Agent]:[Thread-2156] - Checking policy: Unknown-Device-Quarantine
+2024-09-27 10:45:20,130 DEBUG [Authorization-Policy-Agent]:[Thread-2156] - Condition: EndPointProfile EQUALS "Unknown-Device" - MATCHED
+2024-09-27 10:45:20,131 INFO [Authorization-Policy-Agent]:[Thread-2156] - Authorization result: Quarantine VLAN, User=jdoe@company.com, Device=E4-A4-71-12-34-56
+
+# Incorrect profiling of IP phone as workstation
+2024-09-27 11:15:33,567 INFO [Profiling-Service]:[Thread-2234] - New endpoint detected: MAC=00-1A-A1-12-34-57, IP=192.168.30.201
+2024-09-27 11:15:35,789 DEBUG [DHCP-Probe]:[Thread-2234] - DHCP attributes collected:
+  - DHCP-Class-Identifier: "Cisco SPA504G"
+  - DHCP-Parameter-Request-List: "1,3,6,12,15,28,43,125,159,160,161"
+  - DHCP-Option-60: "Cisco SPA504G"
+  - DHCP-Option-125: Enterprise specific options
+
+2024-09-27 11:15:35,890 DEBUG [HTTP-Probe]:[Thread-2234] - HTTP traffic detected from 00-1A-A1-12-34-57
+2024-09-27 11:15:35,891 DEBUG [HTTP-Probe]:[Thread-2234] - HTTP User-Agent: "Cisco-SPA504G/7.5.2b (00-1A-A1-12-34-57)"
+
+# Profiling evaluation with incorrect result
+2024-09-27 11:15:36,123 DEBUG [Profiling-Engine]:[Thread-2234] - Evaluating profiling policies for 00-1A-A1-12-34-57
+2024-09-27 11:15:36,124 DEBUG [Profiling-Engine]:[Thread-2234] - Checking policy: Cisco-IP-Phone
+2024-09-27 11:15:36,125 DEBUG [Profiling-Engine]:[Thread-2234] - Condition: DHCP-Class-Identifier CONTAINS "Cisco" - MATCHED
+2024-09-27 11:15:36,126 DEBUG [Profiling-Engine]:[Thread-2234] - Condition: HTTP-User-Agent CONTAINS "SPA" - MATCHED
+2024-09-27 11:15:36,127 DEBUG [Profiling-Engine]:[Thread-2234] - Policy Cisco-IP-Phone: Certainty Factor = 90 (threshold: 80)
+
+# However, a conflicting higher-priority policy matches incorrectly
+2024-09-27 11:15:36,128 DEBUG [Profiling-Engine]:[Thread-2234] - Checking policy: Network-Device (higher priority)
+2024-09-27 11:15:36,129 DEBUG [Profiling-Engine]:[Thread-2234] - Condition: DHCP-Class-Identifier CONTAINS "Cisco" - MATCHED
+2024-09-27 11:15:36,130 DEBUG [Profiling-Engine]:[Thread-2234] - Condition: MAC-Address OUI EQUALS "001AA1" - MATCHED (Cisco OUI)
+2024-09-27 11:15:36,131 DEBUG [Profiling-Engine]:[Thread-2234] - Policy Network-Device: Certainty Factor = 95 (threshold: 80)
+2024-09-27 11:15:36,132 ERROR [Profiling-Engine]:[Thread-2234] - Policy precedence issue: Network-Device policy incorrectly matching IP phone
+2024-09-27 11:15:36,133 INFO [Profiling-Engine]:[Thread-2234] - Endpoint 00-1A-A1-12-34-57 profiled as: Network-Device (INCORRECT)
+
+# Printer being profiled as unknown due to missing attributes
+2024-09-27 11:30:45,678 INFO [Profiling-Service]:[Thread-2345] - New endpoint detected: MAC=B4-75-0E-12-34-58, IP=192.168.40.150
+2024-09-27 11:30:47,890 DEBUG [DHCP-Probe]:[Thread-2345] - DHCP attributes collected:
+  - DHCP-Class-Identifier: "Xerox WorkCentre 7535"
+  - DHCP-Parameter-Request-List: "1,3,6,12,15,17,23,28,42,43"
+  - DHCP-Vendor-Class-Identifier: "Xerox Corporation"
+
+2024-09-27 11:30:48,234 DEBUG [SNMP-Query]:[Thread-2345] - SNMP query successful for B4-75-0E-12-34-58
+2024-09-27 11:30:48,235 DEBUG [SNMP-Query]:[Thread-2345] - SNMP attributes collected:
+  - SNMP-SysObjectID: "1.3.6.1.4.1.253.8.62.1.3"
+  - SNMP-SysDescr: "Xerox WorkCentre 7535; System Software 4.1.2; Network Version 30.014.16.000"
+  - SNMP-SysName: "XRX001AA1123458"
+
+# Profiling policy evaluation missing key conditions
+2024-09-27 11:30:48,456 DEBUG [Profiling-Engine]:[Thread-2345] - Evaluating profiling policies for B4-75-0E-12-34-58
+2024-09-27 11:30:48,457 DEBUG [Profiling-Engine]:[Thread-2345] - Checking policy: Xerox-Printer
+2024-09-27 11:30:48,458 DEBUG [Profiling-Engine]:[Thread-2345] - Condition: DHCP-Vendor-Class-Identifier CONTAINS "Xerox" - MATCHED
+2024-09-27 11:30:48,459 DEBUG [Profiling-Engine]:[Thread-2345] - Condition: SNMP-SysObjectID STARTS_WITH "1.3.6.1.4.1.253" - MATCHED
+2024-09-27 11:30:48,460 DEBUG [Profiling-Engine]:[Thread-2345] - Condition: HTTP-User-Agent CONTAINS "Xerox" - NOT MATCHED (no HTTP traffic detected)
+2024-09-27 11:30:48,461 DEBUG [Profiling-Engine]:[Thread-2345] - Policy Xerox-Printer: Certainty Factor = 70 (threshold: 80) - FAILED
+2024-09-27 11:30:48,462 INFO [Profiling-Engine]:[Thread-2345] - Endpoint B4-75-0E-12-34-58 profiled as: Unknown-Device (policy threshold not met)
+
+# Performance impact from excessive profiling
+2024-09-27 12:00:00,000 WARN [Profiling-Service]:[Thread-Manager] - Profiling queue depth: 145 endpoints pending analysis
+2024-09-27 12:00:00,001 WARN [Profiling-Service]:[Thread-Manager] - Average profiling time: 4.2 seconds (threshold: 2.0 seconds)
+2024-09-27 12:00:00,002 WARN [Profiling-Service]:[Thread-Manager] - DHCP probe response rate: 67% (target: >90%)
+2024-09-27 12:00:00,003 WARN [Profiling-Service]:[Thread-Manager] - HTTP probe response rate: 23% (target: >60%)
+2024-09-27 12:00:00,004 ERROR [Profiling-Service]:[Thread-Manager] - Profiling performance degraded, consider tuning probe settings
+
+# Summary of profiling issues:
+# 1. Unknown devices due to insufficient profiling data
+# 2. Policy precedence causing incorrect classifications
+# 3. Threshold settings too high for reliable profiling
+# 4. Performance issues with probe timeouts
+# 5. Missing HTTP traffic for complete device fingerprinting

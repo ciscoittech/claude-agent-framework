@@ -1,0 +1,340 @@
+name: Framework Release Automation
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.1)'
+        required: true
+        type: string
+
+env:
+  FRAMEWORK_NAME: "Claude Agent Framework"
+
+jobs:
+  validate-release:
+    runs-on: ubuntu-latest
+    name: Validate Release
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Validate Release Tag
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/}"
+        fi
+
+        echo "🏷️ Validating release version: $VERSION"
+
+        # Validate version format (vX.Y.Z)
+        if [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "✅ Valid semantic version format"
+        else
+          echo "❌ Invalid version format. Use vX.Y.Z (e.g., v1.0.0)"
+          exit 1
+        fi
+
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Check Framework Version Consistency
+      run: |
+        echo "🔍 Checking framework version consistency..."
+
+        # Check if version is mentioned in framework documentation
+        if grep -q "$VERSION" CLAUDE_AGENT_FRAMEWORK.md; then
+          echo "✅ Version $VERSION found in framework documentation"
+        else
+          echo "⚠️ Version $VERSION not found in framework documentation"
+          # Update the version in the framework file
+          sed -i "s/Framework Version [0-9]\+\.[0-9]\+/Framework Version ${VERSION#v}/" CLAUDE_AGENT_FRAMEWORK.md
+          echo "📝 Updated framework version to ${VERSION#v}"
+        fi
+
+    - name: Generate Release Notes
+      run: |
+        echo "📝 Generating release notes..."
+
+        cat > release-notes.md << EOF
+        # $FRAMEWORK_NAME $VERSION
+
+        ## 🎯 Framework Highlights
+
+        This release of the Claude Agent Framework provides:
+
+        - **Performance Optimized**: Minimal context loading (< 10KB auto-loaded)
+        - **Parallel Execution**: 3x faster through simultaneous agent processing
+        - **Project Agnostic**: Works with any technology stack
+        - **Production Tested**: Based on real-world implementation patterns
+
+        ## 📋 Framework Components
+
+        ### Core Documentation
+        - \`CLAUDE_AGENT_FRAMEWORK.md\` - Complete framework guide
+        - \`AGENT_PATTERNS.md\` - Agent design patterns
+        - \`SIMPLICITY_ENFORCEMENT.md\` - Complexity prevention guidelines
+
+        ### Key Features
+        - Agent specialization with clear boundaries
+        - Dynamic context loading
+        - Workflow orchestration patterns
+        - Tool configuration guidelines
+        - Performance optimization strategies
+
+        ## 🚀 Quick Start
+
+        1. **Copy Framework Files**: Copy the framework documentation to your project
+        2. **Create .claude/ Directory**: Set up minimal auto-loaded configuration
+        3. **Build .claude-library/**: Create your agent library structure
+        4. **Define Agents**: Use provided templates for agent creation
+        5. **Create Commands**: Build workflow commands for your project
+
+        ## 📊 Framework Metrics
+
+        - **Documentation**: $(wc -w < CLAUDE_AGENT_FRAMEWORK.md) words, $(wc -l < CLAUDE_AGENT_FRAMEWORK.md) lines
+        - **Code Examples**: $(grep -c '```' CLAUDE_AGENT_FRAMEWORK.md) code blocks
+        - **Sections**: $(grep -c '^##' CLAUDE_AGENT_FRAMEWORK.md) main sections
+
+        ## 🏗️ Architecture Patterns
+
+        The framework supports three execution patterns:
+        - **Sequential**: For dependent tasks
+        - **Parallel**: For independent operations (3-5x performance gain)
+        - **Hierarchical**: For complex problem decomposition
+
+        ## 📚 Usage Examples
+
+        ### Basic Agent Creation
+        \`\`\`bash
+        # Create core agents
+        mkdir -p .claude-library/agents/core
+        # Copy agent templates from framework
+        \`\`\`
+
+        ### Command Implementation
+        \`\`\`bash
+        # Create workflow commands
+        mkdir -p .claude/commands
+        # Implement using parallel execution patterns
+        \`\`\`
+
+        ## 🔄 Migration Guide
+
+        If upgrading from a previous version:
+        1. Review new agent design principles
+        2. Update tool configurations
+        3. Implement parallel execution patterns
+        4. Optimize context loading strategy
+
+        ## 🛠️ Technical Requirements
+
+        - Claude Code CLI environment
+        - Project with .claude/ directory support
+        - Understanding of agent-based development
+
+        ## 📖 Documentation
+
+        - [Framework Guide](./CLAUDE_AGENT_FRAMEWORK.md)
+        - [Agent Patterns](./AGENT_PATTERNS.md)
+        - [Simplicity Enforcement](./SIMPLICITY_ENFORCEMENT.md)
+
+        ## 💡 Best Practices
+
+        1. Start with core agents (architect, engineer, reviewer)
+        2. Add specialized agents as needed
+        3. Use parallel execution for independent tasks
+        4. Keep .claude/ folder minimal (< 10KB)
+        5. Load contexts dynamically
+
+        ---
+
+        **Framework Version**: ${VERSION#v}
+        **Release Date**: $(date +%Y-%m-%d)
+        **Compatibility**: Claude Code v1.0+
+        EOF
+
+        echo "✅ Release notes generated"
+
+    - name: Upload Release Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-notes-${{ env.VERSION }}
+        path: release-notes.md
+
+  create-release:
+    runs-on: ubuntu-latest
+    name: Create GitHub Release
+    needs: validate-release
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download Release Notes
+      uses: actions/download-artifact@v4
+      with:
+        name: release-notes-${{ env.VERSION }}
+
+    - name: Create Framework Archive
+      run: |
+        echo "📦 Creating framework archive..."
+
+        # Create release archive with framework files
+        mkdir -p claude-agent-framework-${{ env.VERSION }}
+
+        # Copy core framework files
+        cp CLAUDE_AGENT_FRAMEWORK.md claude-agent-framework-${{ env.VERSION }}/
+        cp AGENT_PATTERNS.md claude-agent-framework-${{ env.VERSION }}/
+        cp SIMPLICITY_ENFORCEMENT.md claude-agent-framework-${{ env.VERSION }}/
+        cp README.md claude-agent-framework-${{ env.VERSION }}/
+
+        # Copy additional documentation
+        cp AGENT_SYSTEM_TEMPLATE.md claude-agent-framework-${{ env.VERSION }}/
+        cp SYSTEM_GENERATOR_PROMPT.md claude-agent-framework-${{ env.VERSION }}/
+
+        # Create example directory structure
+        mkdir -p claude-agent-framework-${{ env.VERSION }}/examples/.claude/commands
+        mkdir -p claude-agent-framework-${{ env.VERSION }}/examples/.claude-library/agents/core
+        mkdir -p claude-agent-framework-${{ env.VERSION }}/examples/.claude-library/contexts
+
+        # Create example files
+        cat > claude-agent-framework-${{ env.VERSION }}/examples/.claude/agent-launcher.md << 'EOF'
+        # Agent Launcher
+
+        You are the agent launcher for [PROJECT NAME]. Your role is to:
+        1. Parse user requests to determine intent
+        2. Load appropriate agents from `.claude-library/`
+        3. Route tasks to correct agents
+        4. Manage context loading as needed
+
+        ## Quick Commands
+        - `/feature "description"` - Build new feature
+        - `/debug "issue"` - Debug problems
+        - `/review` - Review code
+
+        ## Loading Strategy
+        1. If input starts with `/`, load from `.claude/commands/`
+        2. Match keywords to agents in REGISTRY.json
+        3. Load relevant contexts based on task
+        EOF
+
+        cat > claude-agent-framework-${{ env.VERSION }}/examples/.claude-library/REGISTRY.json << 'EOF'
+        {
+          "version": "1.0.0",
+          "settings": {
+            "auto_load_agents": false,
+            "max_parallel_agents": 3,
+            "cache_loaded_agents": true
+          },
+          "agents": {
+            "architect": {
+              "path": ".claude-library/agents/core/architect.md",
+              "tools": ["Read", "Write", "Grep"],
+              "triggers": ["design", "architecture", "spec"],
+              "category": "core",
+              "priority": 1
+            }
+          },
+          "commands": {
+            "feature": {
+              "path": ".claude/commands/feature.md",
+              "agents": ["architect", "engineer", "reviewer"],
+              "workflow": "parallel-sequential"
+            }
+          }
+        }
+        EOF
+
+        # Create archive
+        tar -czf claude-agent-framework-${{ env.VERSION }}.tar.gz claude-agent-framework-${{ env.VERSION }}/
+        zip -r claude-agent-framework-${{ env.VERSION }}.zip claude-agent-framework-${{ env.VERSION }}/
+
+        echo "✅ Framework archives created"
+
+    - name: Get Version from Environment
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/}"
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.VERSION }}
+        release_name: "Claude Agent Framework ${{ env.VERSION }}"
+        body_path: ./release-notes.md
+        draft: false
+        prerelease: false
+
+    - name: Upload Framework Archive (tar.gz)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./claude-agent-framework-${{ env.VERSION }}.tar.gz
+        asset_name: claude-agent-framework-${{ env.VERSION }}.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload Framework Archive (zip)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./claude-agent-framework-${{ env.VERSION }}.zip
+        asset_name: claude-agent-framework-${{ env.VERSION }}.zip
+        asset_content_type: application/zip
+
+  notify-release:
+    runs-on: ubuntu-latest
+    name: Notify Release
+    needs: create-release
+
+    steps:
+    - name: Get Version
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/}"
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Framework Release Summary
+      run: |
+        echo "🎉 Claude Agent Framework ${{ env.VERSION }} Released!"
+        echo ""
+        echo "📦 Release Assets:"
+        echo "   - claude-agent-framework-${{ env.VERSION }}.tar.gz"
+        echo "   - claude-agent-framework-${{ env.VERSION }}.zip"
+        echo ""
+        echo "📚 Documentation Included:"
+        echo "   - Complete framework guide"
+        echo "   - Agent design patterns"
+        echo "   - Simplicity enforcement guidelines"
+        echo "   - Example project structure"
+        echo ""
+        echo "🚀 Ready for production use!"
+
+    - name: Create Framework Usage Badge
+      run: |
+        echo "📋 Framework badges for README updates:"
+        echo ""
+        echo "Version Badge:"
+        echo "![Framework Version](https://img.shields.io/badge/Claude%20Agent%20Framework-${{ env.VERSION }}-blue)"
+        echo ""
+        echo "Status Badge:"
+        echo "![Framework Status](https://img.shields.io/badge/status-production%20ready-green)"

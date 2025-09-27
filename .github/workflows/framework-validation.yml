@@ -1,0 +1,377 @@
+name: Claude Agent Framework Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  validate-framework:
+    runs-on: ubuntu-latest
+    name: Validate Framework Structure
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Validate Framework Structure
+      run: |
+        echo "🔍 Validating Claude Agent Framework structure..."
+
+        # Check core framework files exist
+        required_files=(
+          "CLAUDE_AGENT_FRAMEWORK.md"
+          "AGENT_PATTERNS.md"
+          "SIMPLICITY_ENFORCEMENT.md"
+          "README.md"
+        )
+
+        for file in "${required_files[@]}"; do
+          if [[ -f "$file" ]]; then
+            echo "✅ $file exists"
+          else
+            echo "❌ Missing required file: $file"
+            exit 1
+          fi
+        done
+
+    - name: Validate Documentation Quality
+      run: |
+        echo "📚 Validating documentation quality..."
+
+        # Check for minimum content requirements
+        if grep -q "## Core Philosophy" CLAUDE_AGENT_FRAMEWORK.md; then
+          echo "✅ Core Philosophy section found"
+        else
+          echo "❌ Missing Core Philosophy section"
+          exit 1
+        fi
+
+        if grep -q "## Agent Design Principles" CLAUDE_AGENT_FRAMEWORK.md; then
+          echo "✅ Agent Design Principles section found"
+        else
+          echo "❌ Missing Agent Design Principles section"
+          exit 1
+        fi
+
+        if grep -q "## Parallel Execution" CLAUDE_AGENT_FRAMEWORK.md; then
+          echo "✅ Parallel Execution section found"
+        else
+          echo "❌ Missing Parallel Execution section"
+          exit 1
+        fi
+
+    - name: Check Framework Version
+      run: |
+        echo "📋 Checking framework version..."
+
+        if grep -q "Framework Version" CLAUDE_AGENT_FRAMEWORK.md; then
+          version=$(grep "Framework Version" CLAUDE_AGENT_FRAMEWORK.md | head -1)
+          echo "✅ Found: $version"
+        else
+          echo "⚠️ No version information found"
+        fi
+
+    - name: Validate Example Patterns
+      run: |
+        echo "🧪 Validating example patterns..."
+
+        # Check for agent template structure
+        if grep -q "Agent Definition Structure" CLAUDE_AGENT_FRAMEWORK.md; then
+          echo "✅ Agent Definition Structure examples found"
+        else
+          echo "❌ Missing Agent Definition Structure examples"
+          exit 1
+        fi
+
+        # Check for workflow patterns
+        if grep -q "Sequential Workflow" CLAUDE_AGENT_FRAMEWORK.md; then
+          echo "✅ Workflow pattern examples found"
+        else
+          echo "❌ Missing workflow pattern examples"
+          exit 1
+        fi
+
+  framework-testing:
+    runs-on: ubuntu-latest
+    name: Framework Testing
+    needs: validate-framework
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Test Agent Template Generation
+      run: |
+        echo "🏗️ Testing agent template generation..."
+
+        # Create a test agent using the framework template
+        mkdir -p test-output/.claude-library/agents/core
+
+        cat > test-output/.claude-library/agents/core/test-agent.md << 'EOF'
+        # Test Agent
+
+        You are a test specialist focusing on framework validation.
+
+        ## Core Responsibilities
+        1. **Primary Task**: Validate framework patterns
+        2. **Secondary Tasks**: Generate test reports
+        3. **Quality Assurance**: Ensure compliance with framework standards
+
+        ## What You SHOULD Do
+        - Follow framework design principles
+        - Use designated tools appropriately
+        - Maintain clear boundaries
+
+        ## What You SHOULD NOT Do
+        - Exceed defined scope
+        - Access restricted tools
+        - Make architectural decisions
+
+        ## Available Tools
+        - **Read**: For reading files
+        - **Write**: For creating test files
+
+        ## Success Criteria
+        - Framework validation passes
+        - Test reports are generated
+        - Compliance standards met
+        EOF
+
+        echo "✅ Test agent template created successfully"
+
+    - name: Test Command Structure
+      run: |
+        echo "📋 Testing command structure..."
+
+        # Create test command following framework patterns
+        mkdir -p test-output/.claude/commands
+
+        cat > test-output/.claude/commands/test-feature.md << 'EOF'
+        # /test-feature Command
+
+        ## Purpose
+        Test feature development using framework patterns
+
+        ## Workflow Stages
+
+        ### Stage 1: Analysis (Parallel)
+        - Architecture Agent: Design validation
+        - Test Agent: Create test specifications
+
+        ### Stage 2: Implementation
+        - Engineering Agent: Build feature
+        - Review Agent: Quality validation
+        EOF
+
+        echo "✅ Test command structure created successfully"
+
+    - name: Test Registry Format
+      run: |
+        echo "🗂️ Testing registry format..."
+
+        # Create test registry following framework spec
+        cat > test-output/.claude-library/REGISTRY.json << 'EOF'
+        {
+          "version": "1.0.0",
+          "settings": {
+            "auto_load_agents": false,
+            "max_parallel_agents": 3,
+            "cache_loaded_agents": true
+          },
+          "agents": {
+            "test-agent": {
+              "path": ".claude-library/agents/core/test-agent.md",
+              "tools": ["Read", "Write"],
+              "triggers": ["test", "validate", "framework"],
+              "category": "testing",
+              "priority": 1
+            }
+          },
+          "commands": {
+            "test-feature": {
+              "path": ".claude/commands/test-feature.md",
+              "agents": ["test-agent"],
+              "workflow": "parallel-sequential"
+            }
+          }
+        }
+        EOF
+
+        # Validate JSON syntax
+        if command -v jq >/dev/null 2>&1; then
+          if jq . test-output/.claude-library/REGISTRY.json >/dev/null 2>&1; then
+            echo "✅ Registry JSON is valid"
+          else
+            echo "❌ Registry JSON is invalid"
+            exit 1
+          fi
+        else
+          echo "⚠️ jq not available, skipping JSON validation"
+        fi
+
+  documentation-check:
+    runs-on: ubuntu-latest
+    name: Documentation Quality Check
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check Documentation Completeness
+      run: |
+        echo "📖 Checking documentation completeness..."
+
+        # Check for key concepts coverage
+        concepts=(
+          "Minimal Auto-Loading"
+          "Agent Specialization"
+          "Workflow-Driven Development"
+          "Tool Configuration"
+          "Context Management"
+          "Performance Optimization"
+        )
+
+        for concept in "${concepts[@]}"; do
+          if grep -q "$concept" CLAUDE_AGENT_FRAMEWORK.md; then
+            echo "✅ $concept documented"
+          else
+            echo "❌ Missing documentation for: $concept"
+            exit 1
+          fi
+        done
+
+    - name: Check Example Code Quality
+      run: |
+        echo "💻 Checking example code quality..."
+
+        # Look for markdown code blocks
+        code_blocks=$(grep -c '```' CLAUDE_AGENT_FRAMEWORK.md)
+        if [[ $code_blocks -gt 10 ]]; then
+          echo "✅ Found $code_blocks code examples"
+        else
+          echo "❌ Insufficient code examples ($code_blocks found, need >10)"
+          exit 1
+        fi
+
+    - name: Check Links and References
+      run: |
+        echo "🔗 Checking links and references..."
+
+        # Check for external references
+        if grep -q "anthropic.com" CLAUDE_AGENT_FRAMEWORK.md; then
+          echo "✅ Anthropic documentation referenced"
+        else
+          echo "⚠️ No Anthropic documentation references found"
+        fi
+
+        if grep -q "docs.claude.com" CLAUDE_AGENT_FRAMEWORK.md; then
+          echo "✅ Claude documentation referenced"
+        else
+          echo "⚠️ No Claude documentation references found"
+        fi
+
+  framework-metrics:
+    runs-on: ubuntu-latest
+    name: Framework Metrics
+    needs: [validate-framework, framework-testing, documentation-check]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Calculate Framework Metrics
+      run: |
+        echo "📊 Calculating framework metrics..."
+
+        # Documentation metrics
+        word_count=$(wc -w < CLAUDE_AGENT_FRAMEWORK.md)
+        line_count=$(wc -l < CLAUDE_AGENT_FRAMEWORK.md)
+
+        echo "📝 Documentation Statistics:"
+        echo "   - Word count: $word_count"
+        echo "   - Line count: $line_count"
+        echo "   - Estimated reading time: $((word_count / 200)) minutes"
+
+        # Framework complexity metrics
+        sections=$(grep -c '^##' CLAUDE_AGENT_FRAMEWORK.md)
+        subsections=$(grep -c '^###' CLAUDE_AGENT_FRAMEWORK.md)
+
+        echo "🏗️ Framework Structure:"
+        echo "   - Main sections: $sections"
+        echo "   - Subsections: $subsections"
+        echo "   - Total structure points: $((sections + subsections))"
+
+        # Code example metrics
+        code_blocks=$(grep -c '```' CLAUDE_AGENT_FRAMEWORK.md)
+        yaml_blocks=$(grep -c '```yaml' CLAUDE_AGENT_FRAMEWORK.md)
+        json_blocks=$(grep -c '```json' CLAUDE_AGENT_FRAMEWORK.md)
+        markdown_blocks=$(grep -c '```markdown' CLAUDE_AGENT_FRAMEWORK.md)
+
+        echo "💻 Code Examples:"
+        echo "   - Total code blocks: $code_blocks"
+        echo "   - YAML examples: $yaml_blocks"
+        echo "   - JSON examples: $json_blocks"
+        echo "   - Markdown examples: $markdown_blocks"
+
+    - name: Framework Health Score
+      run: |
+        echo "🎯 Calculating framework health score..."
+
+        score=0
+        max_score=100
+
+        # Documentation completeness (40 points)
+        word_count=$(wc -w < CLAUDE_AGENT_FRAMEWORK.md)
+        if [[ $word_count -gt 8000 ]]; then
+          score=$((score + 40))
+          echo "✅ Documentation completeness: 40/40"
+        elif [[ $word_count -gt 5000 ]]; then
+          score=$((score + 30))
+          echo "⚠️ Documentation completeness: 30/40"
+        else
+          score=$((score + 20))
+          echo "❌ Documentation completeness: 20/40"
+        fi
+
+        # Code examples (30 points)
+        code_blocks=$(grep -c '```' CLAUDE_AGENT_FRAMEWORK.md)
+        if [[ $code_blocks -gt 15 ]]; then
+          score=$((score + 30))
+          echo "✅ Code examples: 30/30"
+        elif [[ $code_blocks -gt 10 ]]; then
+          score=$((score + 20))
+          echo "⚠️ Code examples: 20/30"
+        else
+          score=$((score + 10))
+          echo "❌ Code examples: 10/30"
+        fi
+
+        # Structure organization (30 points)
+        sections=$(grep -c '^##' CLAUDE_AGENT_FRAMEWORK.md)
+        if [[ $sections -gt 8 ]]; then
+          score=$((score + 30))
+          echo "✅ Structure organization: 30/30"
+        elif [[ $sections -gt 5 ]]; then
+          score=$((score + 20))
+          echo "⚠️ Structure organization: 20/30"
+        else
+          score=$((score + 10))
+          echo "❌ Structure organization: 10/30"
+        fi
+
+        echo ""
+        echo "🏆 Framework Health Score: $score/$max_score"
+
+        if [[ $score -ge 90 ]]; then
+          echo "🎉 Excellent framework quality!"
+        elif [[ $score -ge 70 ]]; then
+          echo "👍 Good framework quality"
+        elif [[ $score -ge 50 ]]; then
+          echo "⚠️ Framework needs improvement"
+        else
+          echo "❌ Framework requires significant work"
+          exit 1
+        fi
