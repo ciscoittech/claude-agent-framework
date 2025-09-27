@@ -1,0 +1,235 @@
+{
+  "version": "1.0.0",
+  "framework": "claude-agent-framework-network-engineering",
+  "description": "Network Engineering Edition with specialized ISE, VoIP, and automation agents",
+  "settings": {
+    "auto_load_agents": false,
+    "max_parallel_agents": 3,
+    "cache_loaded_agents": true,
+    "simplicity_first": true
+  },
+  "agents": {
+    "ise-specialist": {
+      "path": ".claude-library/agents/specialized/ise-specialist.md",
+      "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
+      "triggers": ["ise", "authentication", "radius", "802.1x", "identity", "mab", "web-auth", "posture"],
+      "category": "network-security",
+      "priority": 1,
+      "description": "Cisco ISE infrastructure expert for authentication troubleshooting"
+    },
+    "authentication-analyzer": {
+      "path": ".claude-library/agents/specialized/authentication-analyzer.md",
+      "tools": ["Read", "Grep", "Glob", "Edit"],
+      "triggers": ["auth", "authentication", "radius", "ldap", "certificate", "eap"],
+      "category": "network-security",
+      "priority": 2,
+      "description": "RADIUS and authentication flow analysis specialist"
+    },
+    "voip-specialist": {
+      "path": ".claude-library/agents/specialized/voip-specialist.md",
+      "tools": ["Read", "Write", "Edit", "Grep", "Bash"],
+      "triggers": ["voip", "voice", "cucm", "sip", "rtp", "call", "quality", "phone"],
+      "category": "voice-infrastructure",
+      "priority": 1,
+      "description": "Voice infrastructure expert for CUCM and call quality analysis"
+    },
+    "packet-analyzer": {
+      "path": ".claude-library/agents/specialized/packet-analyzer.md",
+      "tools": ["Read", "Bash", "Edit", "Grep"],
+      "triggers": ["packet", "pcap", "wireshark", "trace", "capture", "traffic"],
+      "category": "network-analysis",
+      "priority": 2,
+      "description": "Network traffic and packet analysis specialist"
+    },
+    "pyats-automation": {
+      "path": ".claude-library/agents/specialized/pyats-automation.md",
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "triggers": ["pyats", "automation", "genie", "testbed", "health", "monitoring"],
+      "category": "network-automation",
+      "priority": 1,
+      "description": "pyATS network automation and health monitoring specialist"
+    },
+    "claude-docs-researcher": {
+      "path": ".claude-library/agents/specialized/claude-docs-researcher.md",
+      "tools": ["WebFetch", "Read", "Write", "Edit"],
+      "triggers": ["claude-docs", "documentation", "research", "best-practices", "platform"],
+      "category": "platform-research",
+      "priority": 2,
+      "description": "Claude Code platform documentation and best practices researcher"
+    }
+  },
+  "commands": {
+    "ise-toolkit": {
+      "path": ".claude/commands/ise-toolkit.md",
+      "agents": ["ise-specialist", "authentication-analyzer"],
+      "workflow": "single-agent-primary",
+      "description": "Comprehensive ISE troubleshooting toolkit",
+      "operations": [
+        "auth-troubleshoot",
+        "policy-validate",
+        "endpoint-profile",
+        "guest-access",
+        "certificate-audit",
+        "radius-analysis",
+        "compliance-check",
+        "performance-monitor"
+      ]
+    },
+    "voip-toolkit": {
+      "path": ".claude/commands/voip-toolkit.md",
+      "agents": ["voip-specialist", "packet-analyzer"],
+      "workflow": "single-agent-primary",
+      "description": "VoIP troubleshooting and call quality analysis",
+      "operations": [
+        "diagnose",
+        "call-quality",
+        "packet-analysis",
+        "sip-trace",
+        "codec-analysis",
+        "jitter-buffer"
+      ]
+    },
+    "claude-docs": {
+      "path": ".claude/commands/claude-docs.md",
+      "agents": ["claude-docs-researcher"],
+      "workflow": "single-agent",
+      "description": "Claude Code documentation research and best practices",
+      "operations": [
+        "research",
+        "sub-agents",
+        "hooks",
+        "sdk",
+        "best-practices",
+        "integration",
+        "architecture"
+      ]
+    },
+    "load-cisco-docs": {
+      "path": ".claude/commands/load-cisco-docs.md",
+      "agents": ["claude-docs-researcher"],
+      "workflow": "single-agent",
+      "description": "Intelligent Cisco documentation fetching and analysis",
+      "operations": [
+        "interactive",
+        "direct",
+        "analyze"
+      ]
+    }
+  },
+  "contexts": {
+    "ise-infrastructure": {
+      "path": ".claude-library/contexts/ise-infrastructure.md",
+      "description": "ISE deployment models, integration patterns, and troubleshooting knowledge",
+      "triggers": ["ise", "authentication", "identity"]
+    },
+    "voip-infrastructure": {
+      "path": ".claude-library/contexts/voip-infrastructure.md",
+      "description": "Voice network patterns, CUCM integration, and call flow analysis",
+      "triggers": ["voip", "voice", "cucm", "call"]
+    },
+    "claude-code-patterns": {
+      "path": ".claude-library/contexts/claude-code-patterns.md",
+      "description": "Claude Code platform knowledge, sub-agent patterns, and best practices",
+      "triggers": ["claude", "platform", "sub-agent", "hook"]
+    }
+  },
+  "workflows": {
+    "simplicity-escalation": {
+      "description": "Simplicity-first escalation ladder: Basic → Scripts → Single Agent → Multi-Agent",
+      "stages": [
+        "basic-commands",
+        "simple-scripts",
+        "single-agent",
+        "multi-agent-coordination"
+      ]
+    },
+    "ise-troubleshooting": {
+      "description": "Complete ISE authentication troubleshooting workflow",
+      "agents": ["ise-specialist", "authentication-analyzer"],
+      "stages": [
+        "symptom-analysis",
+        "log-collection",
+        "flow-analysis",
+        "policy-validation",
+        "root-cause-identification",
+        "remediation"
+      ]
+    },
+    "voip-quality-analysis": {
+      "description": "VoIP call quality analysis and optimization workflow",
+      "agents": ["voip-specialist", "packet-analyzer"],
+      "stages": [
+        "quality-assessment",
+        "packet-capture-analysis",
+        "codec-evaluation",
+        "network-optimization",
+        "validation"
+      ]
+    }
+  },
+  "sample_data": {
+    "ise_authentication_logs": {
+      "path": "examples/ise-sample-data/",
+      "description": "15+ realistic ISE authentication failure scenarios",
+      "scenarios": [
+        "certificate-expired",
+        "wrong-vlan-assignment",
+        "radius-timeout",
+        "policy-mismatch",
+        "device-profiling-failed"
+      ]
+    },
+    "voip_call_data": {
+      "path": "examples/voip-sample-data/",
+      "description": "PCAP files and call quality analysis examples",
+      "scenarios": [
+        "poor-audio-quality",
+        "call-drops",
+        "registration-failures",
+        "codec-issues"
+      ]
+    },
+    "network_configs": {
+      "path": "examples/device-configs/",
+      "description": "Router, switch, and CUCM configuration examples",
+      "types": [
+        "switch-802.1x-config",
+        "router-voice-config",
+        "cucm-integration-config"
+      ]
+    }
+  },
+  "integration": {
+    "pyats_launcher": {
+      "script": "scripts/pyats_launcher.py",
+      "description": "Python script for pyATS integration and health monitoring",
+      "capabilities": [
+        "environment-detection",
+        "health-checks",
+        "device-automation"
+      ]
+    },
+    "docker_support": {
+      "compose_file": "docker-compose.yml",
+      "description": "Docker environment for consistent development",
+      "services": ["pyats", "wireshark", "development"]
+    }
+  },
+  "documentation": {
+    "navigation_guide": "docs/NAVIGATION_GUIDE.md",
+    "simplicity_guide": "docs/SIMPLICITY_GUIDE.md",
+    "network_engineering": "docs/network-engineering/",
+    "operations": "docs/operations/",
+    "examples": "examples/",
+    "testing_methodology": "docs/operations/FRAMEWORK_TESTING_METHODOLOGY.md",
+    "test_report": "docs/operations/FRAMEWORK_TEST_REPORT.md"
+  },
+  "validation": {
+    "framework_grade": "A+ (98/100)",
+    "test_date": "2025-09-27",
+    "user_journeys_validated": 5,
+    "command_interfaces_tested": 4,
+    "simplicity_references": 359,
+    "documentation_files": 58
+  }
+}

@@ -1,0 +1,105 @@
+# ISE Guest Access Portal Issues
+# Scenario: Multiple guest portal problems affecting user experience
+
+# Guest registration portal certificate error
+2024-09-27 13:15:23,456 INFO [Guest-Portal]:[Thread-3456] - Guest registration attempt from IP: 10.10.10.45
+2024-09-27 13:15:23,457 DEBUG [Guest-Portal]:[Thread-3456] - Client User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+2024-09-27 13:15:23,458 DEBUG [Guest-Portal]:[Thread-3456] - SSL handshake initiated
+2024-09-27 13:15:23,567 ERROR [Guest-Portal]:[Thread-3456] - SSL certificate warning presented to client
+2024-09-27 13:15:23,568 WARN [Guest-Portal]:[Thread-3456] - Certificate subject mismatch: cert=ise-guest.company.com, requested=guestportal.company.com
+2024-09-27 13:15:23,569 INFO [Guest-Portal]:[Thread-3456] - Client abandoned session due to certificate warning
+
+# Email validation failure
+2024-09-27 13:22:15,789 INFO [Guest-Portal]:[Thread-3467] - Guest self-registration attempt
+2024-09-27 13:22:15,790 DEBUG [Guest-Portal]:[Thread-3467] - Registration data: FirstName=John, LastName=Visitor, Email=jvisitor@temp-email.com, Phone=555-123-4567
+2024-09-27 13:22:15,791 DEBUG [Email-Validator]:[Thread-3467] - Validating email domain: temp-email.com
+2024-09-27 13:22:15,892 ERROR [Email-Validator]:[Thread-3467] - Email domain rejected: temp-email.com is in blocked domains list
+2024-09-27 13:22:15,893 INFO [Guest-Portal]:[Thread-3467] - Registration FAILED: Invalid email domain, User=jvisitor@temp-email.com
+
+# SMS delivery failure
+2024-09-27 13:30:45,123 INFO [Guest-Portal]:[Thread-3478] - Guest registration successful: FirstName=Sarah, LastName=Client, Email=sclient@business.com
+2024-09-27 13:30:45,124 DEBUG [SMS-Service]:[Thread-3478] - Sending SMS credentials to phone: +1-555-987-6543
+2024-09-27 13:30:45,125 DEBUG [SMS-Gateway]:[Thread-3478] - SMS gateway request: https://sms.provider.com/api/send
+2024-09-27 13:30:48,567 ERROR [SMS-Gateway]:[Thread-3478] - SMS delivery failed: HTTP 429 - Rate limit exceeded
+2024-09-27 13:30:48,568 ERROR [SMS-Service]:[Thread-3478] - Failed to deliver credentials via SMS to +1-555-987-6543
+2024-09-27 13:30:48,569 INFO [Guest-Portal]:[Thread-3478] - Guest credentials sent via email only due to SMS failure
+
+# Sponsor approval workflow timeout
+2024-09-27 13:45:12,345 INFO [Sponsor-Workflow]:[Thread-3489] - Sponsor approval request created
+2024-09-27 13:45:12,346 DEBUG [Sponsor-Workflow]:[Thread-3489] - Guest request: FirstName=Mike, LastName=Contractor, Email=mcontractor@vendor.com, Sponsor=jmanager@company.com
+2024-09-27 13:45:12,456 DEBUG [Email-Service]:[Thread-3489] - Sponsor notification email sent to jmanager@company.com
+2024-09-27 13:45:12,457 INFO [Sponsor-Workflow]:[Thread-3489] - Guest request pending sponsor approval, ID=GR-2024-0927-001
+
+# Sponsor notification email delivery issue
+2024-09-27 13:45:15,678 DEBUG [SMTP-Client]:[Thread-3489] - Connecting to mail server: smtp.company.com:587
+2024-09-27 13:45:18,890 ERROR [SMTP-Client]:[Thread-3489] - SMTP connection timeout to smtp.company.com:587
+2024-09-27 13:45:18,891 ERROR [Email-Service]:[Thread-3489] - Failed to send sponsor notification email
+2024-09-27 13:45:18,892 WARN [Sponsor-Workflow]:[Thread-3489] - Sponsor jmanager@company.com not notified of pending guest request
+
+# Portal customization CSS loading error
+2024-09-27 14:00:33,234 INFO [Guest-Portal]:[Thread-3501] - Portal access from IP: 10.10.10.67
+2024-09-27 14:00:33,235 DEBUG [Portal-Renderer]:[Thread-3501] - Loading portal template: custom-company-portal
+2024-09-27 14:00:33,236 DEBUG [CSS-Loader]:[Thread-3501] - Loading custom stylesheet: /portal/custom/company-theme.css
+2024-09-27 14:00:33,345 ERROR [CSS-Loader]:[Thread-3501] - Custom CSS file not found: /portal/custom/company-theme.css
+2024-09-27 14:00:33,346 WARN [Portal-Renderer]:[Thread-3501] - Falling back to default portal styling
+2024-09-27 14:00:33,347 INFO [Guest-Portal]:[Thread-3501] - Portal rendered with default theme due to customization error
+
+# Guest account expiration issue
+2024-09-27 14:15:45,567 INFO [Guest-Session]:[Thread-3512] - Guest authentication attempt: username=guest_sarah_20240927
+2024-09-27 14:15:45,568 DEBUG [Guest-Database]:[Thread-3512] - Querying guest account: guest_sarah_20240927
+2024-09-27 14:15:45,679 DEBUG [Guest-Database]:[Thread-3512] - Account found: Created=2024-09-27 08:30:45, ValidFrom=2024-09-27 08:30:45, ValidUntil=2024-09-27 14:30:45
+2024-09-27 14:15:45,680 ERROR [Guest-Session]:[Thread-3512] - Guest account expired: Current time 14:15:45 > Expiry time 14:30:45
+2024-09-27 14:15:45,681 INFO [Guest-Session]:[Thread-3512] - Authentication FAILED: Account expired, User=guest_sarah_20240927
+
+# Wait, that's incorrect - the account should still be valid. Let me check...
+2024-09-27 14:15:45,782 DEBUG [Time-Validation]:[Thread-3512] - Current server time: 2024-09-27 14:15:45 UTC
+2024-09-27 14:15:45,783 DEBUG [Time-Validation]:[Thread-3512] - Account expiry time: 2024-09-27 14:30:45 UTC
+2024-09-27 14:15:45,784 ERROR [Time-Validation]:[Thread-3512] - Logic error in expiration check: 14:15:45 is BEFORE 14:30:45, should be valid
+2024-09-27 14:15:45,785 ERROR [Guest-Session]:[Thread-3512] - Bug in expiration validation logic causing premature account expiration
+
+# Portal redirection loop
+2024-09-27 14:25:12,890 INFO [Guest-Portal]:[Thread-3523] - Guest authentication successful: username=guest_mike_contractor
+2024-09-27 14:25:12,891 DEBUG [Portal-Redirect]:[Thread-3523] - Determining post-authentication redirect URL
+2024-09-27 14:25:12,892 DEBUG [Portal-Redirect]:[Thread-3523] - Original URL: https://www.google.com
+2024-09-27 14:25:12,893 DEBUG [URL-Validator]:[Thread-3523] - Validating redirect URL: https://www.google.com
+2024-09-27 14:25:12,894 DEBUG [URL-Validator]:[Thread-3523] - External URL detected, checking whitelist...
+2024-09-27 14:25:12,995 ERROR [URL-Validator]:[Thread-3523] - URL https://www.google.com not in allowed redirect list
+2024-09-27 14:25:12,996 DEBUG [Portal-Redirect]:[Thread-3523] - Redirecting to default success page: https://guestportal.company.com/portal/success
+2024-09-27 14:25:13,097 ERROR [Portal-Redirect]:[Thread-3523] - Success page misconfigured, redirecting back to portal login
+2024-09-27 14:25:13,098 WARN [Guest-Portal]:[Thread-3523] - Potential redirect loop detected for user: guest_mike_contractor
+
+# Portal performance during peak usage
+2024-09-27 14:30:00,000 WARN [Portal-Performance]:[Monitor] - High portal load detected
+2024-09-27 14:30:00,001 INFO [Portal-Performance]:[Monitor] - Active portal sessions: 245 (threshold: 200)
+2024-09-27 14:30:00,002 INFO [Portal-Performance]:[Monitor] - Average page load time: 8.5 seconds (target: <3 seconds)
+2024-09-27 14:30:00,003 WARN [Portal-Performance]:[Monitor] - Database connection pool utilization: 95% (warning: >80%)
+2024-09-27 14:30:00,004 ERROR [Portal-Performance]:[Monitor] - Portal response times degraded, users experiencing delays
+
+# Guest database cleanup failure
+2024-09-27 15:00:00,000 INFO [Guest-Cleanup]:[Scheduler] - Starting expired guest account cleanup
+2024-09-27 15:00:00,001 DEBUG [Guest-Cleanup]:[Scheduler] - Scanning for accounts expired before: 2024-09-26 15:00:00
+2024-09-27 15:00:02,345 INFO [Guest-Cleanup]:[Scheduler] - Found 1,247 expired guest accounts for deletion
+2024-09-27 15:00:02,346 DEBUG [Guest-Cleanup]:[Scheduler] - Deleting guest account: guest_old_user_001
+2024-09-27 15:00:15,678 ERROR [Guest-Cleanup]:[Scheduler] - Database error during cleanup: Foreign key constraint violation
+2024-09-27 15:00:15,679 ERROR [Guest-Cleanup]:[Scheduler] - Cannot delete guest accounts with active session references
+2024-09-27 15:00:15,680 WARN [Guest-Cleanup]:[Scheduler] - Cleanup failed, expired accounts accumulating in database
+
+# Multiple device registration issue
+2024-09-27 15:15:23,456 INFO [Device-Registration]:[Thread-3567] - Device registration request from user: jdoe@company.com
+2024-09-27 15:15:23,457 DEBUG [Device-Registration]:[Thread-3567] - Device details: MAC=A1-B2-C3-12-34-56, Type=Smartphone, OS=iOS 17.1
+2024-09-27 15:15:23,458 DEBUG [Device-Limit]:[Thread-3567] - Checking device limit for user: jdoe@company.com
+2024-09-27 15:15:23,567 DEBUG [Device-Limit]:[Thread-3567] - Current registered devices: 3, Limit: 3
+2024-09-27 15:15:23,568 ERROR [Device-Registration]:[Thread-3567] - Device limit exceeded for user jdoe@company.com
+2024-09-27 15:15:23,569 INFO [Device-Registration]:[Thread-3567] - Registration FAILED: Device limit reached, User=jdoe@company.com
+
+# Summary of guest portal issues:
+# 1. SSL certificate subject name mismatch causing warnings
+# 2. Email domain validation too restrictive
+# 3. SMS gateway rate limiting causing delivery failures
+# 4. Email server connectivity issues affecting sponsor notifications
+# 5. Portal customization files missing
+# 6. Bug in account expiration validation logic
+# 7. Redirect URL whitelist too restrictive causing loops
+# 8. Performance degradation during peak usage
+# 9. Database cleanup failures due to referential integrity
+# 10. Device registration limits blocking legitimate users

@@ -1,0 +1,60 @@
+# ISE Authentication Failure Sample Logs
+# Scenario: 802.1X authentication failures with mixed issues
+
+# Failed authentication - Certificate validation failure
+2024-09-27 09:15:23,045 INFO [Authentication-Policy-Agent]:[Thread-5142] - Authentication Request Details: UserName=jdoe@company.com, CallingStationId=00-1B-77-12-34-56, NASIPAddress=192.168.10.5, NASPortId=GigabitEthernet1/0/12, AuthenticationMethod=dot1x, IdentitySourceId=AD1
+2024-09-27 09:15:23,052 DEBUG [Authentication-Policy-Agent]:[Thread-5142] - EAP-TLS: Certificate chain validation started
+2024-09-27 09:15:23,067 ERROR [Authentication-Policy-Agent]:[Thread-5142] - EAP-TLS: Certificate validation failed - Certificate has expired. Certificate Subject: CN=jdoe@company.com, Issuer: CN=Company Root CA, Serial: 0x1234567890ABCDEF
+2024-09-27 09:15:23,068 INFO [Authentication-Policy-Agent]:[Thread-5142] - Authentication FAILED: UserName=jdoe@company.com, FailureReason=Certificate validation failed, ResponseTime=23ms
+
+# Failed authentication - Wrong credentials
+2024-09-27 09:16:45,123 INFO [Authentication-Policy-Agent]:[Thread-5156] - Authentication Request Details: UserName=msmith@company.com, CallingStationId=A0-88-B4-56-78-90, NASIPAddress=192.168.10.8, NASPortId=GigabitEthernet2/0/5, AuthenticationMethod=dot1x, IdentitySourceId=AD1
+2024-09-27 09:16:45,124 DEBUG [Authentication-Policy-Agent]:[Thread-5156] - PEAP: Starting PEAP authentication with MSCHAPv2
+2024-09-27 09:16:45,126 DEBUG [Authentication-Policy-Agent]:[Thread-5156] - Server certificate validation successful
+2024-09-27 09:16:45,189 DEBUG [Authentication-Policy-Agent]:[Thread-5156] - MSCHAPv2: Authentication against Active Directory
+2024-09-27 09:16:45,267 ERROR [Authentication-Policy-Agent]:[Thread-5156] - Active Directory authentication failed: Invalid username or password
+2024-09-27 09:16:45,268 INFO [Authentication-Policy-Agent]:[Thread-5156] - Authentication FAILED: UserName=msmith@company.com, FailureReason=Invalid credentials, ResponseTime=145ms
+
+# Failed authentication - Account locked
+2024-09-27 09:17:12,234 INFO [Authentication-Policy-Agent]:[Thread-5167] - Authentication Request Details: UserName=bwilson@company.com, CallingStationId=F4-8E-38-AA-BB-CC, NASIPAddress=192.168.10.12, NASPortId=GigabitEthernet3/0/8, AuthenticationMethod=dot1x, IdentitySourceId=AD1
+2024-09-27 09:17:12,235 DEBUG [Authentication-Policy-Agent]:[Thread-5167] - PEAP: Starting PEAP authentication with MSCHAPv2
+2024-09-27 09:17:12,237 DEBUG [Authentication-Policy-Agent]:[Thread-5167] - Server certificate validation successful
+2024-09-27 09:17:12,298 DEBUG [Authentication-Policy-Agent]:[Thread-5167] - MSCHAPv2: Authentication against Active Directory
+2024-09-27 09:17:12,356 ERROR [Authentication-Policy-Agent]:[Thread-5167] - Active Directory authentication failed: Account is locked out
+2024-09-27 09:17:12,357 INFO [Authentication-Policy-Agent]:[Thread-5167] - Authentication FAILED: UserName=bwilson@company.com, FailureReason=Account locked, ResponseTime=123ms
+
+# Failed authentication - Time synchronization issue
+2024-09-27 09:18:33,445 INFO [Authentication-Policy-Agent]:[Thread-5178] - Authentication Request Details: UserName=alice@company.com, CallingStationId=DC-85-DE-11-22-33, NASIPAddress=192.168.10.15, NASPortId=GigabitEthernet1/0/24, AuthenticationMethod=dot1x, IdentitySourceId=AD1
+2024-09-27 09:18:33,446 DEBUG [Authentication-Policy-Agent]:[Thread-5178] - EAP-TLS: Certificate chain validation started
+2024-09-27 09:18:33,458 ERROR [Authentication-Policy-Agent]:[Thread-5178] - EAP-TLS: Certificate validation failed - Certificate not yet valid. Current time: 2024-09-27 09:18:33, Certificate valid from: 2024-09-27 09:25:00
+2024-09-27 09:18:33,459 INFO [Authentication-Policy-Agent]:[Thread-5178] - Authentication FAILED: UserName=alice@company.com, FailureReason=Certificate time validation failed, ResponseTime=14ms
+
+# Failed authentication - RADIUS shared secret mismatch
+2024-09-27 09:19:01,567 INFO [RADIUS-Handler]:[Thread-5189] - RADIUS Request received from NAS: 192.168.10.20
+2024-09-27 09:19:01,568 ERROR [RADIUS-Handler]:[Thread-5189] - RADIUS Request validation failed: Authenticator validation failed for NAS 192.168.10.20
+2024-09-27 09:19:01,569 INFO [RADIUS-Handler]:[Thread-5189] - RADIUS Access-Reject sent to NAS: 192.168.10.20, Reason: Invalid shared secret
+
+# Failed authentication - Unknown network device
+2024-09-27 09:19:45,678 INFO [RADIUS-Handler]:[Thread-5201] - RADIUS Request received from NAS: 192.168.50.100
+2024-09-27 09:19:45,679 ERROR [RADIUS-Handler]:[Thread-5201] - Network Device not found in ISE database: 192.168.50.100
+2024-09-27 09:19:45,680 INFO [RADIUS-Handler]:[Thread-5201] - RADIUS Access-Reject sent to NAS: 192.168.50.100, Reason: Unknown network device
+
+# Failed authentication - Policy evaluation failure
+2024-09-27 09:20:15,789 INFO [Authentication-Policy-Agent]:[Thread-5212] - Authentication Request Details: UserName=contractor1@company.com, CallingStationId=B8-27-EB-44-55-66, NASIPAddress=192.168.10.25, NASPortId=GigabitEthernet2/0/15, AuthenticationMethod=dot1x, IdentitySourceId=AD1
+2024-09-27 09:20:15,790 DEBUG [Authentication-Policy-Agent]:[Thread-5212] - PEAP: Authentication successful
+2024-09-27 09:20:15,791 DEBUG [Authorization-Policy-Agent]:[Thread-5212] - Authorization policy evaluation started
+2024-09-27 09:20:15,792 DEBUG [Authorization-Policy-Agent]:[Thread-5212] - Checking policy: Employee Access
+2024-09-27 09:20:15,793 DEBUG [Authorization-Policy-Agent]:[Thread-5212] - Policy condition failed: User not in required group
+2024-09-27 09:20:15,794 DEBUG [Authorization-Policy-Agent]:[Thread-5212] - Checking policy: Contractor Access
+2024-09-27 09:20:15,795 DEBUG [Authorization-Policy-Agent]:[Thread-5212] - Policy condition failed: Time restriction - outside allowed hours
+2024-09-27 09:20:15,796 INFO [Authorization-Policy-Agent]:[Thread-5212] - Authorization FAILED: UserName=contractor1@company.com, FailureReason=No matching authorization policy, ResponseTime=7ms
+
+# Successful authentication for comparison
+2024-09-27 09:21:30,890 INFO [Authentication-Policy-Agent]:[Thread-5234] - Authentication Request Details: UserName=admin@company.com, CallingStationId=3C-97-0E-77-88-99, NASIPAddress=192.168.10.5, NASPortId=GigabitEthernet1/0/1, AuthenticationMethod=dot1x, IdentitySourceId=AD1
+2024-09-27 09:21:30,891 DEBUG [Authentication-Policy-Agent]:[Thread-5234] - PEAP: Starting PEAP authentication with MSCHAPv2
+2024-09-27 09:21:30,893 DEBUG [Authentication-Policy-Agent]:[Thread-5234] - Server certificate validation successful
+2024-09-27 09:21:30,945 DEBUG [Authentication-Policy-Agent]:[Thread-5234] - MSCHAPv2: Authentication against Active Directory successful
+2024-09-27 09:21:30,946 DEBUG [Authorization-Policy-Agent]:[Thread-5234] - Authorization policy evaluation started
+2024-09-27 09:21:30,947 DEBUG [Authorization-Policy-Agent]:[Thread-5234] - Policy matched: IT Admin Access
+2024-09-27 09:21:30,948 DEBUG [Authorization-Policy-Agent]:[Thread-5234] - Authorization attributes: VLAN=100, Filter-ID=ADMIN_ACL, Session-Timeout=28800
+2024-09-27 09:21:30,949 INFO [Authentication-Policy-Agent]:[Thread-5234] - Authentication PASSED: UserName=admin@company.com, AuthorizationProfile=IT-Admin-Profile, ResponseTime=59ms

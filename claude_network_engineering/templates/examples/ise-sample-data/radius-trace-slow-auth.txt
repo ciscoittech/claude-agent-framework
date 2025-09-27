@@ -1,0 +1,138 @@
+# RADIUS Trace - Slow Authentication Performance Issue
+# Scenario: Authentication taking >5 seconds due to Active Directory delays
+
+# Initial Access-Request
+Packet 1: Access-Request (Code: 1, Identifier: 45, Length: 234)
+  Timestamp: 2024-09-27 14:30:15.123
+  Source: 192.168.10.5 (Switch-Core-01)
+  Destination: 192.168.100.10 (ISE-PSN-01)
+
+  Attributes:
+    User-Name: "mwilliams@company.com"
+    User-Password: [Hidden]
+    Calling-Station-Id: "BC-5F-F4-AA-BB-CC"
+    Called-Station-Id: "00-23-04-EE-BE-09:Company-Secure"
+    NAS-IP-Address: 192.168.10.5
+    NAS-Port: 50001
+    NAS-Port-Type: Ethernet (15)
+    NAS-Port-Id: "GigabitEthernet1/0/1"
+    Service-Type: Framed-User (2)
+    Framed-MTU: 1500
+    EAP-Message: Identity Response
+    Message-Authenticator: 0x1a2b3c4d5e6f7890abcdef1234567890
+
+# Access-Challenge - EAP Method Selection (Normal timing)
+Packet 2: Access-Challenge (Code: 11, Identifier: 45, Length: 156)
+  Timestamp: 2024-09-27 14:30:15.167
+  Response Time: 44ms
+  Source: 192.168.100.10 (ISE-PSN-01)
+  Destination: 192.168.10.5 (Switch-Core-01)
+
+  Attributes:
+    EAP-Message: EAP-Request, PEAP (Type: 25)
+    Message-Authenticator: 0x9876543210fedcba0987654321098765
+    State: 0xabcd1234567890ef
+
+# Client Certificate Request
+Packet 3: Access-Request (Code: 1, Identifier: 46, Length: 298)
+  Timestamp: 2024-09-27 14:30:15.234
+  Source: 192.168.10.5
+  Destination: 192.168.100.10
+
+  Attributes:
+    User-Name: "mwilliams@company.com"
+    Calling-Station-Id: "BC-5F-F4-AA-BB-CC"
+    NAS-IP-Address: 192.168.10.5
+    EAP-Message: EAP-Response, PEAP, TLS Client Certificate
+    State: 0xabcd1234567890ef
+    Message-Authenticator: 0x1122334455667788
+
+# Long delay here - Certificate validation taking too long
+Packet 4: Access-Challenge (Code: 11, Identifier: 46, Length: 178)
+  Timestamp: 2024-09-27 14:30:17.890
+  Response Time: 2656ms ⚠️ SLOW - Certificate validation delay
+  Source: 192.168.100.10
+  Destination: 192.168.10.5
+
+  Attributes:
+    EAP-Message: EAP-Request, PEAP, TLS Server Certificate
+    Message-Authenticator: 0xaabbccddeeff1122
+    State: 0xabcd1234567891ef
+
+# TLS Tunnel Establishment
+Packet 5: Access-Request (Code: 1, Identifier: 47, Length: 567)
+  Timestamp: 2024-09-27 14:30:17.945
+  Source: 192.168.10.5
+  Destination: 192.168.100.10
+
+  Attributes:
+    EAP-Message: EAP-Response, PEAP, TLS Handshake Complete
+    State: 0xabcd1234567891ef
+    Message-Authenticator: 0x33445566778899aa
+
+# Inner MSCHAPv2 Challenge
+Packet 6: Access-Challenge (Code: 11, Identifier: 47, Length: 234)
+  Timestamp: 2024-09-27 14:30:17.978
+  Response Time: 33ms
+  Source: 192.168.100.10
+  Destination: 192.168.10.5
+
+  Attributes:
+    EAP-Message: EAP-Request, MSCHAPv2 Challenge
+    Message-Authenticator: 0xbbccddee11223344
+    State: 0xabcd1234567892ef
+
+# MSCHAPv2 Response
+Packet 7: Access-Request (Code: 1, Identifier: 48, Length: 345)
+  Timestamp: 2024-09-27 14:30:18.012
+  Source: 192.168.10.5
+  Destination: 192.168.100.10
+
+  Attributes:
+    EAP-Message: EAP-Response, MSCHAPv2 Response
+    State: 0xabcd1234567892ef
+    Message-Authenticator: 0x55667788990011aa
+
+# Major delay here - Active Directory lookup taking too long
+Packet 8: Access-Challenge (Code: 11, Identifier: 48, Length: 189)
+  Timestamp: 2024-09-27 14:30:20.567
+  Response Time: 2555ms ⚠️ SLOW - Active Directory authentication delay
+  Source: 192.168.100.10
+  Destination: 192.168.10.5
+
+  Attributes:
+    EAP-Message: EAP-Success
+    Message-Authenticator: 0x99001122334455bb
+    State: 0xabcd1234567893ef
+
+# Final Access-Accept with authorization
+Packet 9: Access-Accept (Code: 2, Identifier: 48, Length: 267)
+  Timestamp: 2024-09-27 14:30:20.634
+  Response Time: 67ms
+  Total Authentication Time: 5511ms ⚠️ SLOW - Exceeds 5 second threshold
+  Source: 192.168.100.10
+  Destination: 192.168.10.5
+
+  Attributes:
+    User-Name: "mwilliams@company.com"
+    Class: 0x495345434c415353233d41444d494e3d55736572
+    Tunnel-Type: VLAN (13)
+    Tunnel-Medium-Type: 802 (6)
+    Tunnel-Private-Group-ID: "100"
+    Filter-ID: "EMPLOYEE_ACL"
+    Session-Timeout: 28800
+    Termination-Action: RADIUS-Request (1)
+    EAP-Message: EAP-Success
+    Message-Authenticator: 0xccddee1122334455
+
+# Performance Analysis Summary:
+# Total Authentication Time: 5.511 seconds
+# Major delays:
+# 1. Certificate validation: 2.656 seconds (Packet 3->4)
+# 2. Active Directory authentication: 2.555 seconds (Packet 7->8)
+#
+# Recommendations:
+# 1. Check Certificate Revocation List (CRL) access
+# 2. Verify Active Directory domain controller performance
+# 3. Consider LDAP connection pooling optimization
+# 4. Review certificate validation caching settings

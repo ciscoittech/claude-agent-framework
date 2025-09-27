@@ -1,0 +1,23 @@
+# Core dependencies
+click>=8.0.0
+pyyaml>=6.0
+jinja2>=3.0.0
+rich>=12.0.0
+inquirer>=2.10.0
+
+# Optional networking dependencies
+# Install with: pip install claude-agent-network-engineering[network]
+# netmiko>=4.0.0
+# napalm>=4.0.0
+# paramiko>=2.9.0
+
+# Optional pyATS dependencies
+# Install with: pip install claude-agent-network-engineering[pyats]
+# pyats[full]>=23.1
+# genie>=23.1
+
+# Development dependencies (install with [dev])
+# pytest>=7.0.0
+# black>=22.0.0
+# flake8>=4.0.0
+# mypy>=0.950

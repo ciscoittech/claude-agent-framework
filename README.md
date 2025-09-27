@@ -10,32 +10,49 @@ Transform your network operations with expert-level troubleshooting, automation,
 
 ## 🚀 **Get Started in 2 Minutes**
 
-### **Step 1: Clone and Setup (30 seconds)**
+### **📦 Option 1: Package Installation (Recommended)**
+
+**NPM Package:**
+```bash
+# Install globally
+npm install -g @claude-agent/network-engineering
+
+# Setup in your project
+cd your-project
+claude-network-setup
+
+# Start using
+claude-code
+/ise-toolkit auth-troubleshoot "test"
+```
+
+**PyPI Package:**
+```bash
+# Install with extras
+pip install claude-agent-network-engineering[network,pyats]
+
+# Setup in your project
+cd your-project
+claude-network-setup
+
+# Start using
+claude-code
+/ise-toolkit auth-troubleshoot "test"
+```
+
+### **📥 Option 2: Git Clone Installation**
+
 ```bash
 # Clone the network engineering edition
 git clone -b network-engineering https://github.com/ciscoittech/claude-agent-framework.git
 cd claude-agent-framework
 
-# Quick setup (Docker or local)
+# Quick setup
 ./scripts/setup.sh
-```
 
-### **Step 2: Launch Claude Code (30 seconds)**
-```bash
-# Start Claude Code in the project directory
+# Start using
 claude-code
-```
-
-### **Step 3: Try Your First Command (60 seconds)**
-```bash
-# Basic ISE troubleshooting
-/ise-toolkit auth-troubleshoot "user-authentication-failed"
-
-# VoIP call quality analysis
-/voip-toolkit call-quality-analysis "poor-audio-quality"
-
-# Research Claude Code best practices
-/claude-docs best-practices "network automation"
+/ise-toolkit auth-troubleshoot "test"
 ```
 
 **🎯 That's it!** You now have access to enterprise-grade network troubleshooting AI.
@@ -209,7 +226,8 @@ This edition includes specialized agents ready for network engineering workflows
 | **`examples/`** | Real-world use cases | Practical applications |
 
 ### **🔗 Quick Reference**
-- **Daily Commands**: `python3 scripts/pyats_launcher.py`, `/ise-toolkit`, `/voip-toolkit`
+- **Package Installation**: [`PACKAGE_INSTALLATION.md`](PACKAGE_INSTALLATION.md) - Complete package guide
+- **Daily Commands**: `claude-pyats-launcher`, `/ise-toolkit`, `/voip-toolkit`
 - **Help & Support**: [`docs/NAVIGATION_GUIDE.md`](docs/NAVIGATION_GUIDE.md) - Troubleshooting navigation
 - **Testing Guide**: [`docs/operations/FRAMEWORK_TESTING_METHODOLOGY.md`](docs/operations/FRAMEWORK_TESTING_METHODOLOGY.md)
 - **Latest Results**: [`docs/operations/FRAMEWORK_TEST_REPORT.md`](docs/operations/FRAMEWORK_TEST_REPORT.md)

@@ -1,0 +1,32 @@
+# Include package metadata
+include README.md
+include CHANGELOG.md
+include LICENSE
+include requirements.txt
+include PACKAGE_INSTALLATION.md
+
+# Include package configuration
+include setup.py
+include package.json
+
+# Include all template files
+recursive-include claude_network_engineering/templates *
+
+# Include scripts
+recursive-include bin *
+recursive-include scripts *
+
+# Documentation
+recursive-include docs *.md *.txt *.rst
+recursive-include examples *.md *.txt *.yaml *.yml *.json
+
+# Claude framework files
+recursive-include .claude *.md *.json
+recursive-include .claude-library *.md *.json
+
+# Exclude development files
+exclude .gitignore
+exclude *.pyc
+exclude .DS_Store
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
