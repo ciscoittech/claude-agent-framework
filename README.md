@@ -55,6 +55,27 @@ claude-code
 /ise-toolkit auth-troubleshoot "test"
 ```
 
+### **🔗 Option 3: Direct Prompt Usage (No Installation)**
+
+**For Claude.ai users who want to use individual agents:**
+
+```bash
+# Download specific agent prompts
+curl -o ise-specialist.md https://raw.githubusercontent.com/ciscoittech/claude-agent-framework/network-engineering/.claude-library/agents/specialized/ise-specialist.md
+
+curl -o voip-specialist.md https://raw.githubusercontent.com/ciscoittech/claude-agent-framework/network-engineering/.claude-library/agents/specialized/voip-specialist.md
+
+curl -o pyats-automation.md https://raw.githubusercontent.com/ciscoittech/claude-agent-framework/network-engineering/examples/pyats-simple.md
+```
+
+**Or browse and copy directly from GitHub:**
+- **[ISE Specialist](https://github.com/ciscoittech/claude-agent-framework/blob/network-engineering/.claude-library/agents/specialized/ise-specialist.md)** - Copy and paste into Claude.ai for ISE troubleshooting
+- **[VoIP Specialist](https://github.com/ciscoittech/claude-agent-framework/blob/network-engineering/.claude-library/agents/specialized/voip-specialist.md)** - Copy and paste for voice infrastructure analysis
+- **[Authentication Analyzer](https://github.com/ciscoittech/claude-agent-framework/blob/network-engineering/.claude-library/agents/specialized/authentication-analyzer.md)** - Copy and paste for RADIUS troubleshooting
+- **[Network Troubleshooter](https://github.com/ciscoittech/claude-agent-framework/blob/network-engineering/examples/network-troubleshooter.md)** - Copy and paste for general network issues
+
+**Usage:** Copy any agent's markdown content and paste it as a system prompt in Claude.ai, then ask your network engineering questions!
+
 **🎯 That's it!** You now have access to enterprise-grade network troubleshooting AI.
 
 ---
@@ -72,6 +93,14 @@ This framework provides powerful pre-built agents for network infrastructure, bu
 
 ---
 
+## 🎯 **Choose Your Setup Method**
+
+| Method | Best For | Setup Time | Features |
+|--------|----------|------------|----------|
+| **📦 NPM/PyPI Package** | Production use, teams | 2 minutes | Full framework, auto-updates, CLI tools |
+| **📥 Git Clone** | Development, customization | 3 minutes | Full framework, examples, latest features |
+| **🔗 Direct Prompts** | Quick testing, Claude.ai users | 30 seconds | Individual agents, no installation |
+
 ## 🛠️ **What You Get Out of the Box**
 
 ### **Specialized Network Agents**
@@ -79,12 +108,20 @@ This framework provides powerful pre-built agents for network infrastructure, bu
 - **📞 VoIP Infrastructure Expert**: Call quality, CUCM integration, SIP diagnostics
 - **🤖 Network Automation Engineer**: pyATS integration, health monitoring, compliance
 - **📚 Claude Code Researcher**: Live documentation and best practices
+- **🔍 Authentication Analyzer**: RADIUS troubleshooting, certificate validation
+- **📊 Packet Analyzer**: Network traffic analysis, Wireshark integration
 
-### **Command Interfaces (Ready to Use)**
+### **Command Interfaces (For Claude Code Users)**
 - **`/ise-toolkit`**: 8 ISE operations (auth-troubleshoot, policy-validate, etc.)
 - **`/voip-toolkit`**: 6 VoIP operations (call-quality, packet-analysis, etc.)
 - **`/claude-docs`**: 7 research operations (architecture, best-practices, etc.)
 - **`/load-cisco-docs`**: Intelligent Cisco documentation fetching
+
+### **System Prompts (For Claude.ai Users)**
+- **Individual agent prompts** available as standalone system prompts
+- **Copy-paste ready** from GitHub repository
+- **No installation required** - just paste and use
+- **Full agent capabilities** in Claude.ai interface
 
 ### **Sample Data Included**
 - **ISE Authentication Logs**: 15+ realistic failure scenarios
@@ -227,10 +264,51 @@ This edition includes specialized agents ready for network engineering workflows
 
 ### **🔗 Quick Reference**
 - **Package Installation**: [`PACKAGE_INSTALLATION.md`](PACKAGE_INSTALLATION.md) - Complete package guide
+- **System Prompts**: Browse [agents directory](https://github.com/ciscoittech/claude-agent-framework/tree/network-engineering/.claude-library/agents/specialized) for copy-paste prompts
 - **Daily Commands**: `claude-pyats-launcher`, `/ise-toolkit`, `/voip-toolkit`
 - **Help & Support**: [`docs/NAVIGATION_GUIDE.md`](docs/NAVIGATION_GUIDE.md) - Troubleshooting navigation
 - **Testing Guide**: [`docs/operations/FRAMEWORK_TESTING_METHODOLOGY.md`](docs/operations/FRAMEWORK_TESTING_METHODOLOGY.md)
 - **Latest Results**: [`docs/operations/FRAMEWORK_TEST_REPORT.md`](docs/operations/FRAMEWORK_TEST_REPORT.md)
+
+---
+
+## 🌐 **For Claude.ai Users: Instant Agent Access**
+
+**Don't want to install anything? Use our agents directly in Claude.ai:**
+
+### **🚀 Quick Start for Claude.ai**
+
+1. **Pick an agent** from the list below
+2. **Click the GitHub link** to view the agent prompt
+3. **Copy the entire markdown content**
+4. **Paste it as a system prompt** in Claude.ai
+5. **Start asking your network questions!**
+
+### **📋 Available System Prompts**
+
+| Agent | Use Case | GitHub Link |
+|-------|----------|-------------|
+| **🔧 ISE Specialist** | Authentication issues, RADIUS logs, policy validation | [📄 Copy Prompt](https://raw.githubusercontent.com/ciscoittech/claude-agent-framework/network-engineering/.claude-library/agents/specialized/ise-specialist.md) |
+| **📞 VoIP Specialist** | Call quality, CUCM issues, SIP troubleshooting | [📄 Copy Prompt](https://raw.githubusercontent.com/ciscoittech/claude-agent-framework/network-engineering/.claude-library/agents/specialized/voip-specialist.md) |
+| **🔍 Authentication Analyzer** | RADIUS analysis, certificate problems, EAP issues | [📄 Copy Prompt](https://raw.githubusercontent.com/ciscoittech/claude-agent-framework/network-engineering/.claude-library/agents/specialized/authentication-analyzer.md) |
+| **📊 Packet Analyzer** | Wireshark analysis, traffic patterns, network flows | [📄 Copy Prompt](https://raw.githubusercontent.com/ciscoittech/claude-agent-framework/network-engineering/.claude-library/agents/specialized/packet-analyzer.md) |
+| **🌐 Network Troubleshooter** | General network issues, connectivity problems | [📄 Copy Prompt](https://raw.githubusercontent.com/ciscoittech/claude-agent-framework/network-engineering/examples/network-troubleshooter.md) |
+| **⚙️ pyATS Automation** | Network automation, health checks, device testing | [📄 Copy Prompt](https://raw.githubusercontent.com/ciscoittech/claude-agent-framework/network-engineering/examples/pyats-simple.md) |
+
+### **💡 Pro Tips for Claude.ai Usage**
+
+```markdown
+Example conversation:
+👤 User: [Paste ISE Specialist prompt as system message]
+👤 User: "I have users failing authentication with error 'Invalid certificate'. Here are the logs: [paste logs]"
+🤖 Claude: [Provides expert ISE analysis and step-by-step troubleshooting]
+```
+
+**Sample Questions to Ask:**
+- "Analyze these ISE authentication logs and tell me why users are failing"
+- "I have poor call quality in CUCM, help me troubleshoot using these RTP stats"
+- "Create a pyATS script to check interface status on my Cisco routers"
+- "Explain this Wireshark capture - why is this traffic being dropped?"
 
 ---
 
