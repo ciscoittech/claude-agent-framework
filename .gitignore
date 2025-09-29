@@ -85,3 +85,13 @@ temp/
 
 # Project specific
 # Add any project-specific ignores here
+
+# Observability testing artifacts (internal testing only)
+test_observability_*.py
+test_output_*.md
+observability_test_results.json
+OBSERVABILITY_TEST_PLAN.md
+OBSERVABILITY_TEST_RESULTS.md
+
+# Logfire credentials
+.logfire/
