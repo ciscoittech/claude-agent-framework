@@ -1,0 +1,451 @@
+{
+  "version": "1.0.0",
+  "framework": "Claude Agent Framework Meta-Implementation",
+  "description": "Agent system for developing the Claude Agent Framework itself",
+  "created": "2025-01-30",
+
+  "settings": {
+    "auto_load_agents": false,
+    "max_parallel_agents": 5,
+    "cache_loaded_agents": true,
+    "performance_monitoring": true,
+    "meta_framework_mode": true,
+    "max_context_size_kb": 10,
+    "parallel_execution_default": true,
+    "observability": {
+      "enabled": true,
+      "provider": "logfire",
+      "config": {
+        "project_name": "claude-agent-framework",
+        "validate_outputs": true,
+        "auto_spawn_observer": false,
+        "log_level": "info",
+        "track_context_size": true,
+        "track_tool_usage": true
+      }
+    }
+  },
+
+  "agents": {
+    "framework-system-architect": {
+      "path": ".claude-library/agents/core/framework-system-architect.md",
+      "type": "core",
+      "domain": "architecture",
+      "tools": ["Read", "Write", "Grep", "Glob", "Edit"],
+      "triggers": [
+        "design", "architecture", "system", "structure", "pattern",
+        "framework architecture", "agent system", "workflow design"
+      ],
+      "contexts": [
+        "framework-architecture.md",
+        "framework-development-patterns.md"
+      ],
+      "priority": 1,
+      "specialization": "Framework architecture and system design",
+      "observability_compatible": true,
+      "performance_targets": {
+        "analysis_time": "30s",
+        "design_complexity": "high",
+        "framework_compliance": "required"
+      }
+    },
+
+    "framework-senior-engineer": {
+      "path": ".claude-library/agents/core/framework-senior-engineer.md",
+      "type": "core",
+      "domain": "implementation",
+      "tools": ["Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob"],
+      "triggers": [
+        "implement", "build", "create", "develop", "code",
+        "framework implementation", "agent development", "workflow creation"
+      ],
+      "contexts": [
+        "framework-architecture.md",
+        "framework-development-patterns.md",
+        "performance-optimization.md"
+      ],
+      "priority": 1,
+      "specialization": "Framework component implementation and optimization",
+      "performance_targets": {
+        "implementation_time": "45s",
+        "code_quality": "high",
+        "framework_compliance": "required"
+      }
+    },
+
+    "framework-code-reviewer": {
+      "path": ".claude-library/agents/core/framework-code-reviewer.md",
+      "type": "core",
+      "domain": "quality_assurance",
+      "tools": ["Read", "Grep", "Glob", "Bash"],
+      "restrictions": ["Write", "Edit"],
+      "triggers": [
+        "review", "validate", "check", "audit", "quality",
+        "framework review", "code validation", "compliance check"
+      ],
+      "contexts": [
+        "framework-architecture.md",
+        "performance-optimization.md"
+      ],
+      "priority": 1,
+      "specialization": "Framework quality assurance and compliance validation",
+      "performance_targets": {
+        "review_time": "30s",
+        "accuracy": "high",
+        "framework_standards": "strict"
+      }
+    },
+
+    "documentation-specialist": {
+      "path": ".claude-library/agents/specialized/documentation-specialist.md",
+      "type": "specialized",
+      "domain": "documentation",
+      "tools": ["Read", "Write", "Edit", "MultiEdit", "Grep", "Glob"],
+      "triggers": [
+        "document", "docs", "guide", "tutorial", "readme",
+        "framework documentation", "user guide", "api docs"
+      ],
+      "contexts": [
+        "framework-architecture.md",
+        "framework-development-patterns.md"
+      ],
+      "priority": 2,
+      "specialization": "Framework documentation creation and maintenance",
+      "performance_targets": {
+        "documentation_time": "30s",
+        "clarity": "high",
+        "completeness": "comprehensive"
+      }
+    },
+
+    "framework-validation-engineer": {
+      "path": ".claude-library/agents/specialized/framework-validation-engineer.md",
+      "type": "specialized",
+      "domain": "testing",
+      "tools": ["Read", "Bash", "Grep", "Glob", "Write", "Edit"],
+      "triggers": [
+        "test", "validate", "benchmark", "measure", "verify",
+        "framework testing", "performance validation", "quality assurance"
+      ],
+      "contexts": [
+        "framework-architecture.md",
+        "performance-optimization.md",
+        "framework-development-patterns.md"
+      ],
+      "priority": 2,
+      "specialization": "Framework testing and performance validation",
+      "performance_targets": {
+        "testing_time": "60s",
+        "coverage": "comprehensive",
+        "accuracy": "high"
+      }
+    },
+
+    "example-generator": {
+      "path": ".claude-library/agents/specialized/example-generator.md",
+      "type": "specialized",
+      "domain": "examples",
+      "tools": ["Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob"],
+      "triggers": [
+        "example", "demo", "tutorial", "showcase", "sample",
+        "framework example", "implementation demo", "usage tutorial"
+      ],
+      "contexts": [
+        "framework-architecture.md",
+        "framework-development-patterns.md"
+      ],
+      "priority": 3,
+      "specialization": "Framework example creation and demonstration",
+      "performance_targets": {
+        "example_creation_time": "60s",
+        "educational_value": "high",
+        "framework_demonstration": "comprehensive"
+      }
+    },
+
+    "observer": {
+      "path": ".claude-library/agents/observability/observer.md",
+      "type": "observability",
+      "domain": "validation",
+      "tools": ["Read", "Bash", "Grep", "Glob"],
+      "restrictions": ["Write", "Edit"],
+      "triggers": [
+        "validate", "observe", "verify", "check outputs",
+        "workflow validation", "output verification"
+      ],
+      "contexts": [],
+      "priority": 3,
+      "specialization": "Workflow output validation and verification",
+      "requires_observability": true,
+      "observability_compatible": true,
+      "performance_targets": {
+        "validation_time": "10s",
+        "accuracy": "95%"
+      }
+    }
+  },
+
+  "commands": {
+    "pattern": {
+      "path": ".claude/commands/pattern.md",
+      "description": "Create new agent patterns or improve existing ones",
+      "agents": [
+        "framework-system-architect",
+        "framework-senior-engineer",
+        "framework-code-reviewer",
+        "documentation-specialist"
+      ],
+      "workflow": "parallel-sequential",
+      "stages": {
+        "analysis": {
+          "type": "parallel",
+          "agents": ["framework-system-architect"],
+          "duration": "30s"
+        },
+        "implementation": {
+          "type": "parallel",
+          "agents": ["framework-senior-engineer", "framework-code-reviewer"],
+          "duration": "45s"
+        },
+        "documentation": {
+          "type": "sequential",
+          "agents": ["documentation-specialist"],
+          "duration": "15s"
+        }
+      },
+      "contexts": [
+        "framework-architecture.md",
+        "framework-development-patterns.md",
+        "performance-optimization.md"
+      ],
+      "performance_target": "90s total"
+    },
+
+    "validate": {
+      "path": ".claude/commands/validate.md",
+      "description": "Comprehensive testing and validation of framework components",
+      "agents": [
+        "framework-validation-engineer",
+        "framework-code-reviewer"
+      ],
+      "workflow": "parallel",
+      "stages": {
+        "planning": {
+          "type": "sequential",
+          "agents": ["framework-validation-engineer"],
+          "duration": "10s"
+        },
+        "testing": {
+          "type": "parallel",
+          "agents": ["framework-validation-engineer"],
+          "duration": "60s"
+        },
+        "analysis": {
+          "type": "sequential",
+          "agents": ["framework-validation-engineer"],
+          "duration": "15s"
+        }
+      },
+      "contexts": [
+        "framework-architecture.md",
+        "performance-optimization.md"
+      ],
+      "performance_target": "85s total"
+    },
+
+    "example": {
+      "path": ".claude/commands/example.md",
+      "description": "Generate comprehensive examples and tutorials",
+      "agents": [
+        "example-generator",
+        "documentation-specialist",
+        "framework-validation-engineer"
+      ],
+      "workflow": "parallel-sequential",
+      "stages": {
+        "planning": {
+          "type": "parallel",
+          "agents": ["example-generator"],
+          "duration": "20s"
+        },
+        "creation": {
+          "type": "parallel",
+          "agents": ["example-generator", "documentation-specialist"],
+          "duration": "45s"
+        },
+        "validation": {
+          "type": "parallel",
+          "agents": ["framework-validation-engineer", "documentation-specialist"],
+          "duration": "20s"
+        }
+      },
+      "contexts": [
+        "framework-architecture.md",
+        "framework-development-patterns.md"
+      ],
+      "performance_target": "85s total"
+    },
+
+    "test-framework": {
+      "path": ".claude/commands/test-framework.md",
+      "description": "Comprehensive self-testing of the Claude Agent Framework",
+      "agents": [
+        "framework-validation-engineer",
+        "framework-code-reviewer"
+      ],
+      "workflow": "sequential-parallel-sequential",
+      "stages": {
+        "planning": {
+          "type": "sequential",
+          "agents": ["framework-validation-engineer"],
+          "duration": "10s"
+        },
+        "testing": {
+          "type": "parallel",
+          "agents": ["framework-validation-engineer"],
+          "duration": "90s"
+        },
+        "analysis": {
+          "type": "sequential",
+          "agents": ["framework-validation-engineer"],
+          "duration": "15s"
+        }
+      },
+      "contexts": [
+        "framework-architecture.md",
+        "performance-optimization.md",
+        "framework-development-patterns.md"
+      ],
+      "performance_target": "115s total"
+    }
+  },
+
+  "contexts": {
+    "framework-architecture": {
+      "path": ".claude-library/contexts/framework-architecture.md",
+      "type": "core",
+      "domain": "architecture",
+      "size_kb": 8.5,
+      "load_priority": 1,
+      "cache_duration": "session",
+      "description": "Core framework architecture and principles"
+    },
+
+    "framework-development-patterns": {
+      "path": ".claude-library/contexts/framework-development-patterns.md",
+      "type": "specialized",
+      "domain": "development",
+      "size_kb": 12.3,
+      "load_priority": 2,
+      "cache_duration": "task",
+      "description": "Meta-development patterns for framework improvement"
+    },
+
+    "performance-optimization": {
+      "path": ".claude-library/contexts/performance-optimization.md",
+      "type": "specialized",
+      "domain": "performance",
+      "size_kb": 9.8,
+      "load_priority": 2,
+      "cache_duration": "task",
+      "description": "Performance optimization strategies and benchmarks"
+    }
+  },
+
+  "workflows": {
+    "meta_framework_development": {
+      "description": "Complete framework development workflow using framework itself",
+      "stages": [
+        {
+          "name": "analysis",
+          "type": "parallel",
+          "agents": ["framework-system-architect"],
+          "contexts": ["framework-architecture.md", "framework-development-patterns.md"]
+        },
+        {
+          "name": "implementation",
+          "type": "parallel",
+          "agents": ["framework-senior-engineer", "framework-code-reviewer"],
+          "contexts": ["framework-architecture.md", "performance-optimization.md"]
+        },
+        {
+          "name": "validation",
+          "type": "sequential",
+          "agents": ["framework-validation-engineer"],
+          "contexts": ["performance-optimization.md"]
+        },
+        {
+          "name": "documentation",
+          "type": "sequential",
+          "agents": ["documentation-specialist"],
+          "contexts": ["framework-development-patterns.md"]
+        }
+      ],
+      "performance_target": "120s",
+      "success_criteria": [
+        "framework_compliance",
+        "performance_targets_met",
+        "quality_gates_passed",
+        "documentation_complete"
+      ]
+    }
+  },
+
+  "performance_baselines": {
+    "context_loading": {
+      "framework_architecture": "150ms",
+      "framework_development_patterns": "180ms",
+      "performance_optimization": "120ms"
+    },
+    "agent_coordination": {
+      "parallel_overhead": "50ms",
+      "sequential_overhead": "20ms",
+      "context_switching": "10ms"
+    },
+    "workflow_execution": {
+      "pattern_development": "90s",
+      "framework_validation": "85s",
+      "example_creation": "85s",
+      "framework_testing": "115s"
+    }
+  },
+
+  "meta_framework_config": {
+    "self_improvement": true,
+    "bootstrap_capability": true,
+    "recursive_enhancement": true,
+    "framework_evolution": true,
+    "self_documentation": true,
+    "performance_optimization": true
+  },
+
+  "quality_gates": {
+    "framework_compliance": {
+      "required": true,
+      "validation_agent": "framework-code-reviewer"
+    },
+    "performance_targets": {
+      "required": true,
+      "validation_agent": "framework-validation-engineer",
+      "thresholds": {
+        "context_loading": "500ms",
+        "parallel_speedup": "3x",
+        "memory_usage": "50MB"
+      }
+    },
+    "documentation_quality": {
+      "required": true,
+      "validation_agent": "documentation-specialist"
+    }
+  },
+
+  "optimization_settings": {
+    "context_caching": true,
+    "agent_reuse": true,
+    "parallel_by_default": true,
+    "performance_monitoring": true,
+    "automatic_optimization": true,
+    "cache_size_limit": "20MB",
+    "max_concurrent_agents": 5
+  }
+}
