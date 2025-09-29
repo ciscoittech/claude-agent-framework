@@ -236,14 +236,40 @@ MIT License - Use freely in your projects, commercial or otherwise.
 
 ---
 
+## 🔍 Optional: Observability (NEW)
+
+Track your agent workflows with real-time monitoring:
+
+```bash
+# 1. Get free Logfire account
+export LOGFIRE_TOKEN="your-key"
+
+# 2. Enable in REGISTRY.json
+"observability": { "enabled": true }
+
+# 3. Watch your agents work
+# View traces at your Logfire dashboard
+```
+
+**What you get:**
+- 📊 Visual workflow traces (see agents working together)
+- ✅ Automatic output validation (verify files created)
+- 📈 Performance metrics (optimize your workflows)
+- 🐛 Debug complex agent interactions
+
+**Optional & lightweight:** Disabled by default. Zero overhead when off.
+
+[Learn more →](./claude-library/observability/README.md)
+
+---
+
 ## 🔮 The Future
 
-Claude Agent Framework is constantly evolving. Coming soon:
-- 🧠 Auto-learning from your Git history
-- 🔄 CI/CD pipeline integration
-- 📊 Performance analytics dashboard
-- 🌐 Multi-project orchestration
-- 🤖 Self-improving agents
+Claude Agent Framework is constantly evolving. Recent additions:
+- ✅ **Observability Pattern** - Track and validate agent workflows
+- 🧠 Auto-learning from your Git history (coming soon)
+- 🔄 CI/CD pipeline integration (coming soon)
+- 🌐 Multi-project orchestration (coming soon)
 
 ---
 
