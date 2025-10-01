@@ -1,0 +1,31 @@
+{
+  "name": "Notification Hooks",
+  "description": "Send team notifications on workflow events",
+  "version": "1.0.0",
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude-library/hooks/scripts/notify_team.sh \"workflow\" \"completed\"",
+            "description": "Notify team of workflow completion"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude-library/hooks/scripts/notify_team.sh \"session\" \"started\"",
+            "description": "Notify team of session start"
+          }
+        ]
+      }
+    ]
+  }
+}

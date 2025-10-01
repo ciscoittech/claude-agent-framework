@@ -1,0 +1,19 @@
+{
+  "name": "Security Hooks",
+  "description": "Block dangerous operations before execution",
+  "version": "1.0.0",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude-library/hooks/scripts/security_check.py \"$command\"",
+            "description": "Validate bash command safety"
+          }
+        ]
+      }
+    ]
+  }
+}

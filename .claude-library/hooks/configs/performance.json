@@ -1,0 +1,31 @@
+{
+  "name": "Performance Tracking Hooks",
+  "description": "Track agent execution timing without external services",
+  "version": "1.0.0",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude-library/hooks/scripts/track_timing.sh start \"$description\"",
+            "description": "Log agent start time"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude-library/hooks/scripts/track_timing.sh end \"$description\"",
+            "description": "Log agent end time"
+          }
+        ]
+      }
+    ]
+  }
+}

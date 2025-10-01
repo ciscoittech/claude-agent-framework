@@ -236,7 +236,9 @@ MIT License - Use freely in your projects, commercial or otherwise.
 
 ---
 
-## 🔍 Optional: Observability (NEW)
+## 🔍 Optional Patterns (NEW)
+
+### Observability Pattern
 
 Track your agent workflows with real-time monitoring:
 
@@ -257,16 +259,44 @@ export LOGFIRE_TOKEN="your-key"
 - 📈 Performance metrics (optimize your workflows)
 - 🐛 Debug complex agent interactions
 
-**Optional & lightweight:** Disabled by default. Zero overhead when off.
+[Learn more →](./.claude-library/observability/README.md)
 
-[Learn more →](./claude-library/observability/README.md)
+---
+
+### Hooks Pattern (NEW)
+
+Add deterministic control over your workflows:
+
+```bash
+# 1. Enable in REGISTRY.json
+"hooks": { "enabled": true, "configs": ["code-quality.json"] }
+
+# 2. Hooks run automatically
+# - Auto-format code after changes
+# - Block dangerous operations
+# - Validate agent outputs
+# - Send team notifications
+```
+
+**What you get:**
+- 🛡️ Quality gates (auto-format, lint, test)
+- 🔒 Security controls (block dangerous commands)
+- 📢 Team notifications (Slack, Discord)
+- 📊 Lightweight metrics (no external service)
+
+[Learn more →](./.claude-library/hooks/README.md)
+
+---
+
+**Optional & lightweight:** Both patterns disabled by default. Zero overhead when off.
 
 ---
 
 ## 🔮 The Future
 
 Claude Agent Framework is constantly evolving. Recent additions:
-- ✅ **Observability Pattern** - Track and validate agent workflows
+- ✅ **Observability Pattern** - Track and validate agent workflows (v1.0)
+- ✅ **Hooks Pattern** - Deterministic workflow control (v1.1)
 - 🧠 Auto-learning from your Git history (coming soon)
 - 🔄 CI/CD pipeline integration (coming soon)
 - 🌐 Multi-project orchestration (coming soon)

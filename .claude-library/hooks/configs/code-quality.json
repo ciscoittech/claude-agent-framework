@@ -1,0 +1,19 @@
+{
+  "name": "Code Quality Hooks",
+  "description": "Automatically format and lint code after file changes",
+  "version": "1.0.0",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude-library/hooks/scripts/format_code.sh \"$file_path\"",
+            "description": "Auto-format code based on file type"
+          }
+        ]
+      }
+    ]
+  }
+}

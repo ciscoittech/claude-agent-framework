@@ -13,6 +13,7 @@
 9. [Best Practices](#best-practices)
 10. [Performance Optimization](#performance-optimization)
 11. [Observability Pattern (Optional)](#observability-pattern-optional)
+12. [Hooks Pattern (Optional)](#hooks-pattern-optional)
 
 ## Introduction
 
@@ -813,6 +814,210 @@ When adding observability to your system:
 - [ ] Test with simple workflow
 - [ ] Review traces in Logfire dashboard
 
+## Hooks Pattern (Optional)
+
+### Overview
+
+The **Hooks Pattern** provides deterministic control over Claude Code's behavior through shell commands that execute at specific workflow points. Unlike observability (which monitors), hooks actively control and can block operations.
+
+**Important:** This pattern requires no external services - completely self-contained using shell scripts and local file logging.
+
+### When to Use Hooks
+
+✅ **Enable hooks when you need:**
+- Automatic code formatting after file changes
+- Security gates to block dangerous operations
+- Custom validation before/after agent actions
+- Team notifications (Slack, Discord, email)
+- Lightweight metrics without external services
+- Project-specific business rules enforcement
+
+❌ **Skip hooks for:**
+- Simple single-agent workflows
+- Rapid prototyping phase
+- Learning the framework basics
+
+### Quick Start
+
+#### 1. Enable Hooks in REGISTRY.json
+
+```json
+{
+  "settings": {
+    "hooks": {
+      "enabled": true,
+      "scope": "project",
+      "configs": [
+        ".claude-library/hooks/configs/code-quality.json"
+      ],
+      "allow_blocking": true,
+      "timeout_ms": 5000,
+      "log_hook_output": true
+    }
+  }
+}
+```
+
+#### 2. Choose Pre-Built Configurations
+
+- `code-quality.json` - Auto-format and lint after file changes
+- `security.json` - Block dangerous bash commands
+- `performance.json` - Track agent timing metrics
+- `notifications.json` - Send team alerts on workflow events
+
+#### 3. Test It
+
+```bash
+# Make a code change - hooks will auto-format
+claude> "Add a new function to src/utils.py"
+
+# Hooks automatically run prettier, eslint, etc.
+```
+
+### Available Hook Events
+
+| Hook Event | When It Runs | Can Block? | Common Uses |
+|------------|--------------|------------|-------------|
+| `PreToolUse` | Before tool execution | ✅ Yes | Security checks, validation |
+| `PostToolUse` | After tool completes | ❌ No | Formatting, notifications |
+| `Stop` | Workflow completes | ❌ No | Team alerts, reports |
+| `SubagentStop` | Agent finishes | ❌ No | Output validation |
+| `SessionStart` | Session begins | ❌ No | Setup, initialization |
+
+### Common Hook Patterns
+
+#### Auto-Format Code
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude-library/hooks/scripts/format_code.sh \"$file_path\""
+        }]
+      }
+    ]
+  }
+}
+```
+
+#### Block Dangerous Commands
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{
+          "type": "command",
+          "command": "python .claude-library/hooks/scripts/security_check.py \"$command\""
+        }]
+      }
+    ]
+  }
+}
+```
+
+#### Track Performance
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [{
+          "command": "bash .claude-library/hooks/scripts/track_timing.sh start \"$description\""
+        }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [{
+          "command": "bash .claude-library/hooks/scripts/track_timing.sh end \"$description\""
+        }]
+      }
+    ]
+  }
+}
+```
+
+### Hooks vs Observability
+
+| Feature | Hooks | Observability |
+|---------|-------|---------------|
+| **Purpose** | Control & automation | Monitoring & insights |
+| **Can Block Operations** | ✅ Yes | ❌ No |
+| **External Service** | ❌ No | ✅ Logfire |
+| **Setup Time** | 2 min | 5 min |
+| **Overhead** | ~100ms | ~500ms |
+| **Use Cases** | Quality gates, security | Debugging, analytics |
+
+### Combined Pattern: Hooks + Observability
+
+For maximum power, use both together:
+
+```json
+{
+  "settings": {
+    "hooks": {
+      "enabled": true,
+      "configs": ["code-quality.json", "security.json"]
+    },
+    "observability": {
+      "enabled": true,
+      "provider": "logfire"
+    }
+  }
+}
+```
+
+**Result:**
+- Hooks enforce quality gates (blocking)
+- Observability tracks what happened (monitoring)
+
+### Directory Structure
+
+```
+.claude-library/
+├── hooks/                              # NEW: Hooks pattern
+│   ├── README.md                      # Complete hooks guide
+│   ├── configs/                       # Pre-built configurations
+│   │   ├── code-quality.json         # Auto-format, lint
+│   │   ├── security.json             # Security gates
+│   │   ├── performance.json          # Timing metrics
+│   │   └── notifications.json        # Team alerts
+│   ├── scripts/                       # Hook execution scripts
+│   │   ├── format_code.sh            # Multi-language formatter
+│   │   ├── security_check.py         # Security validator
+│   │   ├── track_timing.sh           # Performance metrics
+│   │   ├── notify_team.sh            # Slack/Discord alerts
+│   │   └── validate_agent_output.py  # Agent validation
+│   └── patterns/                      # Integration examples
+│       ├── workflow-gates.md         # Quality gate patterns
+│       ├── agent-validation.md       # Output validation
+│       └── lightweight-observability.md # Hooks-based metrics
+```
+
+### Best Practices
+
+1. **Start with one config** - Begin with `code-quality.json`
+2. **Make hooks fast** - Keep execution under 1 second
+3. **Never block on formatting** - Use `PostToolUse` and exit 0
+4. **Log everything** - Even successes, for audit trail
+5. **Use PreToolUse sparingly** - Only for critical security checks
+
+### Complete Documentation
+
+For full implementation details, hook scripts, and advanced patterns:
+
+**→ See `.claude-library/hooks/README.md`**
+
 ## Conclusion
 
 This framework provides a battle-tested approach to building sophisticated agent systems with Claude Code. By following these patterns, you can create systems that are:
@@ -833,4 +1038,5 @@ Remember: Start simple with core agents, then progressively add specialization a
 
 ---
 
-*Framework Version 1.0 - Based on production patterns from real-world applications*
+*Framework Version 1.1 - Based on production patterns from real-world applications*
+*Now with optional Hooks Pattern for deterministic workflow control*

@@ -23,6 +23,17 @@
         "track_context_size": true,
         "track_tool_usage": true
       }
+    },
+    "hooks": {
+      "enabled": false,
+      "scope": "project",
+      "configs": [],
+      "allow_blocking": true,
+      "timeout_ms": 5000,
+      "log_hook_output": true,
+      "log_file": ".claude-metrics/hooks.log",
+      "fail_on_timeout": false,
+      "parallel_hook_execution": false
     }
   },
 
