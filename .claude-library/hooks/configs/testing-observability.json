@@ -1,0 +1,65 @@
+{
+  "name": "Testing Observability Hooks",
+  "description": "Comprehensive observability for test execution, performance tracking, and accuracy validation",
+  "version": "1.0.0",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude-library/hooks/scripts/testing/init_test_session.sh",
+            "description": "Initialize test session tracking and create observability baseline"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash.*test.*\\.py",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude-library/hooks/scripts/testing/pre_test_validation.sh \"$tool\" \"$arguments\"",
+            "description": "Validate test environment before execution"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash.*test.*\\.py",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude-library/hooks/scripts/testing/analyze_test_results.py \"$output\" \"$exit_code\"",
+            "description": "Analyze test results, extract metrics, detect anomalies"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude-library/hooks/scripts/testing/track_test_changes.sh \"$file_path\" \"$tool\"",
+            "description": "Track test file modifications for coverage analysis"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude-library/hooks/scripts/testing/generate_test_report.py",
+            "description": "Generate comprehensive test observability report"
+          }
+        ]
+      }
+    ]
+  }
+}
