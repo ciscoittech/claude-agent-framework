@@ -95,3 +95,21 @@ OBSERVABILITY_TEST_RESULTS.md
 
 # Logfire credentials
 .logfire/
+
+# Video production (separate project)
+video-production/
+
+# Playwright recordings
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Video builder (private - not for distribution)
+compose_video_simple.py
+POST_PRODUCTION_AGENT_SYSTEM.md
+TRAINING_VIDEO_SCRIPT.md
+TRAINING_VIDEO_SCRIPT_V2.md
+
+# External projects (not part of framework)
+cloned-repo/
+vscode-extension/

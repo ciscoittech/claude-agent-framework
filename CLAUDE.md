@@ -26,6 +26,16 @@ The Claude Agent Framework is a comprehensive system for building intelligent mu
 - **AGENT_REFERENCE_PATTERNS.md**: Theory and decision trees for complexity assessment
 - **ANTHROPIC_TEAM_PATTERNS.md**: Production patterns (study but don't over-apply)
 
+### Optional Features
+
+- **Local Observability** (`.claude-library/observability/`): SQLite-based agent execution tracking
+  - Track agent launches, sub-agents, duration, token usage, and costs
+  - Validate task outputs against expectations
+  - Project-local database (`.claude-metrics/observability.db`)
+  - CLI tool (`obs.py`) for querying and analysis
+  - Zero cloud dependencies, 100% offline
+  - See `README.md` and `TEST_RESULTS.md` for details
+
 ## Working with the Framework
 
 ### Recommended Reading Order
@@ -114,3 +124,64 @@ The framework aims for:
 - 3x faster execution through parallel agents
 - <2 minute setup time for new projects
 - Support for any tech stack without modification
+
+## Local Observability System
+
+The framework includes an optional local observability system for tracking agent execution:
+
+### Location
+`.claude-library/observability/`
+
+### Features
+- **Agent Execution Tracking**: Captures when agents launch, sub-agents spawned, duration, token usage
+- **Validation Layer**: Automatically verifies task outputs match expectations
+- **Performance Metrics**: Tracks tokens, costs, execution times
+- **Artifact Tracking**: Monitors files created/modified and commands executed
+- **Project-Local Database**: Each project gets its own `.claude-metrics/observability.db`
+- **CLI Tool**: Query and analyze data with `obs.py` commands
+
+### Test Results
+- **Pass Rate**: 100% (13/13 tests)
+- **Complexity Coverage**: Easy, Medium, Hard scenarios
+- **Database Size**: ~13 KB per execution
+- **Query Performance**: <100ms
+- **Status**: Production Ready
+
+### Files
+```
+.claude-library/observability/
+├── README.md              # Documentation
+├── TEST_RESULTS.md        # Test report
+├── schema.sql            # Database schema
+├── db_helper.py          # Helper library
+├── obs.py               # CLI tool
+├── test_observability.py # Test suite
+├── configs/
+│   └── local-observability.json
+└── scripts/
+    ├── init_observability_db.sh
+    ├── observe_task_start.py
+    ├── observe_task_end.py
+    ├── track_artifact.py
+    └── validate_execution.py
+```
+
+### Usage
+Enable in `.claude-library/REGISTRY.json`:
+```json
+{
+  "settings": {
+    "hooks": {
+      "enabled": true,
+      "configs": [".claude-library/observability/configs/local-observability.json"]
+    }
+  }
+}
+```
+
+Query with CLI:
+```bash
+python3 .claude-library/observability/obs.py recent
+python3 .claude-library/observability/obs.py agents
+python3 .claude-library/observability/obs.py execution <id>
+```

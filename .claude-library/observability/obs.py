@@ -1,0 +1,307 @@
+#!/usr/bin/env python3
+"""
+Local Observability CLI Tool
+Query and analyze agent execution data from project-local SQLite database
+
+Usage:
+    obs.py recent [--limit N]              # Show recent executions
+    obs.py failed [--limit N]              # Show failed executions
+    obs.py execution <id>                  # Show execution details
+    obs.py summary [--days N]              # Show daily summary
+    obs.py agents                          # Show agent performance
+    obs.py session                         # Show current session info
+    obs.py expectations                    # List task expectations
+    obs.py cleanup [--days N]              # Delete old data
+"""
+
+import sys
+import json
+from pathlib import Path
+from typing import Optional
+import argparse
+
+# Add to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from db_helper import (
+    get_recent_executions,
+    get_execution,
+    get_execution_sub_agents,
+    get_execution_artifacts,
+    get_execution_validation,
+    get_daily_summary,
+    get_agent_performance,
+    get_session_id,
+    cleanup_old_data,
+    get_db
+)
+
+
+def format_duration(ms: Optional[int]) -> str:
+    """Format duration in human-readable format"""
+    if ms is None:
+        return 'N/A'
+    if ms < 1000:
+        return f"{ms}ms"
+    elif ms < 60000:
+        return f"{ms/1000:.1f}s"
+    else:
+        return f"{ms/60000:.1f}m"
+
+
+def format_cost(usd: Optional[float]) -> str:
+    """Format cost in USD"""
+    if usd is None or usd == 0:
+        return 'N/A'
+    return f"${usd:.4f}"
+
+
+def cmd_recent(args):
+    """Show recent executions"""
+    executions = get_recent_executions(limit=args.limit, failed_only=False)
+
+    if not executions:
+        print("No executions found")
+        return
+
+    print(f"\n📊 Recent Executions (last {len(executions)}):\n")
+    print(f"{'ID':<5} {'Agent':<20} {'Status':<10} {'Duration':<10} {'Tokens':<10} {'Cost':<12} {'Time':<20}")
+    print("-" * 100)
+
+    for e in executions:
+        status_icon = '✅' if e['status'] == 'success' else '❌'
+        print(
+            f"{e['id']:<5} "
+            f"{e['agent_name'][:19]:<20} "
+            f"{status_icon} {e['status']:<8} "
+            f"{format_duration(e['duration_ms']):<10} "
+            f"{e['tokens_total']:<10} "
+            f"{format_cost(e['cost_usd']):<12} "
+            f"{e['started_at'][:19]:<20}"
+        )
+
+
+def cmd_failed(args):
+    """Show failed executions"""
+    executions = get_recent_executions(limit=args.limit, failed_only=True)
+
+    if not executions:
+        print("✅ No failed executions found")
+        return
+
+    print(f"\n❌ Failed Executions (last {len(executions)}):\n")
+
+    for e in executions:
+        print(f"ID: {e['id']}")
+        print(f"Agent: {e['agent_name']}")
+        print(f"Task: {e['task_description'][:80] if e['task_description'] else 'N/A'}")
+        print(f"Error: {e['error_message'] if 'error_message' in e else 'Unknown'}")
+        print(f"Time: {e['started_at']}")
+        print("-" * 80)
+
+
+def cmd_execution(args):
+    """Show execution details"""
+    execution = get_execution(args.id)
+
+    if not execution:
+        print(f"Execution {args.id} not found")
+        return
+
+    print(f"\n📊 Execution #{execution['id']}:\n")
+    print(f"Agent: {execution['agent_name']}")
+    print(f"Status: {execution['status']}")
+    print(f"Task: {execution['task_description'] if execution['task_description'] else 'N/A'}")
+    print(f"Started: {execution['started_at']}")
+    print(f"Duration: {format_duration(execution['duration_ms'])}")
+    print(f"Tokens: {execution['tokens_total']} (cost: {format_cost(execution['cost_usd'])})")
+
+    # Sub-agents
+    sub_agents = get_execution_sub_agents(args.id)
+    if sub_agents:
+        print(f"\n🤖 Sub-Agents ({len(sub_agents)}):")
+        for sa in sub_agents:
+            print(f"  - {sa['agent_name']} ({sa['agent_type']}) at {sa['launched_at'][:19]}")
+
+    # Artifacts
+    artifacts = get_execution_artifacts(args.id)
+    if artifacts:
+        print(f"\n📁 Artifacts ({len(artifacts)}):")
+        for a in artifacts:
+            size = f" ({a['artifact_size_bytes']} bytes)" if a['artifact_size_bytes'] else ""
+            print(f"  - {a['artifact_type']}: {a['artifact_path'][:60]}{size}")
+
+    # Validation
+    validation = get_execution_validation(args.id)
+    if validation:
+        status = "✅ PASSED" if validation['passed'] else "❌ FAILED"
+        print(f"\n🔍 Validation: {status} (score: {validation['score']})")
+        if validation.get('violations'):
+            print(f"Violations:")
+            for v in validation['violations']:
+                print(f"  - {v['type']}: expected {v['expected']}, got {v.get('actual', 'None')}")
+
+
+def cmd_summary(args):
+    """Show daily summary"""
+    summary = get_daily_summary(days=args.days)
+
+    if not summary:
+        print("No data available")
+        return
+
+    print(f"\n📅 Daily Summary (last {args.days} days):\n")
+    print(f"{'Date':<12} {'Total':<8} {'Success':<8} {'Failed':<8} {'Avg Time':<12} {'Tokens':<10} {'Cost':<12}")
+    print("-" * 80)
+
+    for s in summary:
+        success_rate = f"{s['successful']/s['total_executions']*100:.0f}%" if s['total_executions'] > 0 else 'N/A'
+        print(
+            f"{s['date']:<12} "
+            f"{s['total_executions']:<8} "
+            f"{s['successful']:<8} "
+            f"{s['failed']:<8} "
+            f"{format_duration(s['avg_duration_ms']):<12} "
+            f"{s['total_tokens']:<10} "
+            f"{format_cost(s['total_cost_usd']):<12}"
+        )
+
+
+def cmd_agents(args):
+    """Show agent performance"""
+    agents = get_agent_performance()
+
+    if not agents:
+        print("No agent data available")
+        return
+
+    print(f"\n🤖 Agent Performance:\n")
+    print(f"{'Agent':<25} {'Executions':<12} {'Success Rate':<15} {'Avg Time':<12} {'Avg Tokens':<12} {'Total Cost':<12}")
+    print("-" * 100)
+
+    for a in agents:
+        success_rate = f"{a['successful']/a['total_executions']*100:.0f}%" if a['total_executions'] > 0 else 'N/A'
+        print(
+            f"{a['agent_name'][:24]:<25} "
+            f"{a['total_executions']:<12} "
+            f"{success_rate:<15} "
+            f"{format_duration(a['avg_duration_ms']):<12} "
+            f"{int(a['avg_tokens']) if a['avg_tokens'] else 0:<12} "
+            f"{format_cost(a['total_cost_usd']):<12}"
+        )
+
+
+def cmd_session(args):
+    """Show current session info"""
+    session_id = get_session_id()
+
+    with get_db() as conn:
+        cursor = conn.execute("""
+            SELECT * FROM sessions WHERE session_id = ?
+        """, (session_id,))
+        session = cursor.fetchone()
+
+        if not session:
+            print("No session found")
+            return
+
+        print(f"\n🔄 Current Session:\n")
+        print(f"ID: {session['session_id']}")
+        print(f"Started: {session['started_at']}")
+        print(f"Project: {session['project_path']}")
+        if session['git_branch']:
+            print(f"Git: {session['git_branch']} ({session['git_commit']})")
+        print(f"Executions: {session['total_executions']}")
+        print(f"Tokens: {session['total_tokens']}")
+        print(f"Cost: {format_cost(session['total_cost_usd'])}")
+
+
+def cmd_expectations(args):
+    """List task expectations"""
+    with get_db() as conn:
+        cursor = conn.execute("""
+            SELECT * FROM task_expectations
+            WHERE enabled = 1
+            ORDER BY id
+        """)
+        expectations = cursor.fetchall()
+
+        if not expectations:
+            print("No expectations defined")
+            return
+
+        print(f"\n📋 Task Expectations:\n")
+
+        for exp in expectations:
+            print(f"ID {exp['id']}: {exp['description']}")
+            print(f"  Pattern: {exp['task_pattern']}")
+            if exp['expected_agents']:
+                print(f"  Expected Agents: {exp['expected_agents']}")
+            if exp['max_duration_ms']:
+                print(f"  Max Duration: {format_duration(exp['max_duration_ms'])}")
+            if exp['max_tokens']:
+                print(f"  Max Tokens: {exp['max_tokens']}")
+            if exp['max_cost_usd']:
+                print(f"  Max Cost: {format_cost(exp['max_cost_usd'])}")
+            print()
+
+
+def cmd_cleanup(args):
+    """Delete old data"""
+    print(f"Deleting executions older than {args.days} days...")
+    cleanup_old_data(days=args.days)
+    print("✅ Cleanup complete")
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Local Observability CLI')
+    subparsers = parser.add_subparsers(dest='command', help='Commands')
+
+    # Recent executions
+    p_recent = subparsers.add_parser('recent', help='Show recent executions')
+    p_recent.add_argument('--limit', type=int, default=20, help='Number of executions to show')
+    p_recent.set_defaults(func=cmd_recent)
+
+    # Failed executions
+    p_failed = subparsers.add_parser('failed', help='Show failed executions')
+    p_failed.add_argument('--limit', type=int, default=10, help='Number to show')
+    p_failed.set_defaults(func=cmd_failed)
+
+    # Execution details
+    p_exec = subparsers.add_parser('execution', help='Show execution details')
+    p_exec.add_argument('id', type=int, help='Execution ID')
+    p_exec.set_defaults(func=cmd_execution)
+
+    # Daily summary
+    p_summary = subparsers.add_parser('summary', help='Show daily summary')
+    p_summary.add_argument('--days', type=int, default=7, help='Number of days')
+    p_summary.set_defaults(func=cmd_summary)
+
+    # Agent performance
+    p_agents = subparsers.add_parser('agents', help='Show agent performance')
+    p_agents.set_defaults(func=cmd_agents)
+
+    # Session info
+    p_session = subparsers.add_parser('session', help='Show current session')
+    p_session.set_defaults(func=cmd_session)
+
+    # Expectations
+    p_expect = subparsers.add_parser('expectations', help='List task expectations')
+    p_expect.set_defaults(func=cmd_expectations)
+
+    # Cleanup
+    p_cleanup = subparsers.add_parser('cleanup', help='Delete old data')
+    p_cleanup.add_argument('--days', type=int, default=30, help='Keep data newer than N days')
+    p_cleanup.set_defaults(func=cmd_cleanup)
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        return
+
+    args.func(args)
+
+
+if __name__ == '__main__':
+    main()

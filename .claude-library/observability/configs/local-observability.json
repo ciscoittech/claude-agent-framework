@@ -1,0 +1,95 @@
+{
+  "name": "local-observability",
+  "version": "1.0.0",
+  "description": "Local SQLite-based agent observability and validation",
+  "author": "Claude Agent Framework",
+  "hooks": [
+    {
+      "event": "SessionStart",
+      "script": ".claude-library/observability/scripts/init_observability_db.sh",
+      "description": "Initialize project-local observability database",
+      "blocking": false,
+      "timeout_ms": 3000
+    },
+    {
+      "event": "PreToolUse",
+      "script": ".claude-library/observability/scripts/observe_task_start.py",
+      "description": "Track agent task start (Task tool only)",
+      "blocking": false,
+      "timeout_ms": 1000,
+      "filters": {
+        "tools": ["Task"]
+      }
+    },
+    {
+      "event": "PostToolUse",
+      "script": ".claude-library/observability/scripts/observe_task_end.py",
+      "description": "Track agent task completion and metrics",
+      "blocking": false,
+      "timeout_ms": 2000,
+      "filters": {
+        "tools": ["Task"]
+      }
+    },
+    {
+      "event": "PostToolUse",
+      "script": ".claude-library/observability/scripts/track_artifact.py",
+      "description": "Track files and commands created by agents",
+      "blocking": false,
+      "timeout_ms": 1000,
+      "filters": {
+        "tools": ["Write", "Edit", "NotebookEdit", "Bash"]
+      }
+    },
+    {
+      "event": "PostToolUse",
+      "script": ".claude-library/observability/scripts/validate_execution.py",
+      "description": "Validate task output against expectations",
+      "blocking": false,
+      "timeout_ms": 2000,
+      "filters": {
+        "tools": ["Task"]
+      }
+    }
+  ],
+  "settings": {
+    "database_path": ".claude-metrics/observability.db",
+    "session_tracking": true,
+    "validation_enabled": true,
+    "auto_cleanup_days": 30
+  },
+  "installation": {
+    "requirements": [
+      "SQLite3",
+      "Python 3.8+"
+    ],
+    "steps": [
+      "1. Add this config to REGISTRY.json hooks.configs array",
+      "2. Enable hooks in REGISTRY.json: \"hooks\": { \"enabled\": true }",
+      "3. Database will auto-initialize on first SessionStart"
+    ]
+  },
+  "usage": {
+    "cli_tool": ".claude-library/observability/obs.py",
+    "commands": [
+      "obs.py recent              # Show recent executions",
+      "obs.py failed              # Show failed executions",
+      "obs.py execution <id>      # Show execution details",
+      "obs.py summary --days 7    # Show daily summary",
+      "obs.py agents              # Show agent performance",
+      "obs.py session             # Show current session",
+      "obs.py expectations        # List task expectations",
+      "obs.py cleanup --days 30   # Delete old data"
+    ]
+  },
+  "validation": {
+    "how_it_works": "Regex patterns in task_expectations table match task descriptions. When matched, execution is validated against expected agents, files, artifacts, duration, tokens, and cost.",
+    "add_expectation": "INSERT INTO task_expectations (task_pattern, expected_agents, max_tokens) VALUES ('(?i)create.*api', '[\"architect\", \"engineer\"]', 30000)",
+    "example_patterns": [
+      "(?i)implement.*(auth|authentication) - Matches authentication tasks",
+      "(?i)create.*(api|endpoint) - Matches API creation tasks",
+      "(?i)fix.*bug - Matches bug fix tasks",
+      "(?i)refactor.* - Matches refactoring tasks"
+    ]
+  }
+}
