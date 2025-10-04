@@ -86,12 +86,19 @@ temp/
 # Project specific
 # Add any project-specific ignores here
 
-# Observability testing artifacts (internal testing only)
+# Internal testing artifacts (development process details)
 test_observability_*.py
 test_output_*.md
 observability_test_results.json
 OBSERVABILITY_TEST_PLAN.md
 OBSERVABILITY_TEST_RESULTS.md
+TESTING_GUIDE_V1.1.md
+TESTING_OBSERVABILITY.md
+UPDATE_BRANCH_SUMMARY.md
+test_hooks_pattern.py
+.claude-library/hooks/configs/testing-observability.json
+.claude-library/hooks/patterns/testing-observability.md
+.claude-library/hooks/scripts/testing/
 
 # Logfire credentials
 .logfire/
