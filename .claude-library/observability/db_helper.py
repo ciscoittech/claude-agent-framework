@@ -388,6 +388,131 @@ def clear_current_execution_id():
 
 
 # ==============================================================================
+# TOOL USAGE TRACKING
+# ==============================================================================
+
+def insert_tool_usage(
+    execution_id: int,
+    tool_name: str,
+    parameters_json: Optional[str],
+    success: bool,
+    duration_ms: Optional[int] = None,
+    tokens_used: Optional[int] = None,
+    output_size_bytes: Optional[int] = None
+):
+    """
+    Insert tool usage record
+
+    Args:
+        execution_id: ID of execution using this tool
+        tool_name: Name of the tool (e.g., 'Read', 'Bash', 'Edit')
+        parameters_json: JSON string of tool parameters
+        success: Whether the tool call succeeded
+        duration_ms: Tool execution duration in milliseconds
+        tokens_used: Tokens consumed by this tool call
+        output_size_bytes: Size of tool output in bytes
+    """
+    with get_db() as conn:
+        conn.execute("""
+            INSERT INTO tool_usage
+            (execution_id, tool_name, parameters_json, success, duration_ms, tokens_used, output_size_bytes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (execution_id, tool_name, parameters_json, success, duration_ms, tokens_used, output_size_bytes))
+
+
+def get_tool_usage_by_execution(execution_id: int) -> List[Dict[str, Any]]:
+    """
+    Get all tool usage for an execution
+
+    Args:
+        execution_id: ID of execution
+
+    Returns:
+        List of tool usage records
+    """
+    with get_db() as conn:
+        cursor = conn.execute("""
+            SELECT * FROM tool_usage
+            WHERE execution_id = ?
+            ORDER BY timestamp
+        """, (execution_id,))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_tool_usage_stats(
+    tool_name: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """
+    Get tool usage statistics
+
+    Args:
+        tool_name: Filter by specific tool (optional)
+        start_date: Start date filter (ISO format, optional)
+        end_date: End date filter (ISO format, optional)
+
+    Returns:
+        List of tool statistics
+    """
+    where_clauses = []
+    params = []
+
+    if tool_name:
+        where_clauses.append("tool_name = ?")
+        params.append(tool_name)
+
+    if start_date:
+        where_clauses.append("timestamp >= ?")
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append("timestamp <= ?")
+        params.append(end_date)
+
+    where_clause = ""
+    if where_clauses:
+        where_clause = "WHERE " + " AND ".join(where_clauses)
+
+    with get_db() as conn:
+        # If filtering, use custom query; otherwise use view
+        if where_clause:
+            query = f"""
+                SELECT
+                    tool_name,
+                    COUNT(*) as total_calls,
+                    SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful_calls,
+                    SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failed_calls,
+                    ROUND(100.0 * SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) / COUNT(*), 1) as success_rate,
+                    ROUND(AVG(duration_ms), 0) as avg_duration_ms,
+                    SUM(COALESCE(tokens_used, 0)) as total_tokens,
+                    ROUND(AVG(COALESCE(tokens_used, 0)), 0) as avg_tokens,
+                    ROUND(AVG(COALESCE(output_size_bytes, 0)), 0) as avg_output_size
+                FROM tool_usage
+                {where_clause}
+                GROUP BY tool_name
+                ORDER BY total_calls DESC
+            """
+            cursor = conn.execute(query, params)
+        else:
+            cursor = conn.execute("SELECT * FROM v_tool_stats")
+
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_tool_efficiency() -> List[Dict[str, Any]]:
+    """
+    Get tool efficiency metrics (tokens per successful call)
+
+    Returns:
+        List of tool efficiency records
+    """
+    with get_db() as conn:
+        cursor = conn.execute("SELECT * FROM v_tool_efficiency")
+        return [dict(row) for row in cursor.fetchall()]
+
+
+# ==============================================================================
 # MAINTENANCE
 # ==============================================================================
 

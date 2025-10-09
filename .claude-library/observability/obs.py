@@ -12,6 +12,9 @@ Usage:
     obs.py session                         # Show current session info
     obs.py expectations                    # List task expectations
     obs.py cleanup [--days N]              # Delete old data
+    obs.py tools <execution_id>            # Show tools used in execution
+    obs.py tool-stats [tool_name]          # Show tool usage statistics
+    obs.py tool-efficiency                 # Show tool efficiency metrics
 """
 
 import sys
@@ -33,7 +36,10 @@ from db_helper import (
     get_agent_performance,
     get_session_id,
     cleanup_old_data,
-    get_db
+    get_db,
+    get_tool_usage_by_execution,
+    get_tool_usage_stats,
+    get_tool_efficiency
 )
 
 
@@ -130,6 +136,16 @@ def cmd_execution(args):
         for a in artifacts:
             size = f" ({a['artifact_size_bytes']} bytes)" if a['artifact_size_bytes'] else ""
             print(f"  - {a['artifact_type']}: {a['artifact_path'][:60]}{size}")
+
+    # Tool Usage
+    tools = get_tool_usage_by_execution(args.id)
+    if tools:
+        print(f"\n🔧 Tools Used ({len(tools)}):")
+        for t in tools:
+            status = "✅" if t['success'] else "❌"
+            duration = f" ({format_duration(t['duration_ms'])})" if t['duration_ms'] else ""
+            tokens = f" - {t['tokens_used']} tokens" if t['tokens_used'] else ""
+            print(f"  {status} {t['tool_name']}{duration}{tokens} at {t['timestamp'][:19]}")
 
     # Validation
     validation = get_execution_validation(args.id)
@@ -253,6 +269,86 @@ def cmd_cleanup(args):
     print("✅ Cleanup complete")
 
 
+def cmd_tools(args):
+    """Show tools used in an execution"""
+    tools = get_tool_usage_by_execution(args.execution_id)
+
+    if not tools:
+        print(f"No tool usage found for execution {args.execution_id}")
+        return
+
+    print(f"\n🔧 Tools Used in Execution #{args.execution_id} ({len(tools)}):\n")
+    print(f"{'#':<4} {'Tool':<20} {'Status':<10} {'Duration':<12} {'Tokens':<10} {'Output Size':<12} {'Time':<20}")
+    print("-" * 100)
+
+    for i, t in enumerate(tools, 1):
+        status = "✅ Success" if t['success'] else "❌ Failed"
+        duration = format_duration(t['duration_ms']) if t['duration_ms'] else 'N/A'
+        tokens = str(t['tokens_used']) if t['tokens_used'] else 'N/A'
+        output_size = f"{t['output_size_bytes']} B" if t['output_size_bytes'] else 'N/A'
+        print(
+            f"{i:<4} "
+            f"{t['tool_name'][:19]:<20} "
+            f"{status:<10} "
+            f"{duration:<12} "
+            f"{tokens:<10} "
+            f"{output_size:<12} "
+            f"{t['timestamp'][:19]:<20}"
+        )
+
+
+def cmd_tool_stats(args):
+    """Show statistics for a specific tool or all tools"""
+    stats = get_tool_usage_stats(tool_name=args.tool_name if args.tool_name else None)
+
+    if not stats:
+        print("No tool usage data available")
+        return
+
+    if args.tool_name:
+        print(f"\n🔧 Tool Statistics: {args.tool_name}\n")
+    else:
+        print(f"\n🔧 Tool Usage Statistics (all tools):\n")
+
+    print(f"{'Tool':<25} {'Total':<8} {'Success':<9} {'Failed':<8} {'Rate':<8} {'Avg Time':<12} {'Total Tokens':<14} {'Avg Tokens':<12}")
+    print("-" * 110)
+
+    for s in stats:
+        print(
+            f"{s['tool_name'][:24]:<25} "
+            f"{s['total_calls']:<8} "
+            f"{s['successful_calls']:<9} "
+            f"{s['failed_calls']:<8} "
+            f"{s['success_rate']:.1f}%{'':<4} "
+            f"{format_duration(s['avg_duration_ms']):<12} "
+            f"{s['total_tokens']:<14} "
+            f"{int(s['avg_tokens']) if s['avg_tokens'] else 0:<12}"
+        )
+
+
+def cmd_tool_efficiency(args):
+    """Show tool efficiency metrics (tokens per success)"""
+    efficiency = get_tool_efficiency()
+
+    if not efficiency:
+        print("No tool efficiency data available")
+        return
+
+    print(f"\n🎯 Tool Efficiency (Tokens per Successful Call):\n")
+    print(f"{'Tool':<25} {'Total Calls':<12} {'Successful':<12} {'Total Tokens':<14} {'Tokens/Success':<16} {'Avg Duration':<12}")
+    print("-" * 100)
+
+    for e in efficiency:
+        print(
+            f"{e['tool_name'][:24]:<25} "
+            f"{e['total_calls']:<12} "
+            f"{e['successful_calls']:<12} "
+            f"{e['total_tokens']:<14} "
+            f"{int(e['tokens_per_success']) if e['tokens_per_success'] else 0:<16} "
+            f"{format_duration(e['avg_duration_ms']):<12}"
+        )
+
+
 def main():
     parser = argparse.ArgumentParser(description='Local Observability CLI')
     subparsers = parser.add_subparsers(dest='command', help='Commands')
@@ -293,6 +389,20 @@ def main():
     p_cleanup = subparsers.add_parser('cleanup', help='Delete old data')
     p_cleanup.add_argument('--days', type=int, default=30, help='Keep data newer than N days')
     p_cleanup.set_defaults(func=cmd_cleanup)
+
+    # Tools used in execution
+    p_tools = subparsers.add_parser('tools', help='Show tools used in an execution')
+    p_tools.add_argument('execution_id', type=int, help='Execution ID')
+    p_tools.set_defaults(func=cmd_tools)
+
+    # Tool statistics
+    p_tool_stats = subparsers.add_parser('tool-stats', help='Show tool usage statistics')
+    p_tool_stats.add_argument('tool_name', nargs='?', help='Filter by specific tool (optional)')
+    p_tool_stats.set_defaults(func=cmd_tool_stats)
+
+    # Tool efficiency
+    p_tool_eff = subparsers.add_parser('tool-efficiency', help='Show tool efficiency metrics')
+    p_tool_eff.set_defaults(func=cmd_tool_efficiency)
 
     args = parser.parse_args()
 

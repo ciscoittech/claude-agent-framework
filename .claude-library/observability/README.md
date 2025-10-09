@@ -67,6 +67,15 @@ python3 .claude-library/observability/obs.py summary --days 7
 
 # Show agent performance
 python3 .claude-library/observability/obs.py agents
+
+# Show tools used in execution
+python3 .claude-library/observability/obs.py tools 1
+
+# Show tool usage statistics
+python3 .claude-library/observability/obs.py tool-stats
+
+# Show tool efficiency metrics
+python3 .claude-library/observability/obs.py tool-efficiency
 ```
 
 ---
@@ -90,6 +99,14 @@ python3 .claude-library/observability/obs.py agents
   - Output tokens
   - Cached tokens
   - Estimated cost (USD)
+
+- **Tool Usage**: Monitors tool calls per execution
+  - Tool name (Read, Write, Bash, Edit, etc.)
+  - Parameters passed to tool
+  - Success/failure status
+  - Duration per tool
+  - Tokens consumed per tool
+  - Output size
 
 - **Artifacts**: Monitors changes
   - Files created/modified/deleted
@@ -166,6 +183,12 @@ Violations:
 - `tokens_input`, `tokens_output`, `tokens_cached`, `tokens_total`
 - `cost_usd`
 
+**tool_usage** - Tool call tracking
+- `tool_name`, `parameters_json`
+- `success`, `duration_ms`
+- `tokens_used`, `output_size_bytes`
+- `timestamp`
+
 **artifacts** - Created/modified resources
 - `artifact_type` (file_created, file_modified, command_run, test_run)
 - `artifact_path`, `artifact_size_bytes`, `artifact_hash`
@@ -238,6 +261,13 @@ Tokens: 12500 (cost: $0.0450)
   - file_created: tests/test_login.py (890 bytes)
   - test_run: pytest tests/test_login.py
 
+🔧 Tools Used (5):
+  ✅ Read (125ms) - 1200 tokens at 2025-10-04 14:23:16
+  ✅ Edit (89ms) - 850 tokens at 2025-10-04 14:23:20
+  ✅ Write (234ms) - 1100 tokens at 2025-10-04 14:23:45
+  ✅ Bash (1.2s) - 300 tokens at 2025-10-04 14:24:10
+  ✅ Read (95ms) - 600 tokens at 2025-10-04 14:24:30
+
 🔍 Validation: ✅ PASSED (score: 100.0)
 ```
 
@@ -280,6 +310,67 @@ python3 .claude-library/observability/obs.py expectations
 
 ```bash
 python3 .claude-library/observability/obs.py cleanup --days 30
+```
+
+### Tools Used in Execution
+
+```bash
+python3 .claude-library/observability/obs.py tools 5
+```
+
+Output:
+```
+🔧 Tools Used in Execution #5 (8):
+
+#    Tool                 Status      Duration     Tokens      Output Size   Time
+----------------------------------------------------------------------------------------------------
+1    Read                 ✅ Success  125ms        1200        12500 B       2025-10-04 14:23:16
+2    Grep                 ✅ Success  89ms         450         3200 B        2025-10-04 14:23:18
+3    Edit                 ✅ Success  234ms        1100        8900 B        2025-10-04 14:23:45
+4    Bash                 ✅ Success  1.2s         300         1500 B        2025-10-04 14:24:10
+5    Read                 ✅ Success  95ms         600         7800 B        2025-10-04 14:24:30
+```
+
+### Tool Statistics
+
+```bash
+# Show all tool statistics
+python3 .claude-library/observability/obs.py tool-stats
+
+# Show statistics for specific tool
+python3 .claude-library/observability/obs.py tool-stats Read
+```
+
+Output:
+```
+🔧 Tool Usage Statistics (all tools):
+
+Tool                      Total    Success   Failed   Rate     Avg Time     Total Tokens   Avg Tokens
+--------------------------------------------------------------------------------------------------------------
+Read                      450      448       2        99.6%    115ms        540000         1200
+Edit                      280      275       5        98.2%    205ms        308000         1100
+Write                     150      148       2        98.7%    180ms        165000         1100
+Bash                      320      310       10       96.9%    850ms        96000          300
+Grep                      200      198       2        99.0%    95ms         90000          450
+```
+
+### Tool Efficiency
+
+```bash
+python3 .claude-library/observability/obs.py tool-efficiency
+```
+
+Output:
+```
+🎯 Tool Efficiency (Tokens per Successful Call):
+
+Tool                      Total Calls  Successful   Total Tokens   Tokens/Success   Avg Duration
+----------------------------------------------------------------------------------------------------
+Bash                      320          310          96000          310              850ms
+Grep                      200          198          90000          455              95ms
+Edit                      280          275          308000         1120             205ms
+Write                     150          148          165000         1115             180ms
+Read                      450          448          540000         1205             115ms
 ```
 
 ---
@@ -336,6 +427,36 @@ Quickly find and analyze failures:
 python3 .claude-library/observability/obs.py failed
 ```
 
+### 6. Tool Usage Analysis
+
+Identify which tools agents use most and their efficiency:
+
+```bash
+# See most-used tools
+python3 .claude-library/observability/obs.py tool-stats
+
+# Find most efficient tools (lowest tokens per success)
+python3 .claude-library/observability/obs.py tool-efficiency
+
+# Debug specific execution's tool usage
+python3 .claude-library/observability/obs.py tools 5
+```
+
+### 7. Optimize Token Usage
+
+Track which tools consume the most tokens:
+
+```sql
+sqlite3 .claude-metrics/observability.db
+
+-- Tools with highest token usage
+SELECT tool_name, SUM(tokens_used) as total_tokens
+FROM tool_usage
+GROUP BY tool_name
+ORDER BY total_tokens DESC
+LIMIT 10;
+```
+
 ---
 
 ## 🔧 Advanced Usage
@@ -362,6 +483,17 @@ SELECT
 FROM executions
 WHERE completed_at IS NOT NULL
 GROUP BY agent_name;
+
+-- Tool usage patterns by agent
+SELECT
+  e.agent_name,
+  t.tool_name,
+  COUNT(*) as usage_count,
+  ROUND(AVG(t.tokens_used), 0) as avg_tokens
+FROM tool_usage t
+JOIN executions e ON e.id = t.execution_id
+GROUP BY e.agent_name, t.tool_name
+ORDER BY e.agent_name, usage_count DESC;
 ```
 
 ### Adding Custom Expectations
@@ -506,6 +638,31 @@ Track if generated systems meet quality targets:
 - Token efficiency
 - Success rates
 - Cost per task
+
+### Tracking Tool Usage in Agents
+
+Agents can track their tool usage by calling the helper functions:
+
+```python
+from db_helper import insert_tool_usage, get_current_execution_id
+import json
+
+# Get current execution ID
+execution_id = get_current_execution_id()
+
+# Track a tool call
+insert_tool_usage(
+    execution_id=execution_id,
+    tool_name="Read",
+    parameters_json=json.dumps({"file_path": "/path/to/file.py"}),
+    success=True,
+    duration_ms=125,
+    tokens_used=1200,
+    output_size_bytes=12500
+)
+```
+
+**Note**: This is typically done automatically via hooks, but agents can manually track custom tool usage if needed.
 
 ---
 

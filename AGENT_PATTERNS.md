@@ -938,6 +938,113 @@ const validation = {
 - ❌ Forget progress reporting
 - ❌ Over-engineer simple tasks
 
+## Tool Description Pattern
+
+When describing tools in agent definitions, use this template to ensure clarity and proper usage:
+
+### Standard Template Structure
+
+```markdown
+### Tool: [Tool Name]
+
+**Purpose**: [One clear sentence - what this tool does]
+
+**When to Use**:
+- [Specific scenario 1]
+- [Specific scenario 2]
+
+**Parameters**:
+- `parameter_name` (type, required/optional): Clear description
+  - Example value: `"example"`
+  - Default: `value` (if optional)
+
+**Returns**: [What the agent will receive back]
+
+**Example Usage**:
+```
+[Tool Name](
+  parameter_name="example_value",
+  other_param=123
+)
+```
+
+**Common Mistakes to Avoid**:
+- ❌ [Common mistake 1]
+- ❌ [Common mistake 2]
+
+**Success Indicators**:
+- [How to know it worked]
+```
+
+### When to Use Full vs Simplified Descriptions
+
+**Full Template** - Use for:
+- Core tools agents use frequently (Read, Write, Grep)
+- Tools with complex parameters
+- Tools where mistakes are common
+- Primary tools for that agent type
+
+**Simplified Template** - Use for:
+- Secondary tools used occasionally
+- Tools with obvious usage
+- Well-known standard tools
+
+### Real-World Example: Read Tool
+
+```markdown
+### Read - File Content Retrieval
+
+**Purpose**: Read and analyze file contents with line numbers
+
+**When to Use**:
+- Understanding existing code before modifications
+- Reviewing configuration files
+- Analyzing log files for debugging
+
+**Parameters**:
+- `file_path` (string, required): Absolute path from project root
+  - Example: `"/Users/dev/project/src/auth.py"`
+- `limit` (int, optional): Max lines to read (default: 2000)
+- `offset` (int, optional): Starting line (default: 1)
+
+**Returns**: File contents with line numbers (1-indexed)
+
+**Example Usage**:
+```python
+Read(file_path="/path/to/file.py", limit=50)
+# Returns first 50 lines with line numbers
+```
+
+**Token Efficiency**:
+- For large files (>1000 lines): Use `limit` and `offset` to paginate
+- To find specific code: Use Grep first, then Read the relevant sections
+- Default behavior loads up to 2000 lines
+
+**Common Mistakes**:
+- ❌ Reading entire 5000-line file when only need one function
+- ❌ Using Read to search - use Grep instead
+- ✅ Read specific sections after Grep finds locations
+
+**Success Indicators**:
+- Line numbers visible in output
+- Content is readable and formatted
+- File path confirmed in response
+```
+
+### Implementation Guidelines
+
+1. **Start with Purpose**: One clear sentence explaining what the tool does
+2. **Be Specific with Scenarios**: List concrete use cases, not generic descriptions
+3. **Show Real Examples**: Use actual project paths and realistic values
+4. **Highlight Common Mistakes**: Help agents avoid known pitfalls
+5. **Include Success Indicators**: Help agents verify the tool worked
+
+### Source Attribution
+
+This pattern is based on Anthropic's "Writing Tools for Agents" best practices, emphasizing clarity for new team members and token efficiency.
+
+---
+
 ## Conclusion
 
 These patterns represent battle-tested approaches from production agent systems. Start with simple patterns and progressively adopt more sophisticated ones as your system grows. Remember: the goal is to make development faster and more reliable, not more complex.
