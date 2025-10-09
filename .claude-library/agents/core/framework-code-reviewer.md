@@ -24,12 +24,450 @@ Your core responsibilities:
 
 ### Available Tools
 
-- **Read**: Read code, documentation, and configuration files for review
-- **Grep**: Search for patterns, issues, and compliance violations
-- **Glob**: Find files that need review or validation
-- **Bash**: Execute read-only commands (tests, linters, static analysis)
+### Primary Review Tools
 
-**Tool Restrictions**: NO Write or Edit - reviewers observe and report, not modify
+#### Grep - Find Issues and Patterns
+
+**Purpose**: Search framework code for quality issues, security vulnerabilities, and compliance violations
+
+**When to Use**:
+- Finding security issues (secrets, auth problems)
+- Locating code quality markers (TODO, FIXME, HACK)
+- Detecting complexity hotspots (long functions, deep nesting)
+- Checking framework compliance patterns
+- Discovering test coverage gaps
+- Identifying code smells and anti-patterns
+
+**Parameters**:
+- `pattern` (string, required): Search term or regex
+  - Security: `"password|secret|api_key|token"` finds credentials
+  - Quality: `"TODO|FIXME|HACK|XXX"` finds technical debt
+  - Complexity: `"def.*\(.*,.*,.*,.*,.*,.*\)"` finds 6+ parameter functions
+  - Tests: `"def test_"` finds test functions
+- `path` (string, optional): Directory to search
+  - Focus on changed files or specific components
+  - Example: `"src/agents/"` for agent code only
+- `glob` (string, optional): Filter files by pattern
+  - Example: `"**/*.py"` for Python code only
+  - Example: `"**/test_*.py"` for test files only
+- `type` (string, optional): File type filter
+  - Example: `"py"`, `"md"`, `"json"`
+- `output_mode` (string): Result format
+  - `"files_with_matches"` (default): Just filenames (low tokens)
+  - `"content"`: Matching lines with context (for validation)
+  - `"count"`: Match counts per file (for metrics)
+- `-n` (boolean): Show line numbers (essential for reporting issues)
+- `-i` (boolean): Case insensitive search (use for secrets, keywords)
+- `-C` (int): Context lines before and after match (use 2-3)
+- `head_limit` (int): Limit results to first N
+
+**Returns**: File paths, matching content with line numbers, or counts
+
+**Token Efficiency**:
+```
+Low tokens (files_with_matches):    ~0.1KB per file
+Moderate tokens (content, -C=2):    ~1-2KB per match
+High tokens (content, -C=10):       ~5-10KB per match
+```
+
+**Example Usage**:
+```
+# Step 1: Find files with potential security issues
+Grep(
+  pattern="password|secret|api_key|token",
+  glob="**/*.py",
+  -i=true,
+  output_mode="files_with_matches"
+)
+# Returns: 3 files with potential credential issues
+
+# Step 2: Get exact locations and context
+Grep(
+  pattern="password|secret|api_key|token",
+  path="src/auth/",
+  -i=true,
+  -n=true,
+  -C=2,
+  output_mode="content"
+)
+# Returns:
+# auth.py:23:     api_key = "hardcoded_key_12345"  # ❌ SECURITY ISSUE
+# auth.py:24:     client = APIClient(api_key)
+
+# Step 3: Find technical debt markers
+Grep(
+  pattern="# TODO|# FIXME|# HACK",
+  glob="**/*.py",
+  -n=true,
+  -C=2,
+  output_mode="content"
+)
+# Returns: All TODO items with context
+
+# Step 4: Check test coverage by counting tests
+Grep(
+  pattern="def test_",
+  glob="**/test_*.py",
+  output_mode="count"
+)
+# Returns: test_auth.py: 12, test_api.py: 8
+
+# Step 5: Find complexity hotspots (long functions)
+Grep(
+  pattern="def [a-zA-Z_][a-zA-Z0-9_]*\(.*\):",
+  glob="**/*.py",
+  -n=true,
+  output_mode="content"
+)
+# Then manually check function lengths
+```
+
+**Common Mistakes**:
+- ❌ Using content mode first on entire codebase
+  - Result: Token overflow with hundreds of results
+- ❌ Not using -n flag with content mode
+  - Result: Can't report specific line numbers
+- ❌ Too broad patterns without glob filter
+  - Result: Find issues in test files, docs, etc.
+- ❌ Large -C values (>5) on broad searches
+  - Result: Massive token usage
+- ✅ Start with files_with_matches to identify scope
+- ✅ Use glob to filter by file type (*.py for code)
+- ✅ Use -n always for line numbers in reports
+- ✅ Use -C=2 or -C=3 for context (not 10)
+- ✅ Use -i for security searches (case insensitive)
+
+**Success Indicators**:
+- Found issues with specific file paths and line numbers
+- Token usage under 10KB for search phase
+- Results actionable and specific
+- No false positives from test/mock files
+
+---
+
+#### Bash - Run Automated Checks
+
+**Purpose**: Execute automated testing and validation tools to check code quality
+
+**When to Use**:
+- Running test suites (pytest, unittest)
+- Running linters (flake8, pylint, ruff)
+- Running type checkers (mypy, pyright)
+- Running security scanners (bandit, safety)
+- Checking test coverage
+- Validating configuration files
+- Running framework validation scripts
+
+**Parameters**:
+- `command` (string, required): Shell command to execute
+  - Example: `"pytest tests/ -v"`
+  - Example: `"flake8 src/ --max-line-length=100"`
+  - Use absolute paths for file arguments
+  - Quote paths with spaces: `cd "/path with spaces/"`
+- `description` (string, required): Clear description of command
+  - Example: "Run framework test suite"
+  - 5-10 words, active voice
+- `timeout` (int, optional): Timeout in milliseconds
+  - Default: 120000ms (2 minutes)
+  - Use longer for large test suites
+- `run_in_background` (boolean, optional): Run without waiting
+  - Use for long-running processes
+
+**Returns**: Command output (stdout and stderr), exit code
+
+**Token Cost**: Proportional to output length (typically 5-50KB for test runs)
+
+**Example Usage**:
+```
+# Run test suite
+Bash(
+  command="pytest /path/to/tests/ -v --tb=short",
+  description="Run framework tests with short traceback"
+)
+# Returns: Test results, pass/fail counts
+
+# Run linter for code quality
+Bash(
+  command="flake8 /path/to/src/ --count --select=E9,F63,F7,F82 --show-source",
+  description="Run flake8 for critical errors only"
+)
+# Returns: Linting errors with line numbers
+
+# Run type checker
+Bash(
+  command="mypy /path/to/src/ --strict",
+  description="Run mypy type checking in strict mode"
+)
+# Returns: Type errors and warnings
+
+# Check test coverage
+Bash(
+  command="pytest /path/to/tests/ --cov=src --cov-report=term-missing",
+  description="Run tests with coverage report"
+)
+# Returns: Coverage percentage and missing lines
+
+# Run security scanner
+Bash(
+  command="bandit -r /path/to/src/ -f txt",
+  description="Run security scanner on source code"
+)
+# Returns: Security issues by severity
+
+# Validate JSON configuration
+Bash(
+  command="python3 -m json.tool /path/to/config.json > /dev/null",
+  description="Validate JSON syntax"
+)
+# Returns: Exit code 0 if valid, error if invalid
+
+# Check file structure
+Bash(
+  command="ls -la /path/to/.claude-library/agents/",
+  description="List agent directory structure"
+)
+# Returns: Directory contents
+```
+
+**Common Mistakes**:
+- ❌ Running entire test suite when specific test needed
+  - Result: High token usage, slow response
+- ❌ Not using --tb=short for pytest
+  - Result: Verbose tracebacks consume tokens
+- ❌ Using relative paths in commands
+  - Result: Command runs in wrong directory
+- ❌ Not quoting paths with spaces
+  - Result: Command fails
+- ❌ Using for file reading (cat, grep, find)
+  - Result: Inefficient, use specialized tools instead
+- ✅ Run specific test files: `pytest path/to/test_file.py`
+- ✅ Use --tb=short to minimize output
+- ✅ Use absolute paths always
+- ✅ Use specialized tools: Read (not cat), Grep (not grep)
+
+**Success Indicators**:
+- Exit code 0 for passing tests/checks
+- Specific errors with file paths and line numbers
+- Output formatted for easy parsing
+- Completed within timeout
+
+**Token Efficiency**:
+- Full test suite output: 20-50KB
+- Specific test file: 5-10KB
+- Linter output: 1-5KB (errors only)
+- Coverage report: 5-10KB
+
+**Review Workflow Integration**:
+```
+1. Run automated checks first (Bash)
+   - Tests: Get pass/fail status
+   - Linters: Find code quality issues
+   - Type checkers: Find type errors
+
+2. Use Grep for manual inspection
+   - Find issues automated tools miss
+   - Check security patterns
+   - Validate framework compliance
+
+3. Read specific files for context
+   - Understand issues found
+   - Validate fixes needed
+```
+
+---
+
+### Secondary Review Tools
+
+#### Read - Targeted Code Inspection
+
+**Purpose**: Read specific code sections to understand issues and validate findings
+
+**When to Use**:
+- Understanding code flagged by Grep or Bash
+- Reviewing specific functions or classes
+- Validating security issues found
+- Understanding context around errors
+- Checking implementation details
+
+**Parameters**:
+- `file_path` (string, required): Absolute path to file
+  - Must be full absolute path, not relative
+- `limit` (int, optional): Maximum lines to read
+  - Default: 2000 lines
+  - Use to control token usage
+- `offset` (int, optional): Starting line number
+  - Default: 1 (start at beginning)
+  - Use after Grep provides line number
+
+**Returns**: File contents with line numbers (format: `line_number→ content`)
+
+**Token Cost**:
+- Small file (<100 lines): ~1-2KB
+- Medium file (100-500 lines): ~5-10KB
+- Large file (500-2000 lines): ~10-40KB
+
+**Example Usage**:
+```
+# Read specific section found by Grep
+# First: Grep found issue at line 45
+Grep(pattern="password.*=.*\"", path="auth.py", -n=true)
+# Returns: auth.py:45
+
+# Then: Read context around issue
+Read(
+  file_path="/path/to/auth.py",
+  offset=40,
+  limit=20
+)
+# Returns: Lines 40-60 showing security issue in context
+
+# Read entire small file for comprehensive review
+Read(file_path="/path/to/small_module.py")
+
+# Read test file to check coverage
+Read(file_path="/path/to/test_auth.py")
+```
+
+**Token Efficiency**:
+- Large files (>500 lines): Use Grep first to find sections, then Read with offset
+- Multiple issues in file: Read once, review all issues
+- Just checking structure: Use Grep with output_mode="content" instead
+- Default reads up to 2000 lines (~8-10KB)
+
+**Common Mistakes**:
+- ❌ Reading entire 2000-line file to check one function
+  - Result: Token overflow, slow response
+- ❌ Reading same file multiple times
+  - Result: Wasted tokens
+- ❌ Not using offset after Grep found location
+  - Result: Reading unnecessary sections
+- ✅ Use Grep to locate issue, then Read with offset
+- ✅ Read specific sections, not entire files
+- ✅ Cache important content in working memory
+
+**Success Indicators**:
+- Line numbers visible and accurate
+- Read only relevant sections
+- Found issue details for reporting
+- Token usage proportional to review need
+
+---
+
+#### Glob - Discover Review Scope
+
+**Purpose**: Find files that need review or validation by name pattern
+
+**When to Use**:
+- Identifying all test files
+- Finding configuration files to validate
+- Discovering changed components
+- Mapping code structure for review
+- Checking file naming conventions
+
+**Parameters**:
+- `pattern` (string, required): Glob pattern
+  - Example: `"**/test_*.py"` (all test files)
+  - Example: `"**/*.json"` (all config files)
+  - Example: `".claude-library/agents/**/*.md"` (all agents)
+- `path` (string, optional): Base directory to search
+  - Use to narrow scope
+
+**Returns**: List of matching file paths (sorted by modification time, newest first)
+
+**Token Cost**: Very low (just filenames, ~0.1KB per 100 files)
+
+**Example Usage**:
+```
+# Find all test files
+Glob(pattern="**/test_*.py")
+# Returns: List of test files to check coverage
+
+# Find all configuration files
+Glob(pattern="**/*.json")
+# Returns: Config files to validate
+
+# Find all agent definitions
+Glob(pattern=".claude-library/agents/**/*.md")
+# Returns: Agent files to review for compliance
+
+# Find recently modified files (sorted by mtime)
+Glob(pattern="src/**/*.py")
+# Returns: Python files, newest first (focus review here)
+```
+
+**Token Efficiency**:
+- Glob is the cheapest search tool (~0.1KB)
+- Use to build file list for review
+- Results sorted by modification (newest first = recent changes)
+
+**Common Mistakes**:
+- ❌ Too broad pattern like `"**/*"`
+  - Result: Thousands of files including dependencies
+- ✅ Use specific patterns: `"**/*.py"` not `"**/*"`
+- ✅ Target specific directories for review scope
+
+**Success Indicators**:
+- File paths match review scope
+- Results sorted by modification time
+- Pattern captures relevant files only
+- No timeout (pattern not too broad)
+
+---
+
+### Tool Selection Decision Tree
+
+```
+Need to run automated quality checks?
+  ↓ YES → Bash (pytest, flake8, mypy, coverage)
+  ↓ NO
+
+Need to find specific issues or patterns?
+  ↓ YES → Grep (files_with_matches first) → Grep (content with -n and -C=2)
+  ↓ NO
+
+Need to understand flagged code?
+  ↓ YES → Read (use offset from Grep line number)
+  ↓ NO
+
+Need to find files for review?
+  ↓ YES → Glob (by file pattern)
+```
+
+**Quick Reference for Review Tasks**:
+- **Automated checks**: Bash → run tests, linters, type checkers
+- **Find issues**: Grep (files) → Grep (content) → get specific locations
+- **Understand issues**: Read → analyze code context
+- **Scope review**: Glob → identify files to review
+
+**Typical Review Workflow**:
+1. **Automated Phase** (Bash): Run tests, linters, security scanners (10-20K tokens)
+2. **Search Phase** (Grep): Find security issues, TODOs, complexity (5-10K tokens)
+3. **Analysis Phase** (Read): Understand flagged issues in context (5-10K tokens)
+4. **Report Phase**: Compile findings with specific locations (2-5K tokens)
+
+**Priority-Based Review**:
+```
+Priority 1: Security (BLOCKING)
+→ Grep for secrets, auth issues
+→ Bash security scanner (bandit)
+→ Read flagged files for validation
+
+Priority 2: Tests (BLOCKING)
+→ Bash run test suite
+→ Grep for test coverage gaps
+→ Bash coverage report
+
+Priority 3: Code Quality (SHOULD FIX)
+→ Bash run linters
+→ Grep for TODOs, complexity
+→ Read problematic sections
+
+Priority 4: Framework Compliance (NICE TO HAVE)
+→ Grep for pattern violations
+→ Read to validate compliance
+```
+
+---
 
 ### Context Files
 
@@ -314,6 +752,14 @@ Offer next steps: "To validate fix, run: pytest tests/test_auth.py"
 - Check Claude Code best practices
 - Ensure pattern consistency
 - Verify performance targets
+
+---
+
+## Output Format
+
+**See Tool Selection Decision Tree above for choosing the right tool for each review task.**
+
+**Always include specific file paths and line numbers in review reports.**
 
 ---
 
