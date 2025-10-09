@@ -280,6 +280,55 @@
         "documentation_phase": "20s",
         "total_feature_build": "3min"
       }
+    },
+
+    "best-practice-analyzer": {
+      "path": ".claude-library/agents/specialized/best-practice-analyzer.md",
+      "type": "specialized",
+      "domain": "best_practices_ingestion",
+      "tools": ["Read", "Write", "WebFetch", "Grep", "Glob"],
+      "triggers": [
+        "analyze best practice", "extract principles", "ingest documentation",
+        "anthropic document", "best practice ingestion"
+      ],
+      "contexts": [
+        "framework-architecture.md",
+        "claude-code-best-practices.md"
+      ],
+      "priority": 2,
+      "specialization": "Analyzes new Anthropic best practice documents and extracts structured principles",
+      "observability_compatible": true,
+      "performance_targets": {
+        "analysis_time": "30s",
+        "principle_extraction": "5-7 key principles",
+        "document_creation": "15s"
+      }
+    },
+
+    "framework-gap-analyzer": {
+      "path": ".claude-library/agents/specialized/framework-gap-analyzer.md",
+      "type": "specialized",
+      "domain": "best_practices_gap_analysis",
+      "tools": ["Read", "Grep", "Glob", "Write"],
+      "restrictions": ["Edit", "Bash"],
+      "triggers": [
+        "gap analysis", "compare framework", "identify gaps",
+        "improvement opportunities", "prioritize actions"
+      ],
+      "contexts": [
+        "framework-architecture.md",
+        "framework-development-patterns.md",
+        "performance-optimization.md",
+        "claude-code-best-practices.md"
+      ],
+      "priority": 2,
+      "specialization": "Compares best practices against current framework, identifies gaps and prioritizes improvements",
+      "observability_compatible": true,
+      "performance_targets": {
+        "analysis_time": "90s",
+        "principle_comparison": "complete",
+        "report_generation": "20s"
+      }
     }
   },
 
@@ -609,6 +658,78 @@
       "meta_improvement_capability": true,
       "observability_required": true,
       "requires_observability_data": true
+    },
+
+    "ingest-best-practice": {
+      "path": ".claude/commands/ingest-best-practice.md",
+      "description": "Ingest new Anthropic best practice documents, extract principles, analyze gaps, prepare for testing",
+      "agents": [
+        "best-practice-analyzer",
+        "framework-gap-analyzer"
+      ],
+      "workflow": "sequential",
+      "stages": {
+        "extract_principles": {
+          "type": "sequential",
+          "agents": ["best-practice-analyzer"],
+          "duration": "45s"
+        },
+        "analyze_gaps": {
+          "type": "sequential",
+          "agents": ["framework-gap-analyzer"],
+          "duration": "90s"
+        },
+        "generate_summary": {
+          "type": "sequential",
+          "agents": [],
+          "duration": "10s",
+          "note": "Automated summary generation"
+        }
+      },
+      "contexts": [
+        "framework-architecture.md",
+        "framework-development-patterns.md",
+        "performance-optimization.md",
+        "claude-code-best-practices.md"
+      ],
+      "performance_target": "2min 30s",
+      "self_building_command": true,
+      "best_practice_integration": true
+    },
+
+    "validate-framework": {
+      "path": ".claude/commands/validate-framework.md",
+      "description": "Validate framework improvements from applied best practices through comprehensive testing",
+      "agents": [],
+      "workflow": "sequential",
+      "stages": {
+        "run_tests": {
+          "type": "sequential",
+          "agents": [],
+          "duration": "30s",
+          "note": "Runs pytest test suite"
+        },
+        "analyze_results": {
+          "type": "sequential",
+          "agents": [],
+          "duration": "10s"
+        },
+        "simplicity_check": {
+          "type": "sequential",
+          "agents": [],
+          "duration": "5s"
+        },
+        "generate_recommendation": {
+          "type": "sequential",
+          "agents": [],
+          "duration": "10s"
+        }
+      },
+      "contexts": [],
+      "performance_target": "1min",
+      "self_building_command": true,
+      "best_practice_integration": true,
+      "testing_command": true
     }
   },
 
