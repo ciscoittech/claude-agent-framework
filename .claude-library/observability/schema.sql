@@ -251,6 +251,61 @@ VALUES (
 );
 
 -- ==============================================================================
+-- TOOL USAGE TRACKING
+-- ==============================================================================
+
+-- Tool usage tracking
+CREATE TABLE IF NOT EXISTS tool_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    execution_id INTEGER NOT NULL,
+    tool_name TEXT NOT NULL,
+    parameters_json TEXT,
+    success BOOLEAN NOT NULL,
+    duration_ms INTEGER,
+    tokens_used INTEGER,
+    output_size_bytes INTEGER,
+    timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (execution_id) REFERENCES executions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tool_usage_execution ON tool_usage(execution_id);
+CREATE INDEX IF NOT EXISTS idx_tool_usage_tool ON tool_usage(tool_name);
+CREATE INDEX IF NOT EXISTS idx_tool_usage_timestamp ON tool_usage(timestamp);
+
+-- View: Tool usage statistics
+CREATE VIEW IF NOT EXISTS v_tool_stats AS
+SELECT
+    tool_name,
+    COUNT(*) as total_calls,
+    SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful_calls,
+    SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failed_calls,
+    ROUND(100.0 * SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) / COUNT(*), 1) as success_rate,
+    ROUND(AVG(duration_ms), 0) as avg_duration_ms,
+    SUM(COALESCE(tokens_used, 0)) as total_tokens,
+    ROUND(AVG(COALESCE(tokens_used, 0)), 0) as avg_tokens,
+    ROUND(AVG(COALESCE(output_size_bytes, 0)), 0) as avg_output_size
+FROM tool_usage
+GROUP BY tool_name
+ORDER BY total_calls DESC;
+
+-- View: Tool efficiency (tokens per success)
+CREATE VIEW IF NOT EXISTS v_tool_efficiency AS
+SELECT
+    tool_name,
+    COUNT(*) as total_calls,
+    SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful_calls,
+    SUM(COALESCE(tokens_used, 0)) as total_tokens,
+    CASE
+        WHEN SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) > 0
+        THEN ROUND(CAST(SUM(COALESCE(tokens_used, 0)) AS REAL) / SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END), 0)
+        ELSE 0
+    END as tokens_per_success,
+    ROUND(AVG(duration_ms), 0) as avg_duration_ms
+FROM tool_usage
+GROUP BY tool_name
+ORDER BY tokens_per_success ASC;
+
+-- ==============================================================================
 -- SCHEMA VERSION
 -- ==============================================================================
 
@@ -260,4 +315,4 @@ CREATE TABLE IF NOT EXISTS schema_version (
     description TEXT
 );
 
-INSERT OR REPLACE INTO schema_version (version, description) VALUES (1, 'Initial schema with executions, metrics, artifacts, validations');
+INSERT OR REPLACE INTO schema_version (version, description) VALUES (2, 'Added tool usage tracking with statistics views');
