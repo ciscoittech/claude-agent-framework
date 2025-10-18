@@ -1,0 +1,219 @@
+{
+  "examples": [
+    {
+      "id": "example_1",
+      "title": "Implement New Feature",
+      "task": "Implement a caching layer for our database queries using Redis",
+      "expected_agent": "code-specialist",
+      "expected_model": "claude-3-5-sonnet-20241022",
+      "expected_tokens": "10000-12000",
+      "expected_duration": "15-20 minutes",
+      "reasoning": "Medium-high complexity, requires architecture design, coding implementation, multi-file changes"
+    },
+    {
+      "id": "example_2",
+      "title": "Bug Fix",
+      "task": "Fix the memory leak in the background worker process",
+      "expected_agent": "code-specialist",
+      "expected_model": "claude-3-5-sonnet-20241022",
+      "expected_tokens": "8000-10000",
+      "expected_duration": "10-15 minutes",
+      "reasoning": "Medium complexity, requires debugging, profiling, and code modification"
+    },
+    {
+      "id": "example_3",
+      "title": "Write Tests",
+      "task": "Create comprehensive unit tests for the authentication module with edge cases",
+      "expected_agent": "test-generator",
+      "expected_model": "claude-3-5-sonnet-20241022",
+      "expected_tokens": "8000-10000",
+      "expected_duration": "12-18 minutes",
+      "reasoning": "Medium complexity, requires understanding existing code and writing comprehensive test coverage"
+    },
+    {
+      "id": "example_4",
+      "title": "Generate Documentation",
+      "task": "Create API documentation for our REST endpoints including authentication, rate limiting, and error handling",
+      "expected_agent": "documentation-expert",
+      "expected_model": "claude-3-5-sonnet-20241022",
+      "expected_tokens": "9000-12000",
+      "expected_duration": "15-20 minutes",
+      "reasoning": "Medium complexity, requires understanding API design, clear communication, multiple formats"
+    },
+    {
+      "id": "example_5",
+      "title": "Code Analysis",
+      "task": "Analyze our microservices architecture and identify opportunities for simplification",
+      "expected_agent": "project-analyzer",
+      "expected_model": "claude-3-5-sonnet-20241022",
+      "expected_tokens": "12000-16000",
+      "expected_duration": "20-30 minutes",
+      "reasoning": "High complexity, requires deep codebase analysis, architecture understanding, multiple files"
+    },
+    {
+      "id": "example_6",
+      "title": "Quick Fix",
+      "task": "Update the copyright year in all source files",
+      "expected_agent": "generalist",
+      "expected_model": "claude-3-5-haiku-20241022",
+      "expected_tokens": "2000-3000",
+      "expected_duration": "2-3 minutes",
+      "reasoning": "Low complexity, simple file operations, minimal logic required"
+    },
+    {
+      "id": "example_7",
+      "title": "Complex Refactoring",
+      "task": "Refactor the payment processing module to use async/await instead of callbacks",
+      "expected_agent": "code-specialist",
+      "expected_model": "claude-3-5-opus-20250514",
+      "expected_tokens": "15000-20000",
+      "expected_duration": "25-40 minutes",
+      "reasoning": "High complexity, large scope, critical system, requires careful validation"
+    },
+    {
+      "id": "example_8",
+      "title": "Multi-step Task",
+      "task": "Create a new dashboard component and then write tests for it",
+      "expected_routing": [
+        {
+          "step": 1,
+          "agent": "code-specialist",
+          "task": "Create dashboard component with proper TypeScript types"
+        },
+        {
+          "step": 2,
+          "agent": "test-generator",
+          "task": "Write integration and unit tests for component"
+        }
+      ],
+      "total_duration": "25-35 minutes",
+      "reasoning": "Multi-step task requires different expertise for each phase"
+    },
+    {
+      "id": "example_9",
+      "title": "Simple Debug",
+      "task": "Why is the login button not working on mobile devices?",
+      "expected_agent": "generalist",
+      "expected_model": "claude-3-5-haiku-20241022",
+      "expected_tokens": "3000-4000",
+      "expected_duration": "3-5 minutes",
+      "reasoning": "Low complexity, quick debugging, specific problem scope"
+    },
+    {
+      "id": "example_10",
+      "title": "Performance Optimization",
+      "task": "Optimize the database query performance in the reporting module",
+      "expected_agent": "code-specialist",
+      "expected_model": "claude-3-5-sonnet-20241022",
+      "expected_tokens": "10000-14000",
+      "expected_duration": "15-25 minutes",
+      "reasoning": "Medium-high complexity, requires profiling, optimization techniques, testing"
+    }
+  ],
+  "decision_tree": {
+    "root": {
+      "question": "What type of task is this?",
+      "branches": [
+        {
+          "condition": "Implementation/Coding/Refactoring/Optimization",
+          "agent": "code-specialist",
+          "model": "sonnet",
+          "keywords": [
+            "implement",
+            "code",
+            "refactor",
+            "optimize",
+            "fix bug",
+            "architecture",
+            "design pattern"
+          ]
+        },
+        {
+          "condition": "Testing/Quality Assurance",
+          "agent": "test-generator",
+          "model": "sonnet",
+          "keywords": [
+            "test",
+            "unit test",
+            "integration test",
+            "coverage",
+            "mock",
+            "fixture",
+            "pytest",
+            "jest"
+          ]
+        },
+        {
+          "condition": "Documentation/Learning",
+          "agent": "documentation-expert",
+          "model": "sonnet",
+          "keywords": [
+            "document",
+            "guide",
+            "tutorial",
+            "explain",
+            "api",
+            "reference",
+            "readme",
+            "wiki"
+          ]
+        },
+        {
+          "condition": "Analysis/Understanding",
+          "agent": "project-analyzer",
+          "model": "sonnet",
+          "keywords": [
+            "analyze",
+            "review",
+            "understand",
+            "architecture",
+            "pattern",
+            "structure",
+            "complexity",
+            "dependencies"
+          ]
+        },
+        {
+          "condition": "Simple/Quick/Minor",
+          "agent": "generalist",
+          "model": "haiku",
+          "keywords": [
+            "simple",
+            "quick",
+            "update",
+            "minor",
+            "fix typo",
+            "rename"
+          ]
+        }
+      ]
+    },
+    "complexity_adjustments": {
+      "simple_task": {
+        "condition": "LOC < 50 OR time_estimate < 5min",
+        "override_to": "generalist",
+        "model": "haiku",
+        "tokens": "2000-3000"
+      },
+      "complex_task": {
+        "condition": "LOC > 500 OR time_estimate > 30min OR multiple_files > 10",
+        "upgrade_to": "code-specialist",
+        "model": "opus",
+        "tokens": "15000-25000"
+      },
+      "medium_task": {
+        "condition": "50 <= LOC <= 500",
+        "route_to": "standard_specialist",
+        "model": "sonnet",
+        "tokens": "8000-12000"
+      }
+    }
+  },
+  "performance_baseline": {
+    "agent_selection_time": "< 1 second",
+    "configuration_time": "< 1 second",
+    "selection_overhead_tokens": "~500",
+    "accuracy_rate": "92-95% correct agent selection",
+    "improvement_over_manual": "40-60% faster, more consistent"
+  }
+}

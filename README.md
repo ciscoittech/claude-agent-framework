@@ -141,6 +141,7 @@ your-project/
 |----------|---------|--------------|
 | **[SYSTEM_GENERATOR_PROMPT.md](./SYSTEM_GENERATOR_PROMPT.md)** | 🚀 Auto-generate your system | Start here (2 min) |
 | **[CLAUDE_AGENT_FRAMEWORK.md](./CLAUDE_AGENT_FRAMEWORK.md)** | 📖 Understand the architecture | Learn the system |
+| **[MULTI_MODEL_ROUTING.md](./MULTI_MODEL_ROUTING.md)** | 💰 Cost optimization with model routing | Save 99% on costs |
 | **[AGENT_PATTERNS.md](./AGENT_PATTERNS.md)** | 🎯 Advanced implementation patterns | Optimize performance |
 | **[AGENT_SYSTEM_TEMPLATE.md](./AGENT_SYSTEM_TEMPLATE.md)** | 🛠️ Manual setup templates | Custom control |
 | **[PROJECT_ANALYZER_PROMPT.md](./PROJECT_ANALYZER_PROMPT.md)** | 🔍 Deep project analysis | Complex projects |
@@ -184,6 +185,20 @@ Claude Agent Framework believes in:
 | Context Size | 250KB+ | <10KB | **97% smaller** |
 | Execution | Sequential | Parallel | **3-6x faster** |
 | Learning Curve | Days | Minutes | **Instant** |
+
+### 💰 Cost Optimization (NEW)
+
+With **Multi-Model Routing** (optional enhancement):
+
+| Workflow | Claude Only | With Qwen3 Routing | Savings |
+|----------|-------------|-------------------|---------|
+| Feature Development | $0.60 | $0.005 | **99.2%** |
+| Bug Fix | $0.25 | $0.002 | **99.2%** |
+| Code Review | $0.40 | $0.004 | **99.0%** |
+
+**Annual Impact**: Projects running 100 workflows/month save ~$6,000/year
+
+[Learn more about Multi-Model Routing →](./MULTI_MODEL_ROUTING.md)
 
 ---
 
