@@ -8,6 +8,21 @@
 
 ---
 
+> ⚠️ **NOTE: `explore/agent-skills` Branch - STILL IN DEVELOPMENT**
+>
+> This branch contains the next evolution of Claude Agent Framework with **Agent Skills v1.1** integration.
+>
+> **Status:** Research complete ✅ | Strategy drafted ✅ | POC implemented ✅ | **Implementation: Phase 1 (Nov 2025)**
+>
+> **For Production Use:** Stay on `main` branch (v1.0)
+>
+> **Interested in Agent Skills?** Check out:
+> - [`AGENT_SKILLS_RESEARCH.md`](./AGENT_SKILLS_RESEARCH.md) - Complete technical analysis
+> - [`SKILLS_INTEGRATION_STRATEGY.md`](./SKILLS_INTEGRATION_STRATEGY.md) - 16-week roadmap
+> - [`SKILLS_INTEGRATION_GUIDE.md`](./SKILLS_INTEGRATION_GUIDE.md) - How to use skills
+
+---
+
 ## 🎯 What is Claude Agent Framework?
 
 Claude Agent Framework is a battle-tested system that transforms Claude Code into a team of specialized AI agents working in parallel on your project. Whether you're building a startup MVP, enterprise system, or personal project, this framework adapts to YOUR stack and YOUR patterns.
@@ -137,6 +152,8 @@ your-project/
 
 ## 📚 Framework Documentation
 
+### Core Documentation
+
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
 | **[SYSTEM_GENERATOR_PROMPT.md](./SYSTEM_GENERATOR_PROMPT.md)** | 🚀 Auto-generate your system | Start here (2 min) |
@@ -147,6 +164,21 @@ your-project/
 | **[PROJECT_ANALYZER_PROMPT.md](./PROJECT_ANALYZER_PROMPT.md)** | 🔍 Deep project analysis | Complex projects |
 | **[AGENT_REFERENCE_PATTERNS.md](./AGENT_REFERENCE_PATTERNS.md)** | 🧠 Anthropic's best practices | Theory & principles |
 | **[ANTHROPIC_TEAM_PATTERNS.md](./ANTHROPIC_TEAM_PATTERNS.md)** | 💼 Production patterns | Real-world examples |
+
+### 🚀 Agent Skills v1.1 (Experimental - `explore/agent-skills` branch)
+
+| Document | Purpose | When to Read |
+|----------|---------|--------------|
+| **[AGENT_SKILLS_RESEARCH.md](./AGENT_SKILLS_RESEARCH.md)** | 📊 Complete Agent Skills technical analysis | Deep understanding (30 min) |
+| **[SKILLS_QUICK_REFERENCE.md](./SKILLS_QUICK_REFERENCE.md)** | ⚡ Quick facts and 5-minute guide | Quick overview (5 min) |
+| **[SKILLS_INTEGRATION_STRATEGY.md](./SKILLS_INTEGRATION_STRATEGY.md)** | 🗺️ Strategic roadmap (16 weeks, 4 phases) | For planning (20 min) |
+| **[SKILLS_INTEGRATION_GUIDE.md](./SKILLS_INTEGRATION_GUIDE.md)** | 📖 How to use and create skills | Practical implementation |
+| **[SKILLS_SESSION_SUMMARY.md](./SKILLS_SESSION_SUMMARY.md)** | 📋 What was accomplished | Overview of work done |
+| **[SKILLS_EXPLORATION_OVERVIEW.md](./SKILLS_EXPLORATION_OVERVIEW.md)** | 🎯 Visual summary of deliverables | Quick reference |
+
+**Agent Skills POC Skills:**
+- **Agent Launcher Skill** - `.claude-library/skills/agent-launcher-skill/` - Intelligent agent selection
+- **Documentation Builder Skill** - `.claude-library/skills/doc-builder-skill/` - Professional docs generation
 
 ---
 
@@ -312,9 +344,26 @@ Add deterministic control over your workflows:
 Claude Agent Framework is constantly evolving. Recent additions:
 - ✅ **Observability Pattern** - Track and validate agent workflows (v1.0)
 - ✅ **Hooks Pattern** - Deterministic workflow control (v1.1)
+- 🚀 **Agent Skills Integration** - Progressive disclosure for v1.1 (in development on `explore/agent-skills` branch)
 - 🧠 Auto-learning from your Git history (coming soon)
 - 🔄 CI/CD pipeline integration (coming soon)
 - 🌐 Multi-project orchestration (coming soon)
+
+---
+
+## 🎯 Branches
+
+### `main` (v1.0 - Production Ready)
+- **Status:** ✅ Stable and production-ready
+- **Use this for:** Current projects, production deployments
+- **Features:** Full agent framework with v1.0 capabilities
+
+### `explore/agent-skills` (v1.1 - In Development)
+- **Status:** ⚠️ Research complete, implementation starting
+- **Use this for:** Evaluation, feedback, planning for v1.1
+- **Features:** Agent Skills integration, progressive disclosure (70-90% context reduction)
+- **Timeline:** Phase 1 implementation scheduled Nov 2025
+- **Read First:** [`SKILLS_INTEGRATION_STRATEGY.md`](./SKILLS_INTEGRATION_STRATEGY.md)
 
 ---
 
