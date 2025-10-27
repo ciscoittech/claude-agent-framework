@@ -120,3 +120,6 @@ TRAINING_VIDEO_SCRIPT_V2.md
 # External projects (not part of framework)
 cloned-repo/
 vscode-extension/
+
+# Development archives (local only)
+archive/
