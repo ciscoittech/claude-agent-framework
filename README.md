@@ -1,25 +1,10 @@
 # 🔥 Claude Agent Framework
 ### *Transform any project into an AI-powered development powerhouse in 2 minutes*
 
-[![Framework Version](https://img.shields.io/badge/version-1.0-blue)]()
+[![Framework Version](https://img.shields.io/badge/version-1.1-blue)]()
 [![Setup Time](https://img.shields.io/badge/setup-2%20minutes-green)]()
 [![Performance](https://img.shields.io/badge/speed-3--6x%20faster-orange)]()
 [![Context Reduction](https://img.shields.io/badge/context-97%25%20smaller-red)]()
-
----
-
-> ⚠️ **NOTE: `explore/agent-skills` Branch - STILL IN DEVELOPMENT**
->
-> This branch contains the next evolution of Claude Agent Framework with **Agent Skills v1.1** integration.
->
-> **Status:** Research complete ✅ | Strategy drafted ✅ | POC implemented ✅ | **Implementation: Phase 1 (Nov 2025)**
->
-> **For Production Use:** Stay on `main` branch (v1.0)
->
-> **Interested in Agent Skills?** Check out:
-> - [`AGENT_SKILLS_RESEARCH.md`](./AGENT_SKILLS_RESEARCH.md) - Complete technical analysis
-> - [`SKILLS_INTEGRATION_STRATEGY.md`](./SKILLS_INTEGRATION_STRATEGY.md) - 16-week roadmap
-> - [`SKILLS_INTEGRATION_GUIDE.md`](./SKILLS_INTEGRATION_GUIDE.md) - How to use skills
 
 ---
 
@@ -353,17 +338,10 @@ Claude Agent Framework is constantly evolving. Recent additions:
 
 ## 🎯 Branches
 
-### `main` (v1.0 - Production Ready)
+### `main` (v1.1 - Production Ready)
 - **Status:** ✅ Stable and production-ready
 - **Use this for:** Current projects, production deployments
-- **Features:** Full agent framework with v1.0 capabilities
-
-### `explore/agent-skills` (v1.1 - In Development)
-- **Status:** ⚠️ Research complete, implementation starting
-- **Use this for:** Evaluation, feedback, planning for v1.1
-- **Features:** Agent Skills integration, progressive disclosure (70-90% context reduction)
-- **Timeline:** Phase 1 implementation scheduled Nov 2025
-- **Read First:** [`SKILLS_INTEGRATION_STRATEGY.md`](./SKILLS_INTEGRATION_STRATEGY.md)
+- **Features:** Full agent framework with Agent Skills integration, writing tools best practices, multi-model routing, observability, and hooks patterns
 
 ---
 
@@ -380,7 +358,7 @@ $ claude
 
 ---
 
-*Claude Agent Framework v1.0 | Built with ❤️ by developers, for developers*
+*Claude Agent Framework v1.1 | Built with ❤️ by developers, for developers*
 
 [Documentation](./CLAUDE_AGENT_FRAMEWORK.md) • [Examples](./AGENT_PATTERNS.md) • [Support](https://github.com/ciscoittech/claude-agent-framework/issues)
 
