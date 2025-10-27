@@ -203,20 +203,6 @@ Claude Agent Framework believes in:
 | Execution | Sequential | Parallel | **3-6x faster** |
 | Learning Curve | Days | Minutes | **Instant** |
 
-### 💰 Cost Optimization (NEW)
-
-With **Multi-Model Routing** (optional enhancement):
-
-| Workflow | Claude Only | With Qwen3 Routing | Savings |
-|----------|-------------|-------------------|---------|
-| Feature Development | $0.60 | $0.005 | **99.2%** |
-| Bug Fix | $0.25 | $0.002 | **99.2%** |
-| Code Review | $0.40 | $0.004 | **99.0%** |
-
-**Annual Impact**: Projects running 100 workflows/month save ~$6,000/year
-
-[Learn more about Multi-Model Routing →](./MULTI_MODEL_ROUTING.md)
-
 ---
 
 ## 🚦 Getting Started
