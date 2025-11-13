@@ -1,0 +1,78 @@
+{
+  "name": "Quality Control System",
+  "version": "1.0.0",
+  "description": "Multi-repo build checking and error tracking to ensure zero errors left behind",
+
+  "hooks": {
+    "PostToolUse": [
+      {
+        "name": "edit-tracker",
+        "description": "Tracks all file edits to determine which repos were modified",
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude-library/hooks/scripts/track_edits.sh \"${FILE_PATH}\" \"${TOOL_NAME}\"",
+          "blocking": false,
+          "timeout_ms": 500,
+          "on_error": "continue"
+        }]
+      }
+    ],
+
+    "Stop": [
+      {
+        "name": "build-checker",
+        "description": "Runs build checks on all modified repos",
+        "matcher": ".*",
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude-library/hooks/scripts/build_checker.sh",
+          "blocking": false,
+          "timeout_ms": 30000,
+          "on_error": "continue"
+        }]
+      }
+    ]
+  },
+
+  "config": {
+    "multi_repo": true,
+    "edit_log_path": "/tmp/claude-edits.json",
+    "error_threshold": 5,
+    "auto_suggest_resolver": true,
+
+    "repo_detection": {
+      "patterns": [
+        "package.json",
+        "pyproject.toml",
+        "go.mod",
+        "Cargo.toml",
+        "pom.xml"
+      ]
+    },
+
+    "build_commands": {
+      "typescript": "npm run build || npx tsc --noEmit",
+      "javascript": "npm run build",
+      "python": "python -m pytest || python -m mypy .",
+      "go": "go build ./...",
+      "rust": "cargo check"
+    },
+
+    "risky_patterns": {
+      "backend": [
+        "try", "catch", "async", "await",
+        "prisma", "sequelize", "mongoose",
+        "repository", "service", "controller"
+      ],
+      "frontend": [
+        "fetch", "axios", "useState", "useEffect",
+        "async", "Promise", "then", "catch"
+      ],
+      "database": [
+        "CREATE", "ALTER", "DROP", "migration",
+        "schema", "model", "table"
+      ]
+    }
+  }
+}

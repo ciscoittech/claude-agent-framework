@@ -1,0 +1,45 @@
+{
+  "name": "Skill Auto-Activation System",
+  "version": "1.0.0",
+  "description": "Automatically suggests relevant skills based on user prompts and file context",
+
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "name": "skill-activator",
+        "description": "Analyzes prompt and suggests relevant skills before Claude sees it",
+        "matcher": ".*",
+        "hooks": [{
+          "type": "command",
+          "command": "python3 .claude-library/hooks/scripts/skill_activator.py \"${PROMPT}\" \"${CWD}\"",
+          "blocking": false,
+          "timeout_ms": 2000,
+          "on_error": "continue"
+        }]
+      }
+    ],
+
+    "Stop": [
+      {
+        "name": "error-handling-reminder",
+        "description": "Gentle reminder to self-check error handling after editing risky code",
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [{
+          "type": "command",
+          "command": "python3 .claude-library/hooks/scripts/error_reminder.py \"${EDITED_FILES}\"",
+          "blocking": false,
+          "timeout_ms": 1000,
+          "on_error": "continue"
+        }]
+      }
+    ]
+  },
+
+  "config": {
+    "skill_rules_path": ".claude-library/skills/skill-rules.json",
+    "max_skills_to_suggest": 3,
+    "confidence_threshold": 0.6,
+    "log_activations": true,
+    "log_path": ".claude-metrics/skill-activations.log"
+  }
+}

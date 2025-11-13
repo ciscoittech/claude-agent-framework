@@ -12,6 +12,39 @@
     "meta_framework_mode": true,
     "max_context_size_kb": 10,
     "parallel_execution_default": true,
+
+    "skills": {
+      "enabled": false,
+      "auto_activation": true,
+      "config_path": ".claude-library/skills/skill-rules.json",
+      "progressive_disclosure": true,
+      "max_simultaneous": 3
+    },
+
+    "dev_docs": {
+      "enabled": false,
+      "workflow_path": ".claude-library/workflows/dev-docs/",
+      "active_docs_path": "~/dev/active/",
+      "archive_docs_path": "~/dev/archive/",
+      "auto_suggest_complex_tasks": true,
+      "complexity_threshold": 4
+    },
+
+    "quality_control": {
+      "enabled": false,
+      "multi_repo": true,
+      "edit_tracking": true,
+      "build_checking": true,
+      "error_threshold": 5,
+      "auto_suggest_resolver": true
+    },
+
+    "planning_enforcement": {
+      "enabled": true,
+      "complexity_threshold": 4,
+      "suggest_mode": true,
+      "block_mode": false
+    },
     "observability": {
       "enabled": true,
       "provider": "logfire",

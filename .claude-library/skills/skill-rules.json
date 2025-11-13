@@ -1,0 +1,202 @@
+{
+  "$schema": "skill-rules-schema",
+  "version": "1.0.0",
+  "description": "Skill auto-activation rules based on user prompts and file context",
+
+  "skills": {
+    "frontend-dev-guidelines": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "promptTriggers": {
+        "keywords": [
+          "frontend", "react", "component", "UI", "UX", "styling",
+          "CSS", "tailwind", "MUI", "chakra", "shadcn",
+          "state management", "redux", "zustand", "context",
+          "routing", "navigation", "layout", "responsive",
+          "hooks", "useState", "useEffect", "custom hook"
+        ],
+        "intentPatterns": [
+          "(create|add|build).*?(component|page|layout|view)",
+          "(style|design|theme).*?(component|page|UI)",
+          "(how to|best practice).*?(react|frontend|UI)",
+          "(implement|add).*?(navigation|routing|state)",
+          "(fix|debug).*?(rendering|hydration|state)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "**/src/components/**/*.{ts,tsx,js,jsx}",
+          "**/src/pages/**/*.{ts,tsx,js,jsx}",
+          "**/src/app/**/*.{ts,tsx,js,jsx}",
+          "**/components/**/*.{ts,tsx,js,jsx}",
+          "**/src/styles/**/*.{css,scss,sass}",
+          "**/src/hooks/**/*.{ts,tsx,js,jsx}"
+        ],
+        "contentPatterns": [
+          "import.*react",
+          "export.*function.*Component",
+          "const.*=.*\\(.*\\).*=>",
+          "useState|useEffect|useContext|useReducer",
+          "return.*<.*>",
+          "className=",
+          "styled\\..*`"
+        ]
+      },
+      "activationMessage": "🎯 Consider using **frontend-dev-guidelines** skill for React/UI patterns"
+    },
+
+    "backend-dev-guidelines": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "promptTriggers": {
+        "keywords": [
+          "backend", "API", "endpoint", "route", "controller", "service",
+          "database", "query", "migration", "schema",
+          "authentication", "authorization", "JWT", "session",
+          "middleware", "validation", "error handling",
+          "repository", "ORM", "prisma", "sequelize", "mongoose"
+        ],
+        "intentPatterns": [
+          "(create|add).*?(endpoint|route|API|controller)",
+          "(implement|add).*?(authentication|auth|login)",
+          "(design|create).*?(database|schema|model)",
+          "(how to|best practice).*?(backend|API|database)",
+          "(add|implement).*?(validation|error handling|middleware)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "**/src/api/**/*.{ts,js,py,go}",
+          "**/src/routes/**/*.{ts,js,py,go}",
+          "**/src/controllers/**/*.{ts,js,py,go}",
+          "**/src/services/**/*.{ts,js,py,go}",
+          "**/src/models/**/*.{ts,js,py,go}",
+          "**/src/repositories/**/*.{ts,js,py,go}",
+          "**/backend/**/*.{ts,js,py,go}"
+        ],
+        "contentPatterns": [
+          "router\\.",
+          "app\\.(get|post|put|delete|patch)",
+          "export.*Controller",
+          "export.*Service",
+          "@Controller|@Injectable|@Service",
+          "prisma\\.|sequelize\\.|mongoose\\.",
+          "async.*req.*res"
+        ]
+      },
+      "activationMessage": "🎯 Consider using **backend-dev-guidelines** skill for API/service patterns"
+    },
+
+    "workflow-developer": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "promptTriggers": {
+        "keywords": [
+          "workflow", "automation", "pipeline", "orchestration",
+          "state machine", "process", "flow", "step",
+          "trigger", "action", "condition", "rule"
+        ],
+        "intentPatterns": [
+          "(create|build|design).*?workflow",
+          "(implement|add).*?(automation|pipeline)",
+          "(how to|pattern).*?(workflow|orchestration)",
+          "(state machine|finite state)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "**/src/workflows/**/*.{ts,js,py}",
+          "**/src/automation/**/*.{ts,js,py}",
+          "**/src/pipelines/**/*.{ts,js,py}"
+        ],
+        "contentPatterns": [
+          "workflow|Workflow",
+          "StateMachine|state.*machine",
+          "orchestrat",
+          "pipeline"
+        ]
+      },
+      "activationMessage": "🎯 Consider using **workflow-developer** skill for workflow patterns"
+    },
+
+    "database-specialist": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "promptTriggers": {
+        "keywords": [
+          "database", "SQL", "query", "migration", "schema",
+          "index", "optimization", "transaction", "relation",
+          "postgres", "mysql", "mongodb", "redis"
+        ],
+        "intentPatterns": [
+          "(create|add|modify).*?(table|schema|model)",
+          "(optimize|improve).*?(query|database|performance)",
+          "(design|create).*?migration",
+          "(add|create).*?(index|constraint|relation)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "**/migrations/**/*.{sql,js,ts}",
+          "**/prisma/schema.prisma",
+          "**/src/models/**/*.{ts,js,py}",
+          "**/src/database/**/*.{ts,js,py,sql}"
+        ],
+        "contentPatterns": [
+          "CREATE TABLE|ALTER TABLE|DROP TABLE",
+          "model.*\\{",
+          "prisma\\..*\\.",
+          "SELECT.*FROM|INSERT INTO|UPDATE.*SET",
+          "@Entity|@Column|@Table"
+        ]
+      },
+      "activationMessage": "🎯 Consider using **database-specialist** skill for database patterns"
+    },
+
+    "testing-specialist": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "promptTriggers": {
+        "keywords": [
+          "test", "testing", "spec", "unit test", "integration test",
+          "e2e", "mock", "stub", "fixture", "coverage",
+          "jest", "vitest", "pytest", "mocha", "chai"
+        ],
+        "intentPatterns": [
+          "(write|create|add).*?test",
+          "(test|verify).*?(functionality|feature|component)",
+          "(mock|stub).*?(data|API|service)",
+          "(improve|increase).*?coverage"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "**/__tests__/**/*.{ts,tsx,js,jsx,py}",
+          "**/*.{test,spec}.{ts,tsx,js,jsx,py}",
+          "**/tests/**/*.{ts,tsx,js,jsx,py}"
+        ],
+        "contentPatterns": [
+          "describe\\(|it\\(|test\\(",
+          "expect\\(.*\\)\\.to",
+          "@Test|@pytest",
+          "jest\\.mock|vi\\.mock",
+          "beforeEach|afterEach|beforeAll|afterAll"
+        ]
+      },
+      "activationMessage": "🎯 Consider using **testing-specialist** skill for test patterns"
+    }
+  },
+
+  "meta": {
+    "autoActivationEnabled": true,
+    "maxSimultaneousSkills": 3,
+    "confidenceThreshold": 0.6,
+    "activationStrategy": "keyword_and_pattern",
+    "fallbackBehavior": "suggest_all_matches"
+  }
+}

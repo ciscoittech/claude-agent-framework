@@ -20,6 +20,56 @@ Common mistakes in agent systems:
 
 ## 🎯 Simplicity Circuit Breakers
 
+### Circuit Breaker 0: Planning-First Gate ⭐ NEW
+
+**BEFORE implementing ANY complex task (>3 steps), PAUSE and PLAN:**
+
+```markdown
+Task Complexity Check:
+- Single file change? → Implement directly ✅
+- 2-3 simple steps? → Implement directly ✅
+- 4+ steps? → PLANNING MODE REQUIRED 🛑
+- Multiple files/services? → PLANNING MODE REQUIRED 🛑
+- Uncertain approach? → PLANNING MODE REQUIRED 🛑
+- Cross-repo changes? → PLANNING MODE REQUIRED 🛑
+
+If Planning Required:
+1. Enter planning mode (or use strategic-plan-architect agent)
+2. Research thoroughly (gather context)
+3. Create structured plan with:
+   - Executive summary
+   - Phases and tasks
+   - Success criteria
+   - Risks and mitigations
+4. **USER REVIEWS PLAN** (critical!)
+5. Only then implement
+6. For multi-session tasks: Create dev docs
+
+Planning Mode Benefits:
+✅ Catch silly mistakes before coding
+✅ Better context gathering up front
+✅ Structured, systematic approach
+✅ User can review and course-correct
+✅ Prevents "losing the plot" mid-implementation
+
+Anti-Pattern:
+❌ "Let's just start coding and figure it out"
+✅ "Let me create a comprehensive plan first"
+```
+
+**Real-World Impact:**
+- Prevents context loss during long implementations
+- Reduces time wasted on wrong approaches
+- Enables better estimation and tracking
+- Makes code reviews more effective
+
+**Tools:**
+- Planning mode (built-in)
+- `/dev-docs` command (creates plan/context/tasks files)
+- `strategic-plan-architect` agent (comprehensive planning)
+
+---
+
 ### Circuit Breaker 1: Complexity Assessment
 
 **BEFORE creating any agent system, measure:**
