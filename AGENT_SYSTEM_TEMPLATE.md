@@ -1,32 +1,33 @@
 # Claude Code Agent System - Quick Start Template
 *Start simple, grow naturally*
 
-## ⚠️ IMPORTANT: Choose Your Setup Level
+## IMPORTANT: Choose Your Setup Level
 
-### 🟢 MINIMAL Setup (Recommended Start)
+### MINIMAL Setup (Recommended Start)
 **For:** Projects < 1000 lines, simple workflows
 **Files:** 7 total
 **Time:** 2 minutes
 
-### 🟡 STANDARD Setup
+### STANDARD Setup
 **For:** Projects 1000-10000 lines, moderate complexity
 **Files:** 10-12 total
 **Time:** 5 minutes
 
-### 🔴 FULL Setup
+### FULL Setup
 **For:** Projects > 10000 lines, complex systems
 **Files:** 15-20 total
 **Time:** 10 minutes
 
 ---
 
-## 🟢 MINIMAL Setup (START HERE)
+## MINIMAL Setup (START HERE)
 
 ### Step 1: Create Minimal Structure
 
 ```bash
 # Create only essential directories
 mkdir -p .claude/commands
+mkdir -p .claude/agents          # NEW: Custom subagent types
 mkdir -p .claude-library/agents/core
 ```
 
@@ -133,6 +134,98 @@ Read, Grep, Glob
 Ship working code, not perfect code.
 ```
 
+### Step 3b: Create Custom Subagent Types (Optional)
+
+<!-- NEW in v2.0 -->
+
+Custom subagent types let you define specialized agents that Claude Code can launch by name.
+
+Create `.claude/agents/architect.md`:
+```markdown
+You are a system architect. Design simple, working solutions.
+
+## Focus
+- Basic structure and data models
+- Minimal API specs
+- Follow existing patterns
+
+## Tools
+Read, Write, Grep, Glob
+```
+
+Create `.claude/agents/reviewer.md`:
+```markdown
+You are a code reviewer. Check for correctness and security.
+
+## Focus
+- Does it work?
+- Major bugs or security issues?
+- Follows existing patterns?
+
+## Tools
+Read, Grep, Glob (read-only)
+```
+
+Usage in commands:
+```python
+Task(
+    description="Design auth system",
+    prompt="Design authentication for this project",
+    subagent_type="architect"  # loads .claude/agents/architect.md
+)
+```
+
+### Step 3c: Path-Specific Rules (Optional)
+
+<!-- NEW in v2.0 -->
+
+Create `.claude/rules/` to define rules that apply only when working with specific file paths:
+
+Create `.claude/rules/tests.md`:
+```markdown
+---
+globs: ["tests/**", "**/*.test.*", "**/*.spec.*"]
+---
+- Use pytest for all test files
+- Follow AAA pattern (Arrange, Act, Assert)
+- Mock external services, use real database
+- Minimum 80% branch coverage for new code
+```
+
+Create `.claude/rules/api.md`:
+```markdown
+---
+globs: ["src/api/**", "src/routes/**"]
+---
+- All endpoints must have input validation
+- Return consistent error format: { error: { code, message } }
+- Include rate limiting on public endpoints
+- Document with OpenAPI annotations
+```
+
+### Step 3d: Auto Memory (Optional)
+
+<!-- NEW in v2.0 -->
+
+Claude Code's auto memory system persists knowledge across conversations via `MEMORY.md`.
+
+Create `.claude/MEMORY.md`:
+```markdown
+# Project Memory
+
+## Architecture Decisions
+- [Link to memory file about key decision]
+
+## User Preferences
+- [Link to memory file about preferred patterns]
+```
+
+Memory files are stored in `~/.claude/projects/<project>/memory/` and indexed by MEMORY.md. The system automatically loads relevant memories in future conversations.
+
+**When to use memory vs contexts:**
+- **Memory**: User preferences, project decisions, feedback — persists across conversations
+- **Contexts**: Technical patterns, API docs, code conventions — loaded per-task
+
 ### Step 4: Create Single Build Command
 
 Create `.claude/commands/build.md` (Start with ONE command only):
@@ -155,7 +248,7 @@ Keep it sequential. Add parallel only if >3 independent tasks.
 
 ---
 
-## 🟡 STANDARD Setup (Only if Minimal Insufficient)
+## STANDARD Setup (Only if Minimal Insufficient)
 
 Add these ONLY when minimal setup proves insufficient:
 
@@ -163,6 +256,29 @@ Add these ONLY when minimal setup proves insufficient:
 - `/debug` - When you hit first complex bug
 - `/test` - When test suite exists
 - `/deploy` - When deployment configured
+
+### Directory Structure
+
+```
+project-root/
+├── .claude/
+│   ├── agent-launcher.md
+│   ├── settings.json
+│   ├── MEMORY.md              # NEW: Cross-conversation memory index
+│   ├── agents/                # NEW: Custom subagent types
+│   │   ├── architect.md
+│   │   └── reviewer.md
+│   ├── rules/                 # NEW: Path-specific rules
+│   │   ├── tests.md
+│   │   └── api.md
+│   └── commands/
+│       └── build.md
+└── .claude-library/
+    ├── REGISTRY.json
+    ├── agents/
+    │   └── core/
+    └── contexts/
+```
 
 ### Workflow Orchestrator (only if needed)
 
@@ -199,11 +315,8 @@ Architect → Engineer → Reviewer
 ### Hierarchical Workflow
 ```
 Orchestrator
-├─ Team A
-│   ├─ Agent 1
-│   └─ Agent 2
-└─ Team B
-    └─ Agent 3
+├─ Team A (Agent 1, Agent 2)
+└─ Team B (Agent 3)
 ```
 
 ## Available Tools
@@ -211,20 +324,13 @@ Orchestrator
 - **Read**: For reading results
 
 ## Execution Process
-1. Analyze task complexity
-2. Select appropriate agents
-3. Determine workflow pattern
-4. Launch agents (parallel when possible)
-5. Monitor progress
-6. Synthesize results
-7. Validate quality gates
+1. Analyze task complexity and select agents
+2. Determine workflow pattern (sequential/parallel/hierarchical)
+3. Launch agents, monitor progress
+4. Synthesize results and validate quality gates
 
 ## Progress Reporting
-- ⏳ Pending
-- 🔄 In Progress
-- ✅ Completed
-- ❌ Failed
-- 🔁 Retrying
+- Pending / In Progress / Completed / Failed / Retrying
 ```
 
 ### Step 4: Create Your First Command
@@ -235,44 +341,27 @@ Create `.claude/commands/build.md`:
 # /build Command
 
 ## Purpose
-Build features using Test-Driven Development with multiple specialized agents.
+Build features using TDD with multiple specialized agents.
 
 ## Usage
-```
 /build "Feature description"
 /build "API endpoint for user authentication"
-```
 
 ## Workflow
-
-### Stage 1: Architecture & Planning (Parallel)
-Three agents work simultaneously:
-1. **Architect**: Design system structure
-2. **Test Planner**: Create test specifications
-3. **Researcher**: Find existing patterns
-
-### Stage 2: Implementation & Review (Parallel)
-Two agents work together:
-1. **Engineer**: Implement with TDD
-2. **Reviewer**: Real-time quality checks
-
-### Stage 3: Integration
-1. **Orchestrator**: Final validation and integration
+1. **Architecture & Planning** (Parallel): Architect + Test Planner + Researcher
+2. **Implementation & Review** (Parallel): Engineer + Reviewer
+3. **Integration**: Orchestrator validates and integrates
 
 ## Implementation
-
-The command will:
 1. Load agent definitions from `.claude-library/agents/`
 2. Load relevant contexts from `.claude-library/contexts/`
 3. Execute agents in parallel where possible
-4. Synthesize results
-5. Report completion
+4. Synthesize results and report completion
 
 ## Success Criteria
 - All tests passing
 - Code review approved
 - Documentation complete
-- Performance targets met
 ```
 
 ### Step 5: Create Registry
@@ -281,7 +370,7 @@ Create `.claude-library/REGISTRY.json`:
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "project": "YOUR_PROJECT_NAME",
   "description": "Agent registry for YOUR_PROJECT",
   "agents": {
@@ -320,6 +409,12 @@ Create `.claude-library/REGISTRY.json`:
       "triggers": ["orchestrate", "coordinate", "workflow", "complex"],
       "category": "core",
       "priority": 1
+    }
+  },
+  "skills": {
+    "agent-launcher": {
+      "path": ".claude-library/skills/agent-launcher-skill/",
+      "description": "Intelligent agent selection and routing"
     }
   },
   "commands": {
@@ -390,28 +485,13 @@ src/
 - Code style: [e.g., ESLint, Black]
 - Git flow: [e.g., feature branches]
 - Testing: [minimum coverage]
-- Documentation: [requirements]
-
-## Environment Variables
-```bash
-DATABASE_URL=
-API_KEY=
-SECRET_KEY=
-```
 
 ## Common Commands
 ```bash
-# Install dependencies
-npm install
-
-# Run development
-npm run dev
-
-# Run tests
-npm test
-
-# Build production
-npm run build
+npm install    # Install dependencies
+npm run dev    # Run development
+npm test       # Run tests
+npm run build  # Build production
 ```
 ```
 
@@ -448,13 +528,8 @@ You are a database specialist with expertise in schema design, query optimizatio
 5. Ensure data integrity
 
 ## Specialized Knowledge
-- Relational databases (PostgreSQL, MySQL)
-- NoSQL databases (MongoDB, Redis)
-- Query optimization techniques
-- Index strategies
-- Transaction management
-
-[Rest of agent definition...]
+- Relational databases (PostgreSQL, MySQL), NoSQL (MongoDB, Redis)
+- Query optimization, indexing strategies, transaction management
 ```
 
 ### Adding Custom Commands
@@ -512,22 +587,13 @@ Create `.claude-library/contexts/api-patterns.md`:
 ## Testing Your Setup
 
 ### Test Agent Loading
-```
-User: "I need to design a REST API"
-Expected: System architect agent loads with API context
-```
+- `"I need to design a REST API"` -> System architect loads with API context
 
 ### Test Command Execution
-```
-User: "/build user authentication"
-Expected: Parallel execution of architect, test planner, and researcher
-```
+- `/build user authentication` -> Parallel execution of architect, test planner, researcher
 
 ### Test Context Loading
-```
-User: "Debug database performance"
-Expected: Database expert loads with database patterns context
-```
+- `"Debug database performance"` -> Database expert loads with database patterns context
 
 ## Scaling Your System
 
