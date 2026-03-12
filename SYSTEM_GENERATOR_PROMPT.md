@@ -11,7 +11,7 @@ Copy and paste this entire prompt into Claude to automatically generate a comple
 
 You are an expert Claude Code agent system architect. Your task is to analyze the current project and generate a MINIMAL agent system that follows the "simplest approach first" principle.
 
-## ⚠️ CRITICAL: Simplicity Circuit Breakers
+## CRITICAL: Simplicity Circuit Breakers
 
 Before generating ANYTHING, follow these rules:
 1. **Start with 3 core agents ONLY** (architect, engineer, reviewer)
@@ -27,7 +27,99 @@ Before generating ANYTHING, follow these rules:
 3. **Justify Additions** - Only add complexity when proven necessary
 4. **Follow Simplicity** - Try simple approaches before complex ones
 
-## Step 1: Complexity Assessment (NEW - DO THIS FIRST!)
+## Phase 0: Deep Project Analysis (For Medium/Complex Projects)
+
+Before assessing complexity, perform a thorough analysis of the project.
+Skip this phase for obviously simple projects (<500 lines, single file, etc.).
+
+### 0.1 Read Core Documentation
+
+Priority files to analyze (in order):
+1. `CLAUDE.md` or `.claude/CLAUDE.md` - Project-specific Claude instructions
+2. `README.md` - Project overview and setup instructions
+3. `package.json`, `requirements.txt`, `go.mod`, `Cargo.toml` - Dependencies and scripts
+4. `.env.example` or config files - Configuration patterns and environment variables
+5. Directory structure - Architecture patterns and organization
+
+Read each file that exists and extract:
+- Project name, purpose, and current status
+- Development workflow and conventions
+- Known pain points or areas of complexity
+- Team preferences and constraints
+
+### 0.2 Detect Technology Stack
+
+Identify each layer of the stack:
+- **Primary Language**: JavaScript/TypeScript/Python/Go/Rust/Java/etc.
+- **Frameworks**: Next.js/Django/FastAPI/Express/Rails/Spring/etc.
+- **Database**: PostgreSQL/MongoDB/MySQL/SQLite/Redis/etc.
+- **Testing**: Jest/Pytest/Vitest/Mocha/Go test/etc.
+- **Build Tools**: Webpack/Vite/ESBuild/Turbopack/Make/etc.
+- **Deployment**: Vercel/AWS/Docker/Kubernetes/Fly.io/etc.
+
+Record the primary technology for each layer. Ignore minor utilities and dev-only tools
+unless they significantly affect the development workflow.
+
+### 0.3 Extract Project Patterns
+
+Scan the codebase for established conventions:
+- **File naming**: kebab-case, PascalCase, snake_case, or mixed
+- **Directory organization**: feature-based, layer-based, domain-driven, or flat
+- **Code style**: functional, OOP, mixed, or framework-idiomatic
+- **State management**: Redux, Zustand, Context, Pinia, signals, etc.
+- **API patterns**: REST, GraphQL, tRPC, gRPC, WebSocket
+- **Authentication**: JWT, session-based, OAuth, API keys
+- **Error handling**: try/catch patterns, Result types, error boundaries
+
+Only record patterns that are actually present in the code. Do not assume
+patterns based on the framework alone.
+
+### 0.4 Identify Key Domains
+
+Detect business domains present in the codebase:
+- **User management**: user models, profiles, preferences
+- **Authentication/Authorization**: login, roles, permissions
+- **Payment processing**: Stripe, PayPal, billing logic
+- **Content management**: CMS, editors, media handling
+- **Real-time features**: WebSockets, SSE, polling
+- **Data processing**: ETL, pipelines, batch jobs
+- **Third-party integrations**: external APIs, webhooks, SDKs
+
+Each detected domain may justify a specialized agent (but only if
+the domain is substantial enough -- see complexity thresholds in Step 1).
+
+### 0.5 Smart Agent Matching
+
+Use these auto-detection rules to map project structure to potential agents:
+
+**Frontend Detection:**
+- `components/` or `src/components/` -> UI component agents
+- `pages/` or `app/` -> Routing specialists
+- `styles/` or CSS-in-JS patterns -> Styling agents
+- State management files -> State specialists
+
+**Backend Detection:**
+- `api/` or `routes/` -> API architects
+- `models/` or `schemas/` -> Data modeling agents
+- `middleware/` -> Middleware specialists
+- `services/` -> Service layer agents
+
+**Database Detection:**
+- `migrations/` -> Migration specialists
+- `seeds/` or `fixtures/` -> Data seeding agents
+- ORM config files -> ORM specialists
+- `.sql` files -> SQL experts
+
+**Testing Detection:**
+- `tests/` or `__tests__/` -> Test engineers
+- `.spec.` or `.test.` files -> TDD workflow
+- `e2e/` or `cypress/` or `playwright/` -> E2E test specialists
+- Coverage config files -> Coverage agents
+
+**Important**: Detection alone does not justify creating a specialist.
+The directory must contain enough substance to warrant one (see thresholds in Step 1).
+
+## Step 1: Complexity Assessment (DO THIS FIRST!)
 
 ### Determine Project Complexity Level
 
@@ -52,9 +144,9 @@ Before generating ANYTHING, follow these rules:
 - Many API endpoints
 - CI/CD pipelines
 
-**If SIMPLE → Use MINIMAL configuration (7-9 files total)**
-**If MEDIUM → Add 1-2 specialized agents MAX**
-**If COMPLEX → Full system may be appropriate**
+**If SIMPLE -> Use MINIMAL configuration (7-9 files total)**
+**If MEDIUM -> Add 1-2 specialized agents MAX**
+**If COMPLEX -> Full system may be appropriate**
 
 ## Step 2: Project Analysis
 
@@ -70,16 +162,17 @@ Extract ONLY what's essential:
 - Actual patterns in use (not potential patterns)
 - Features that exist (not planned features)
 
-## Step 2: Reference Framework Documentation
+## Step 3: Reference Framework Documentation
 
 Read the framework documentation located in `claude-agent-framework/`:
-1. `CLAUDE_AGENT_FRAMEWORK.md` - Core principles and architecture
-2. `AGENT_SYSTEM_TEMPLATE.md` - Quick start templates
-3. `AGENT_PATTERNS.md` - Implementation patterns
+1. `SIMPLICITY_ENFORCEMENT.md` - Circuit breakers against over-engineering (read first)
+2. `CLAUDE_AGENT_FRAMEWORK.md` - Core principles and architecture
+3. `AGENT_SYSTEM_TEMPLATE.md` - Quick start templates
+4. `AGENT_PATTERNS.md` - Implementation patterns (use sparingly)
 
-## Step 3: Generate MINIMAL Agent System
+## Step 4: Generate MINIMAL Agent System
 
-### 3.1 Start with MINIMAL Structure
+### 4.1 Start with MINIMAL Structure
 
 **FOR SIMPLE PROJECTS (DEFAULT):**
 ```bash
@@ -99,11 +192,11 @@ Read the framework documentation located in `claude-agent-framework/`:
 ```
 
 **ONLY ADD MORE IF:**
-- Tests detected → Add test.md command
-- Deployment config found → Add deploy.md
-- Multiple debugging issues in code → Add debug.md
-- Database with >5 tables → Add database-specialist.md
-- >10 API endpoints → Add api-specialist.md
+- Tests detected -> Add test.md command
+- Deployment config found -> Add deploy.md
+- Multiple debugging issues in code -> Add debug.md
+- Database with >5 tables -> Add database-specialist.md
+- >10 API endpoints -> Add api-specialist.md
 
 **DO NOT automatically create:**
 - workflow-orchestrator (unless >5 parallel tasks)
@@ -111,7 +204,7 @@ Read the framework documentation located in `claude-agent-framework/`:
 - Context files unless essential
 - Tech-specific patterns unless dominant in codebase
 
-### 3.2 Generate Agent Launcher
+### 4.2 Generate Agent Launcher
 
 Create `.claude/agent-launcher.md` with:
 - Project name from CLAUDE.md
@@ -119,12 +212,12 @@ Create `.claude/agent-launcher.md` with:
 - Available commands based on project type
 - Loading strategy for agents
 
-### 3.3 Generate SIMPLE Core Agents
+### 4.3 Generate SIMPLE Core Agents
 
 **SIMPLICITY CHECK: Before adding ANYTHING to agents:**
-1. Is this feature actively used in the project? If no → DON'T ADD
-2. Can existing tools handle this? If yes → DON'T ADD
-3. Is this a "nice to have"? If yes → DON'T ADD
+1. Is this feature actively used in the project? If no -> DON'T ADD
+2. Can existing tools handle this? If yes -> DON'T ADD
+3. Is this a "nice to have"? If yes -> DON'T ADD
 
 **Minimal Architect Agent:**
 - ONLY include the primary framework detected
@@ -145,9 +238,9 @@ Create `.claude/agent-launcher.md` with:
 **DO NOT anticipate future needs**
 **DO NOT include patterns not seen in actual code**
 
-### 3.4 Generate Specialized Agents (ONLY IF JUSTIFIED)
+### 4.4 Generate Specialized Agents (ONLY IF JUSTIFIED)
 
-**⚠️ CIRCUIT BREAKER: Specialized agents need STRONG justification**
+**CIRCUIT BREAKER: Specialized agents need STRONG justification**
 
 Only create specialized agents if:
 - Database: >5 tables OR complex queries observed
@@ -156,10 +249,10 @@ Only create specialized agents if:
 - AI/ML: Actual model training/inference code present
 - Testing: >40% test coverage OR >20 test files
 
-**If criteria NOT met → DO NOT CREATE**
+**If criteria NOT met -> DO NOT CREATE**
 **Start without them - add later if needed**
 
-### 3.5 Generate Commands
+### 4.5 Generate Commands
 
 Create commands based on project workflow:
 
@@ -179,7 +272,7 @@ Create commands based on project workflow:
 - Add coverage requirements
 - Include test patterns
 
-### 3.6 Generate Contexts
+### 4.6 Generate Contexts
 
 Create context files with:
 - Extracted project structure
@@ -188,7 +281,7 @@ Create context files with:
 - Common commands from package.json
 - Database schemas if found
 
-### 3.7 Generate Registry
+### 4.7 Generate Registry
 
 Create `REGISTRY.json` with:
 - All generated agents
@@ -197,7 +290,7 @@ Create `REGISTRY.json` with:
 - Command mappings
 - Project-specific settings
 
-## Step 4: Optimization
+## Step 5: Optimization
 
 Apply these optimizations:
 1. Keep `.claude/` folder under 10KB
@@ -206,7 +299,7 @@ Apply these optimizations:
 4. Include only essential contexts
 5. Cache frequently used agents
 
-## Step 5: Validation
+## Step 6: Validation
 
 After generation:
 1. Verify all file paths are correct
@@ -249,6 +342,99 @@ Execute this plan:
 
 Start by reading CLAUDE.md and analyzing the project structure.
 ```
+
+---
+
+## Appendix: Best Practice Integration
+
+This section describes how to continuously improve the framework by ingesting
+and validating best practices from Anthropic documentation and other sources.
+
+### Integration Workflow
+
+The integration process follows four stages:
+
+1. **Ingest**: Fetch and extract principles from Anthropic docs or other best practice sources
+2. **Analyze**: Compare extracted principles against the current framework to identify gaps
+3. **Test**: Validate proposed improvements with concrete, measurable metrics
+4. **Integrate**: Merge approved changes into the framework after passing all checks
+
+### Integration Criteria
+
+Each proposed change is evaluated against three thresholds:
+
+**APPROVED:**
+- Pass rate >= 90%
+- Average improvement >= 10%
+- Simplicity maintained (no unnecessary bloat added)
+- Action: Merge to main framework
+
+**REVIEW:**
+- Pass rate 70-89%
+- Improvement 5-9%
+- Minor simplicity concerns that need discussion
+- Action: Refine the approach and re-test
+
+**REJECTED:**
+- Pass rate < 70%
+- Improvement < 5%
+- Violates the simplicity-first principle
+- Action: Archive with documentation explaining why
+
+### Available Commands
+
+**`/ingest-best-practice <URL>`**
+Fetches and analyzes a new best practice document. Outputs:
+- Context document with extracted principles
+- Gap analysis comparing principles to current framework
+- Summary report with prioritized action items
+
+Example:
+```bash
+/ingest-best-practice https://www.anthropic.com/engineering/writing-tools-for-agents
+```
+
+**`/validate-framework <name>`**
+Runs validation tests for a specific best practice integration. Outputs:
+- Test results with pass rate and per-metric scores
+- Before/after comparison showing concrete improvements
+- Simplicity compliance check
+- Final verdict: APPROVED / REVIEW / REJECTED
+
+Example:
+```bash
+/validate-framework tool-writing
+```
+
+### Integration File Structure
+
+After running the integration workflow, files are organized as:
+```
+.claude-library/
+├── contexts/anthropic-best-practices/
+│   └── <best-practice-name>.md          # Extracted principles
+├── experiments/
+│   └── <best-practice-name>/
+│       ├── gap-analysis.md              # Detailed comparison
+│       ├── baseline/                    # Original files
+│       ├── improved/                    # Enhanced files
+│       └── test-results/               # Validation reports
+└── agents/specialized/
+    ├── best-practice-analyzer.md        # Ingestion agent
+    └── framework-gap-analyzer.md        # Analysis agent
+
+.claude/commands/
+├── ingest-best-practice.md              # Ingestion workflow
+└── validate-framework.md               # Validation workflow
+```
+
+### Tips for Best Practice Integration
+
+- Start with quick wins: high impact, low effort changes
+- Run tests frequently to catch regressions early
+- Keep simplicity as the top priority at all times
+- Document why each change was made or rejected
+- Archive experiment data after integration is complete
 
 ---
 
@@ -305,7 +491,7 @@ Claude: I'll analyze your project and generate a complete agent system.
 *Detects Next.js, PostgreSQL, Jest*
 *Generates 18 files*
 
-Claude: ✅ Agent system generated successfully!
+Claude: Agent system generated successfully!
 
 Created:
 - 4 core agents (customized for Next.js)
