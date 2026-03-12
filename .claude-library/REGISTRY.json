@@ -1,17 +1,13 @@
 {
-  "version": "1.0.0",
-  "framework": "Claude Agent Framework Meta-Implementation",
-  "description": "Agent system for developing the Claude Agent Framework itself",
+  "version": "2.0.0",
+  "framework": "Claude Agent Framework",
+  "description": "Agent system for building intelligent multi-agent development systems",
   "created": "2025-01-30",
 
   "settings": {
     "auto_load_agents": false,
     "max_parallel_agents": 5,
     "cache_loaded_agents": true,
-    "performance_monitoring": true,
-    "meta_framework_mode": true,
-    "max_context_size_kb": 10,
-    "parallel_execution_default": true,
     "observability": {
       "enabled": true,
       "provider": "logfire",
@@ -37,31 +33,25 @@
     }
   },
 
+  "agent_defaults": {
+    "tool_guidelines": {
+      "prefer_dedicated_tools": "Use Read/Edit/Write/Grep/Glob over Bash equivalents",
+      "edit_over_write": "Prefer Edit for existing files, Write only for new files",
+      "grep_before_read": "Use Grep to find locations, then Read specific sections"
+    },
+    "token_limits": {
+      "read_default": "2000 lines",
+      "grep_default": "20 matches",
+      "glob_default": "100 files"
+    }
+  },
+
   "agents": {
     "framework-system-architect": {
       "path": ".claude-library/agents/core/framework-system-architect.md",
       "type": "core",
       "domain": "architecture",
-      "tools": {
-        "code_search": ["Grep", "Glob"],
-        "file_operations": ["Read", "Write", "Edit"],
-        "coordination": ["Task"]
-      },
-      "tool_guidelines": {
-        "prefer_order": ["Grep", "Glob", "Read", "Edit", "Write"],
-        "avoid_patterns": [
-          "Don't use Write for existing files - use Edit instead",
-          "Prefer Grep over Read when searching for patterns",
-          "Use Glob to discover file structure before detailed analysis",
-          "Avoid sequential reads when parallel Grep can answer questions",
-          "Use Task tool for delegating implementation to engineers"
-        ],
-        "token_limits": {
-          "read_default": "2000 lines",
-          "grep_default": "20 matches for pattern analysis",
-          "glob_default": "100 files for structure analysis"
-        }
-      },
+      "tools": ["Grep", "Glob", "Read", "Write", "Edit", "Task"],
       "triggers": [
         "design", "architecture", "system", "structure", "pattern",
         "framework architecture", "agent system", "workflow design"
@@ -71,40 +61,14 @@
         "framework-development-patterns.md"
       ],
       "priority": 1,
-      "specialization": "Framework architecture and system design",
-      "observability_compatible": true,
-      "performance_targets": {
-        "analysis_time": "30s",
-        "design_complexity": "high",
-        "framework_compliance": "required"
-      }
+      "specialization": "Framework architecture and system design"
     },
 
     "framework-senior-engineer": {
       "path": ".claude-library/agents/core/framework-senior-engineer.md",
       "type": "core",
       "domain": "implementation",
-      "tools": {
-        "file_operations": ["Read", "Write", "Edit", "MultiEdit"],
-        "code_search": ["Grep", "Glob"],
-        "execution": ["Bash"],
-        "coordination": ["Task"]
-      },
-      "tool_guidelines": {
-        "prefer_order": ["Read", "Edit", "MultiEdit", "Grep", "Write", "Bash"],
-        "avoid_patterns": [
-          "Don't use Bash for file operations - use dedicated file tools",
-          "Prefer Edit over Write for existing files to preserve content",
-          "Use MultiEdit for multiple related changes across files",
-          "Avoid cat/grep/sed in Bash - use Grep/Read/Edit tools instead",
-          "Chain related Bash commands with && for atomic operations"
-        ],
-        "token_limits": {
-          "read_default": "2000 lines",
-          "grep_default": "10 matches for quick validation",
-          "glob_default": "50 files for implementation scope"
-        }
-      },
+      "tools": ["Read", "Write", "Edit", "MultiEdit", "Grep", "Glob", "Bash", "Task"],
       "triggers": [
         "implement", "build", "create", "develop", "code",
         "framework implementation", "agent development", "workflow creation"
@@ -115,39 +79,14 @@
         "performance-optimization.md"
       ],
       "priority": 1,
-      "specialization": "Framework component implementation and optimization",
-      "performance_targets": {
-        "implementation_time": "45s",
-        "code_quality": "high",
-        "framework_compliance": "required"
-      }
+      "specialization": "Framework component implementation and optimization"
     },
 
     "framework-code-reviewer": {
       "path": ".claude-library/agents/core/framework-code-reviewer.md",
       "type": "core",
       "domain": "quality_assurance",
-      "tools": {
-        "code_search": ["Grep", "Glob"],
-        "file_operations": ["Read"],
-        "execution": ["Bash"],
-        "coordination": ["Task"]
-      },
-      "tool_guidelines": {
-        "prefer_order": ["Grep", "Glob", "Read", "Bash"],
-        "avoid_patterns": [
-          "Never use Write or Edit - reviewers are read-only",
-          "Use Grep to find anti-patterns before detailed Read",
-          "Prefer parallel Grep searches for comprehensive coverage",
-          "Use Bash only for testing/validation commands, not file ops",
-          "Use Task to delegate fixes to engineers, never fix directly"
-        ],
-        "token_limits": {
-          "read_default": "2000 lines for focused review",
-          "grep_default": "15 matches to identify issues",
-          "glob_default": "50 files for scope analysis"
-        }
-      },
+      "tools": ["Grep", "Glob", "Read", "Bash", "Task"],
       "restrictions": ["Write", "Edit"],
       "triggers": [
         "review", "validate", "check", "audit", "quality",
@@ -158,12 +97,7 @@
         "performance-optimization.md"
       ],
       "priority": 1,
-      "specialization": "Framework quality assurance and compliance validation",
-      "performance_targets": {
-        "review_time": "30s",
-        "accuracy": "high",
-        "framework_standards": "strict"
-      }
+      "specialization": "Framework quality assurance and compliance validation"
     },
 
     "documentation-specialist": {
@@ -180,12 +114,7 @@
         "framework-development-patterns.md"
       ],
       "priority": 2,
-      "specialization": "Framework documentation creation and maintenance",
-      "performance_targets": {
-        "documentation_time": "30s",
-        "clarity": "high",
-        "completeness": "comprehensive"
-      }
+      "specialization": "Framework documentation creation and maintenance"
     },
 
     "framework-validation-engineer": {
@@ -203,12 +132,7 @@
         "framework-development-patterns.md"
       ],
       "priority": 2,
-      "specialization": "Framework testing and performance validation",
-      "performance_targets": {
-        "testing_time": "60s",
-        "coverage": "comprehensive",
-        "accuracy": "high"
-      }
+      "specialization": "Framework testing and performance validation"
     },
 
     "example-generator": {
@@ -225,12 +149,7 @@
         "framework-development-patterns.md"
       ],
       "priority": 3,
-      "specialization": "Framework example creation and demonstration",
-      "performance_targets": {
-        "example_creation_time": "60s",
-        "educational_value": "high",
-        "framework_demonstration": "comprehensive"
-      }
+      "specialization": "Framework example creation and demonstration"
     },
 
     "observer": {
@@ -243,15 +162,9 @@
         "validate", "observe", "verify", "check outputs",
         "workflow validation", "output verification"
       ],
-      "contexts": [],
       "priority": 3,
       "specialization": "Workflow output validation and verification",
-      "requires_observability": true,
-      "observability_compatible": true,
-      "performance_targets": {
-        "validation_time": "10s",
-        "accuracy": "95%"
-      }
+      "requires_observability": true
     },
 
     "framework-research-specialist": {
@@ -271,14 +184,7 @@
         "claude-code-documentation-map.md"
       ],
       "priority": 2,
-      "specialization": "Fetches and maintains Claude Code documentation, tracks changes, updates contexts",
-      "observability_compatible": true,
-      "performance_targets": {
-        "doc_fetch_time": "10s per source",
-        "analysis_time": "30s",
-        "update_time": "20s per file",
-        "total_update_cycle": "2min"
-      }
+      "specialization": "Fetches and maintains Claude Code documentation, tracks changes, updates contexts"
     },
 
     "framework-best-practice-auditor": {
@@ -299,14 +205,7 @@
         "performance-optimization.md"
       ],
       "priority": 2,
-      "specialization": "Audits framework against Claude Code best practices, 8-category scoring, compliance reports",
-      "observability_compatible": true,
-      "performance_targets": {
-        "full_audit_time": "3min",
-        "targeted_audit_time": "1min",
-        "quick_validation_time": "30s",
-        "report_generation_time": "30s"
-      }
+      "specialization": "Audits framework against Claude Code best practices, 8-category scoring, compliance reports"
     },
 
     "framework-feature-builder": {
@@ -328,17 +227,8 @@
         "performance-optimization.md"
       ],
       "priority": 1,
-      "specialization": "Meta-builder that uses framework agents to build framework features, proves framework works",
-      "observability_compatible": true,
-      "self_building_capable": true,
-      "performance_targets": {
-        "research_phase": "30s",
-        "design_phase": "30s",
-        "implementation_phase": "60s",
-        "validation_phase": "30s",
-        "documentation_phase": "20s",
-        "total_feature_build": "3min"
-      }
+      "specialization": "Meta-builder that uses framework agents to build framework features",
+      "self_building_capable": true
     },
 
     "best-practice-analyzer": {
@@ -355,13 +245,7 @@
         "claude-code-best-practices.md"
       ],
       "priority": 2,
-      "specialization": "Analyzes new Anthropic best practice documents and extracts structured principles",
-      "observability_compatible": true,
-      "performance_targets": {
-        "analysis_time": "30s",
-        "principle_extraction": "5-7 key principles",
-        "document_creation": "15s"
-      }
+      "specialization": "Analyzes new Anthropic best practice documents and extracts structured principles"
     },
 
     "framework-gap-analyzer": {
@@ -381,13 +265,7 @@
         "claude-code-best-practices.md"
       ],
       "priority": 2,
-      "specialization": "Compares best practices against current framework, identifies gaps and prioritizes improvements",
-      "observability_compatible": true,
-      "performance_targets": {
-        "analysis_time": "90s",
-        "principle_comparison": "complete",
-        "report_generation": "20s"
-      }
+      "specialization": "Compares best practices against current framework, identifies gaps and prioritizes improvements"
     }
   },
 
@@ -395,400 +273,76 @@
     "pattern": {
       "path": ".claude/commands/pattern.md",
       "description": "Create new agent patterns or improve existing ones",
-      "agents": [
-        "framework-system-architect",
-        "framework-senior-engineer",
-        "framework-code-reviewer",
-        "documentation-specialist"
-      ],
-      "workflow": "parallel-sequential",
-      "stages": {
-        "analysis": {
-          "type": "parallel",
-          "agents": ["framework-system-architect"],
-          "duration": "30s"
-        },
-        "implementation": {
-          "type": "parallel",
-          "agents": ["framework-senior-engineer", "framework-code-reviewer"],
-          "duration": "45s"
-        },
-        "documentation": {
-          "type": "sequential",
-          "agents": ["documentation-specialist"],
-          "duration": "15s"
-        }
-      },
-      "contexts": [
-        "framework-architecture.md",
-        "framework-development-patterns.md",
-        "performance-optimization.md"
-      ],
-      "performance_target": "90s total"
+      "agents": ["framework-system-architect", "framework-senior-engineer", "framework-code-reviewer", "documentation-specialist"],
+      "workflow": "parallel-sequential"
     },
 
     "validate": {
       "path": ".claude/commands/validate.md",
       "description": "Comprehensive testing and validation of framework components",
-      "agents": [
-        "framework-validation-engineer",
-        "framework-code-reviewer"
-      ],
-      "workflow": "parallel",
-      "stages": {
-        "planning": {
-          "type": "sequential",
-          "agents": ["framework-validation-engineer"],
-          "duration": "10s"
-        },
-        "testing": {
-          "type": "parallel",
-          "agents": ["framework-validation-engineer"],
-          "duration": "60s"
-        },
-        "analysis": {
-          "type": "sequential",
-          "agents": ["framework-validation-engineer"],
-          "duration": "15s"
-        }
-      },
-      "contexts": [
-        "framework-architecture.md",
-        "performance-optimization.md"
-      ],
-      "performance_target": "85s total"
+      "agents": ["framework-validation-engineer", "framework-code-reviewer"],
+      "workflow": "parallel"
     },
 
     "example": {
       "path": ".claude/commands/example.md",
       "description": "Generate comprehensive examples and tutorials",
-      "agents": [
-        "example-generator",
-        "documentation-specialist",
-        "framework-validation-engineer"
-      ],
-      "workflow": "parallel-sequential",
-      "stages": {
-        "planning": {
-          "type": "parallel",
-          "agents": ["example-generator"],
-          "duration": "20s"
-        },
-        "creation": {
-          "type": "parallel",
-          "agents": ["example-generator", "documentation-specialist"],
-          "duration": "45s"
-        },
-        "validation": {
-          "type": "parallel",
-          "agents": ["framework-validation-engineer", "documentation-specialist"],
-          "duration": "20s"
-        }
-      },
-      "contexts": [
-        "framework-architecture.md",
-        "framework-development-patterns.md"
-      ],
-      "performance_target": "85s total"
+      "agents": ["example-generator", "documentation-specialist", "framework-validation-engineer"],
+      "workflow": "parallel-sequential"
     },
 
     "test-framework": {
       "path": ".claude/commands/test-framework.md",
       "description": "Comprehensive self-testing of the Claude Agent Framework",
-      "agents": [
-        "framework-validation-engineer",
-        "framework-code-reviewer"
-      ],
-      "workflow": "sequential-parallel-sequential",
-      "stages": {
-        "planning": {
-          "type": "sequential",
-          "agents": ["framework-validation-engineer"],
-          "duration": "10s"
-        },
-        "testing": {
-          "type": "parallel",
-          "agents": ["framework-validation-engineer"],
-          "duration": "90s"
-        },
-        "analysis": {
-          "type": "sequential",
-          "agents": ["framework-validation-engineer"],
-          "duration": "15s"
-        }
-      },
-      "contexts": [
-        "framework-architecture.md",
-        "performance-optimization.md",
-        "framework-development-patterns.md"
-      ],
-      "performance_target": "115s total"
+      "agents": ["framework-validation-engineer", "framework-code-reviewer"],
+      "workflow": "sequential-parallel-sequential"
     },
 
     "update-docs": {
       "path": ".claude/commands/update-docs.md",
       "description": "Fetch latest Claude Code documentation and update framework context files",
-      "agents": [
-        "framework-research-specialist"
-      ],
-      "workflow": "sequential",
-      "stages": {
-        "initialize": {
-          "type": "sequential",
-          "agents": ["framework-research-specialist"],
-          "duration": "5s"
-        },
-        "fetch_and_analyze": {
-          "type": "sequential",
-          "agents": ["framework-research-specialist"],
-          "duration": "60s"
-        },
-        "update_contexts": {
-          "type": "sequential",
-          "agents": ["framework-research-specialist"],
-          "duration": "30s"
-        },
-        "report_results": {
-          "type": "sequential",
-          "agents": ["framework-research-specialist"],
-          "duration": "15s"
-        }
-      },
-      "contexts": [
-        "claude-code-best-practices.md",
-        "claude-code-subagents.md",
-        "claude-code-hooks.md",
-        "claude-code-mcp.md",
-        "claude-code-documentation-map.md"
-      ],
-      "performance_target": "2min",
-      "self_building_command": true
+      "agents": ["framework-research-specialist"],
+      "workflow": "sequential"
     },
 
     "audit-practices": {
       "path": ".claude/commands/audit-practices.md",
       "description": "Comprehensive audit of framework against Claude Code best practices",
-      "agents": [
-        "framework-best-practice-auditor"
-      ],
-      "workflow": "sequential",
-      "stages": {
-        "preparation": {
-          "type": "sequential",
-          "agents": ["framework-best-practice-auditor"],
-          "duration": "10s"
-        },
-        "category_audits": {
-          "type": "sequential",
-          "agents": ["framework-best-practice-auditor"],
-          "duration": "160s"
-        },
-        "scoring_and_analysis": {
-          "type": "sequential",
-          "agents": ["framework-best-practice-auditor"],
-          "duration": "10s"
-        },
-        "report_generation": {
-          "type": "sequential",
-          "agents": ["framework-best-practice-auditor"],
-          "duration": "30s"
-        }
-      },
-      "contexts": [
-        "claude-code-best-practices.md",
-        "claude-code-subagents.md",
-        "claude-code-hooks.md",
-        "framework-architecture.md",
-        "performance-optimization.md"
-      ],
-      "performance_target": "3min",
-      "self_building_command": true
+      "agents": ["framework-best-practice-auditor"],
+      "workflow": "sequential"
     },
 
     "build-feature": {
       "path": ".claude/commands/build-feature.md",
-      "description": "Use Claude Agent Framework to build framework features using framework's own agents",
+      "description": "Use framework agents to build framework features (meta-building)",
       "agents": [
-        "framework-feature-builder",
-        "framework-research-specialist",
-        "framework-system-architect",
-        "framework-senior-engineer",
-        "framework-code-reviewer",
-        "framework-validation-engineer",
-        "framework-best-practice-auditor",
-        "documentation-specialist"
+        "framework-feature-builder", "framework-research-specialist",
+        "framework-system-architect", "framework-senior-engineer",
+        "framework-code-reviewer", "framework-validation-engineer",
+        "framework-best-practice-auditor", "documentation-specialist"
       ],
-      "workflow": "mixed-parallel-sequential",
-      "stages": {
-        "research_phase": {
-          "type": "sequential",
-          "agents": ["framework-research-specialist"],
-          "duration": "30s"
-        },
-        "design_phase": {
-          "type": "sequential",
-          "agents": ["framework-system-architect"],
-          "duration": "30s"
-        },
-        "implementation_phase": {
-          "type": "parallel",
-          "agents": ["framework-senior-engineer", "framework-code-reviewer"],
-          "duration": "60s"
-        },
-        "validation_phase": {
-          "type": "sequential",
-          "agents": ["framework-validation-engineer", "framework-best-practice-auditor"],
-          "duration": "30s"
-        },
-        "documentation_phase": {
-          "type": "parallel",
-          "agents": ["documentation-specialist"],
-          "duration": "20s"
-        },
-        "integration_and_report": {
-          "type": "sequential",
-          "agents": ["framework-feature-builder"],
-          "duration": "10s"
-        }
-      },
-      "contexts": [
-        "claude-code-best-practices.md",
-        "claude-code-subagents.md",
-        "claude-code-hooks.md",
-        "claude-code-mcp.md",
-        "framework-architecture.md",
-        "framework-development-patterns.md",
-        "performance-optimization.md"
-      ],
-      "performance_target": "3min",
-      "self_building_command": true,
-      "meta_building_capability": true,
-      "observability_required": true
+      "workflow": "mixed-parallel-sequential"
     },
 
     "self-improve": {
       "path": ".claude/commands/self-improve.md",
       "description": "Analyze observability data to identify and implement framework improvements",
-      "agents": [
-        "framework-feature-builder"
-      ],
-      "workflow": "sequential",
-      "stages": {
-        "data_collection": {
-          "type": "sequential",
-          "agents": ["framework-feature-builder"],
-          "duration": "10s"
-        },
-        "analysis": {
-          "type": "sequential",
-          "agents": ["framework-feature-builder"],
-          "duration": "20s"
-        },
-        "prioritization": {
-          "type": "sequential",
-          "agents": ["framework-feature-builder"],
-          "duration": "10s"
-        },
-        "implementation": {
-          "type": "sequential",
-          "agents": ["framework-feature-builder"],
-          "duration": "180s",
-          "note": "Launches /build-feature internally"
-        },
-        "validation": {
-          "type": "sequential",
-          "agents": ["framework-feature-builder"],
-          "duration": "30s"
-        },
-        "report_and_schedule": {
-          "type": "sequential",
-          "agents": ["framework-feature-builder"],
-          "duration": "10s"
-        }
-      },
-      "contexts": [
-        "claude-code-best-practices.md",
-        "framework-architecture.md",
-        "framework-development-patterns.md",
-        "performance-optimization.md"
-      ],
-      "performance_target": "4min",
-      "self_building_command": true,
-      "meta_improvement_capability": true,
-      "observability_required": true,
-      "requires_observability_data": true
+      "agents": ["framework-feature-builder"],
+      "workflow": "sequential"
     },
 
     "ingest-best-practice": {
       "path": ".claude/commands/ingest-best-practice.md",
-      "description": "Ingest new Anthropic best practice documents, extract principles, analyze gaps, prepare for testing",
-      "agents": [
-        "best-practice-analyzer",
-        "framework-gap-analyzer"
-      ],
-      "workflow": "sequential",
-      "stages": {
-        "extract_principles": {
-          "type": "sequential",
-          "agents": ["best-practice-analyzer"],
-          "duration": "45s"
-        },
-        "analyze_gaps": {
-          "type": "sequential",
-          "agents": ["framework-gap-analyzer"],
-          "duration": "90s"
-        },
-        "generate_summary": {
-          "type": "sequential",
-          "agents": [],
-          "duration": "10s",
-          "note": "Automated summary generation"
-        }
-      },
-      "contexts": [
-        "framework-architecture.md",
-        "framework-development-patterns.md",
-        "performance-optimization.md",
-        "claude-code-best-practices.md"
-      ],
-      "performance_target": "2min 30s",
-      "self_building_command": true,
-      "best_practice_integration": true
+      "description": "Ingest new Anthropic best practice documents, extract principles, analyze gaps",
+      "agents": ["best-practice-analyzer", "framework-gap-analyzer"],
+      "workflow": "sequential"
     },
 
     "validate-framework": {
       "path": ".claude/commands/validate-framework.md",
-      "description": "Validate framework improvements from applied best practices through comprehensive testing",
+      "description": "Validate framework improvements through comprehensive testing",
       "agents": [],
-      "workflow": "sequential",
-      "stages": {
-        "run_tests": {
-          "type": "sequential",
-          "agents": [],
-          "duration": "30s",
-          "note": "Runs pytest test suite"
-        },
-        "analyze_results": {
-          "type": "sequential",
-          "agents": [],
-          "duration": "10s"
-        },
-        "simplicity_check": {
-          "type": "sequential",
-          "agents": [],
-          "duration": "5s"
-        },
-        "generate_recommendation": {
-          "type": "sequential",
-          "agents": [],
-          "duration": "10s"
-        }
-      },
-      "contexts": [],
-      "performance_target": "1min",
-      "self_building_command": true,
-      "best_practice_integration": true,
-      "testing_command": true
+      "workflow": "sequential"
     }
   },
 
@@ -797,9 +351,6 @@
       "path": ".claude-library/contexts/framework-architecture.md",
       "type": "core",
       "domain": "architecture",
-      "size_kb": 8.5,
-      "load_priority": 1,
-      "cache_duration": "session",
       "description": "Core framework architecture and principles"
     },
 
@@ -807,9 +358,6 @@
       "path": ".claude-library/contexts/framework-development-patterns.md",
       "type": "specialized",
       "domain": "development",
-      "size_kb": 12.3,
-      "load_priority": 2,
-      "cache_duration": "task",
       "description": "Meta-development patterns for framework improvement"
     },
 
@@ -817,9 +365,6 @@
       "path": ".claude-library/contexts/performance-optimization.md",
       "type": "specialized",
       "domain": "performance",
-      "size_kb": 9.8,
-      "load_priority": 2,
-      "cache_duration": "task",
       "description": "Performance optimization strategies and benchmarks"
     },
 
@@ -827,329 +372,51 @@
       "path": ".claude-library/contexts/claude-code-best-practices.md",
       "type": "core",
       "domain": "best_practices",
-      "size_kb": 6.0,
-      "load_priority": 1,
-      "cache_duration": "session",
       "description": "Official Claude Code best practices from Anthropic",
-      "source_url": "https://www.anthropic.com/engineering/claude-code-best-practices",
-      "update_frequency": "weekly",
-      "self_building_context": true
+      "source_url": "https://www.anthropic.com/engineering/claude-code-best-practices"
     },
 
     "claude-code-subagents": {
       "path": ".claude-library/contexts/claude-code-subagents.md",
       "type": "core",
       "domain": "subagents",
-      "size_kb": 8.0,
-      "load_priority": 1,
-      "cache_duration": "session",
       "description": "Official Claude Code Task tool and subagent patterns",
-      "source_url": "https://docs.claude.com/en/docs/claude-code/sub-agents.md",
-      "update_frequency": "weekly",
-      "self_building_context": true
+      "source_url": "https://docs.claude.com/en/docs/claude-code/sub-agents.md"
     },
 
     "claude-code-hooks": {
       "path": ".claude-library/contexts/claude-code-hooks.md",
       "type": "specialized",
       "domain": "hooks",
-      "size_kb": 10.0,
-      "load_priority": 2,
-      "cache_duration": "task",
       "description": "Official Claude Code hooks system documentation",
-      "source_url": "https://docs.claude.com/en/docs/claude-code/hooks-guide.md",
-      "update_frequency": "weekly",
-      "self_building_context": true
+      "source_url": "https://docs.claude.com/en/docs/claude-code/hooks-guide.md"
     },
 
     "claude-code-mcp": {
       "path": ".claude-library/contexts/claude-code-mcp.md",
       "type": "specialized",
       "domain": "mcp_integration",
-      "size_kb": 9.0,
-      "load_priority": 2,
-      "cache_duration": "task",
       "description": "Official Claude Code MCP (Model Context Protocol) integration guide",
-      "source_url": "https://docs.claude.com/en/docs/claude-code/mcp.md",
-      "update_frequency": "weekly",
-      "self_building_context": true
+      "source_url": "https://docs.claude.com/en/docs/claude-code/mcp.md"
     },
 
     "claude-code-documentation-map": {
       "path": ".claude-library/contexts/claude-code-documentation-map.md",
       "type": "reference",
       "domain": "documentation",
-      "size_kb": 5.0,
-      "load_priority": 3,
-      "cache_duration": "task",
       "description": "Complete map of Claude Code documentation structure",
-      "source_url": "https://docs.claude.com/en/docs/claude-code/claude_code_docs_map.md",
-      "update_frequency": "monthly",
-      "self_building_context": true
+      "source_url": "https://docs.claude.com/en/docs/claude-code/claude_code_docs_map.md"
     }
   },
 
-  "workflows": {
-    "meta_framework_development": {
-      "description": "Complete framework development workflow using framework itself",
-      "stages": [
-        {
-          "name": "analysis",
-          "type": "parallel",
-          "agents": ["framework-system-architect"],
-          "contexts": ["framework-architecture.md", "framework-development-patterns.md"]
-        },
-        {
-          "name": "implementation",
-          "type": "parallel",
-          "agents": ["framework-senior-engineer", "framework-code-reviewer"],
-          "contexts": ["framework-architecture.md", "performance-optimization.md"]
-        },
-        {
-          "name": "validation",
-          "type": "sequential",
-          "agents": ["framework-validation-engineer"],
-          "contexts": ["performance-optimization.md"]
-        },
-        {
-          "name": "documentation",
-          "type": "sequential",
-          "agents": ["documentation-specialist"],
-          "contexts": ["framework-development-patterns.md"]
-        }
-      ],
-      "performance_target": "120s",
-      "success_criteria": [
-        "framework_compliance",
-        "performance_targets_met",
-        "quality_gates_passed",
-        "documentation_complete"
-      ]
+  "skills": {
+    "agent-launcher": {
+      "path": ".claude-library/skills/agent-launcher-skill/",
+      "description": "Intelligent agent selection and routing"
     },
-
-    "self_building_feature_development": {
-      "description": "Framework uses itself to build new features - the ultimate proof of concept",
-      "command": "/build-feature",
-      "stages": [
-        {
-          "name": "research",
-          "type": "sequential",
-          "agents": ["framework-research-specialist"],
-          "contexts": ["claude-code-best-practices.md", "claude-code-subagents.md"],
-          "duration": "30s"
-        },
-        {
-          "name": "design",
-          "type": "sequential",
-          "agents": ["framework-system-architect"],
-          "contexts": ["framework-architecture.md", "framework-development-patterns.md"],
-          "duration": "30s"
-        },
-        {
-          "name": "implementation",
-          "type": "parallel",
-          "agents": ["framework-senior-engineer", "framework-code-reviewer"],
-          "contexts": ["framework-architecture.md", "performance-optimization.md"],
-          "duration": "60s"
-        },
-        {
-          "name": "validation",
-          "type": "sequential",
-          "agents": ["framework-validation-engineer", "framework-best-practice-auditor"],
-          "contexts": ["performance-optimization.md", "claude-code-best-practices.md"],
-          "duration": "30s"
-        },
-        {
-          "name": "documentation",
-          "type": "parallel",
-          "agents": ["documentation-specialist"],
-          "contexts": ["framework-development-patterns.md"],
-          "duration": "20s"
-        }
-      ],
-      "performance_target": "180s",
-      "success_criteria": [
-        "tests_passing_90_percent",
-        "compliance_score_85_percent",
-        "performance_targets_met",
-        "documentation_complete",
-        "quality_gates_green"
-      ],
-      "proof_of_concept": "If framework can build itself, it can build anything"
-    },
-
-    "self_improvement_cycle": {
-      "description": "Framework analyzes its own performance data and optimizes itself",
-      "command": "/self-improve",
-      "stages": [
-        {
-          "name": "data_collection",
-          "type": "sequential",
-          "agents": ["framework-feature-builder"],
-          "contexts": [],
-          "duration": "10s",
-          "data_source": ".claude-metrics/observability.db"
-        },
-        {
-          "name": "analysis_prioritization",
-          "type": "sequential",
-          "agents": ["framework-feature-builder"],
-          "contexts": ["framework-architecture.md", "performance-optimization.md"],
-          "duration": "30s"
-        },
-        {
-          "name": "implementation",
-          "type": "sequential",
-          "agents": ["framework-feature-builder"],
-          "contexts": ["claude-code-best-practices.md"],
-          "duration": "180s",
-          "note": "Launches /build-feature internally"
-        },
-        {
-          "name": "impact_measurement",
-          "type": "sequential",
-          "agents": ["framework-feature-builder"],
-          "contexts": [],
-          "duration": "40s",
-          "data_source": ".claude-metrics/observability.db"
-        }
-      ],
-      "performance_target": "240s",
-      "success_criteria": [
-        "improvement_identified",
-        "fix_implemented",
-        "measurable_performance_gain",
-        "no_regressions"
-      ],
-      "intelligence_proof": "Framework improves itself using its own data"
-    },
-
-    "documentation_maintenance_cycle": {
-      "description": "Regular updates from official Claude Code documentation",
-      "command": "/update-docs",
-      "stages": [
-        {
-          "name": "fetch_and_analyze",
-          "type": "sequential",
-          "agents": ["framework-research-specialist"],
-          "contexts": ["claude-code-documentation-map.md"],
-          "duration": "60s"
-        },
-        {
-          "name": "update_contexts",
-          "type": "sequential",
-          "agents": ["framework-research-specialist"],
-          "contexts": [],
-          "duration": "30s"
-        },
-        {
-          "name": "report_changes",
-          "type": "sequential",
-          "agents": ["framework-research-specialist"],
-          "contexts": [],
-          "duration": "15s"
-        }
-      ],
-      "performance_target": "120s",
-      "frequency": "weekly",
-      "success_criteria": [
-        "all_sources_checked",
-        "changes_detected",
-        "contexts_updated",
-        "report_generated"
-      ]
+    "doc-builder": {
+      "path": ".claude-library/skills/doc-builder-skill/",
+      "description": "Professional documentation generation"
     }
-  },
-
-  "performance_baselines": {
-    "context_loading": {
-      "framework_architecture": "150ms",
-      "framework_development_patterns": "180ms",
-      "performance_optimization": "120ms"
-    },
-    "agent_coordination": {
-      "parallel_overhead": "50ms",
-      "sequential_overhead": "20ms",
-      "context_switching": "10ms"
-    },
-    "workflow_execution": {
-      "pattern_development": "90s",
-      "framework_validation": "85s",
-      "example_creation": "85s",
-      "framework_testing": "115s"
-    }
-  },
-
-  "meta_framework_config": {
-    "self_improvement": true,
-    "bootstrap_capability": true,
-    "recursive_enhancement": true,
-    "framework_evolution": true,
-    "self_documentation": true,
-    "performance_optimization": true,
-    "self_building": {
-      "enabled": true,
-      "commands": ["/build-feature", "/self-improve", "/update-docs", "/audit-practices"],
-      "proof_of_concept": "Framework builds itself using its own agents and patterns",
-      "intelligence_proof": "Framework improves itself using observability data"
-    },
-    "live_documentation": {
-      "enabled": true,
-      "sources": [
-        "https://www.anthropic.com/engineering/claude-code-best-practices",
-        "https://docs.claude.com/en/docs/claude-code/sub-agents.md",
-        "https://docs.claude.com/en/docs/claude-code/hooks-guide.md",
-        "https://docs.claude.com/en/docs/claude-code/mcp.md",
-        "https://docs.claude.com/en/docs/claude-code/claude_code_docs_map.md"
-      ],
-      "update_frequency": "weekly",
-      "update_command": "/update-docs"
-    },
-    "best_practice_compliance": {
-      "enabled": true,
-      "audit_command": "/audit-practices",
-      "minimum_score": 85,
-      "categories": 8,
-      "frequency": "monthly"
-    },
-    "local_observability": {
-      "enabled": true,
-      "provider": "sqlite",
-      "database_path": ".claude-metrics/observability.db",
-      "track_self_building": true,
-      "track_sub_agents": true,
-      "track_validation": true,
-      "self_improve_enabled": true
-    }
-  },
-
-  "quality_gates": {
-    "framework_compliance": {
-      "required": true,
-      "validation_agent": "framework-code-reviewer"
-    },
-    "performance_targets": {
-      "required": true,
-      "validation_agent": "framework-validation-engineer",
-      "thresholds": {
-        "context_loading": "500ms",
-        "parallel_speedup": "3x",
-        "memory_usage": "50MB"
-      }
-    },
-    "documentation_quality": {
-      "required": true,
-      "validation_agent": "documentation-specialist"
-    }
-  },
-
-  "optimization_settings": {
-    "context_caching": true,
-    "agent_reuse": true,
-    "parallel_by_default": true,
-    "performance_monitoring": true,
-    "automatic_optimization": true,
-    "cache_size_limit": "20MB",
-    "max_concurrent_agents": 5
   }
 }
