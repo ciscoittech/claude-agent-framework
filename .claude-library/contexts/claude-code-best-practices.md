@@ -76,6 +76,29 @@
 - Add custom tools and data sources
 - Integrate with external services
 
+**Effort Levels** (NEW):
+- Use `model: "haiku"` in Agent tool for fast, cheap tasks (formatting, simple searches)
+- Use `model: "opus"` for complex reasoning, architecture decisions
+- Default (sonnet) works for most tasks
+- Match effort to task complexity for optimal cost/quality
+
+**Extended Context** (NEW):
+- Claude Code supports up to 1M tokens of context
+- Enables processing entire codebases in single pass
+- Auto-compression of prior messages near context limits
+- Less aggressive context pruning needed for small/medium projects
+
+**Auto Memory** (NEW):
+- Persistent file-based memory at `~/.claude/projects/<project>/memory/`
+- Types: user, feedback, project, reference
+- Indexed by `MEMORY.md` in memory directory
+- Automatically loaded in future conversations when relevant
+
+**MCP Tool Search** (NEW):
+- Tools from MCP servers can be loaded on-demand via `ToolSearch`
+- Reduces initial context load with many MCP servers
+- Query by exact name or keyword search
+
 **Multiple Instances**:
 - Use git worktrees for parallel work
 - Run multiple Claude instances simultaneously
@@ -85,6 +108,12 @@
 - Automate workflows with CLI
 - CI/CD integration
 - Batch processing
+
+#### D. Agent Teams Workflow
+1. Define custom agent types in `.claude/agents/`
+2. Create path-specific rules in `.claude/rules/`
+3. Launch specialized agents by type name
+4. Use worktree isolation for safe parallel editing
 
 ### 5. General Principles
 
@@ -189,5 +218,5 @@
 
 ---
 
-**Last Updated**: October 4, 2025
+**Last Updated**: March 12, 2026
 **Update Method**: `python3 .claude-library/observability/obs.py` or `/update-docs` command

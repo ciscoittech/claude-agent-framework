@@ -118,6 +118,33 @@ Example custom types:
 - `framework-reviewer`: Code review
 - `framework-validator`: Testing
 
+### Custom Subagent Types (Agent Teams)
+
+<!-- NEW: Mar 2026 -->
+
+Define custom subagent types in `.claude/agents/` directory. Each `.md` file becomes a launchable agent type.
+
+**Creating a Custom Type**:
+Create `.claude/agents/security-reviewer.md`:
+```markdown
+You are a security-focused code reviewer...
+[agent definition]
+```
+
+**Launching**:
+```python
+Task(
+    description="Security review",
+    prompt="Review auth module",
+    subagent_type="security-reviewer"  # matches filename
+)
+```
+
+**Benefits over general-purpose**:
+- Persistent persona without repeating in every prompt
+- Consistent behavior across invocations
+- Team-wide shared agent definitions
+
 ---
 
 ## Best Practices
@@ -231,6 +258,48 @@ test = Task(
 - Track subagent duration
 - Measure parallel speedup
 - Use observability for insights
+
+### Advanced Subagent Features
+
+<!-- NEW: Mar 2026 -->
+
+#### Worktree Isolation
+Run agents in isolated git worktrees for safe parallel file editing:
+```python
+Task(
+    description="Refactor auth module",
+    prompt="...",
+    subagent_type="general-purpose",
+    isolation="worktree"  # gets its own copy of the repo
+)
+```
+Worktree is auto-cleaned if no changes; returns branch name if changes made.
+
+#### Background Agents
+Run agents asynchronously and get notified on completion:
+```python
+Task(
+    description="Long research task",
+    prompt="...",
+    subagent_type="general-purpose",
+    run_in_background=True  # returns immediately, notifies when done
+)
+```
+
+#### Agent Memory
+Agents can use the auto memory system (`MEMORY.md`) to persist knowledge across conversations. Memory types: user, feedback, project, reference.
+
+#### Model Selection
+Override the model for specific agents:
+```python
+Task(
+    description="Quick formatting",
+    prompt="...",
+    subagent_type="general-purpose",
+    model="haiku"  # fast/cheap for simple tasks
+)
+```
+Available: "opus" (complex), "sonnet" (balanced), "haiku" (fast/cheap)
 
 ---
 
@@ -386,5 +455,5 @@ coordinator = Task(
 
 ---
 
-**Last Updated**: October 4, 2025
+**Last Updated**: March 12, 2026
 **Update Method**: `/update-docs` command or WebFetch

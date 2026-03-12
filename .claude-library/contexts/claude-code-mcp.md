@@ -49,6 +49,40 @@ External Systems (Databases, APIs, Files, etc.)
 
 ---
 
+## MCP Tool Search (Deferred Loading)
+
+<!-- NEW: Mar 2026 -->
+
+Claude Code now supports **deferred tool loading** — MCP tools aren't loaded into context until needed. This dramatically reduces initial context usage when many MCP servers are configured.
+
+### How It Works
+
+1. MCP servers register their tools at startup
+2. Tool schemas are NOT loaded into context immediately
+3. When Claude needs a tool, it uses `ToolSearch` to find and load it
+4. Only the matched tool's schema is added to context
+
+### Usage
+
+```python
+# Search by exact tool name
+ToolSearch(query="select:mcp__github__create_issue")
+
+# Search by keyword
+ToolSearch(query="database query", max_results=5)
+
+# Search with name filter + ranking
+ToolSearch(query="+slack send message", max_results=3)
+```
+
+### Impact on Agent Systems
+- **Before**: 50 MCP tools = ~25KB of context consumed at startup
+- **After**: 0KB at startup, ~500B per tool when needed
+- Configure many MCP servers without context penalty
+- Agents only pay for tools they actually use
+
+---
+
 ## Using MCP Servers
 
 ### Configuration
@@ -492,5 +526,5 @@ async def call_tool(name: str, arguments: dict):
 
 ---
 
-**Last Updated**: October 4, 2025
+**Last Updated**: March 12, 2026
 **Update Method**: `/update-docs` command or WebFetch
