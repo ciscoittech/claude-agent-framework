@@ -254,7 +254,10 @@ Only create specialized agents if:
 
 ### 4.5 Generate Commands
 
-Create commands based on project workflow:
+Commands are `.claude/commands/*.md` files invoked via `/command-name` or the Skill tool.
+They are Claude Code's native skill mechanism — no custom runtime needed.
+
+#### Workflow Commands (project-specific)
 
 **For `/build` command:**
 - Use TDD if tests detected
@@ -271,6 +274,25 @@ Create commands based on project workflow:
 - Include detected test frameworks
 - Add coverage requirements
 - Include test patterns
+
+#### Utility Commands (recommended for all projects)
+
+**For `/launch-agent` command:**
+- Classify task → select agent type + model
+- Simple tasks → haiku, medium → sonnet, complex → opus
+- Route to custom subagent types in `.claude/agents/` if they exist
+- Fallback to general-purpose agent
+
+**For `/review-code` command:**
+- Review uncommitted, staged, or PR changes
+- Check correctness, security (OWASP), quality, performance
+- Report with severity levels: Critical / Warning / Suggestion
+- Offer to fix issues after review
+
+**For `/generate-docs` command (medium+ projects):**
+- Types: api, readme, architecture, guide, changelog
+- Analyze code to generate accurate documentation
+- Follow project's existing doc style
 
 ### 4.6 Generate Contexts
 

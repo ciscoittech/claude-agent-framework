@@ -343,6 +343,27 @@
       "description": "Validate framework improvements through comprehensive testing",
       "agents": [],
       "workflow": "sequential"
+    },
+
+    "launch-agent": {
+      "path": ".claude/commands/launch-agent.md",
+      "description": "Intelligent agent selection and routing based on task classification",
+      "agents": ["framework-system-architect", "framework-senior-engineer", "framework-code-reviewer", "documentation-specialist"],
+      "workflow": "dynamic"
+    },
+
+    "generate-docs": {
+      "path": ".claude/commands/generate-docs.md",
+      "description": "Analyze code and generate professional documentation (api, readme, architecture, guide, changelog)",
+      "agents": ["documentation-specialist"],
+      "workflow": "sequential"
+    },
+
+    "review-code": {
+      "path": ".claude/commands/review-code.md",
+      "description": "Review code changes for bugs, security issues, and quality",
+      "agents": ["framework-code-reviewer"],
+      "workflow": "sequential"
     }
   },
 
@@ -410,13 +431,20 @@
   },
 
   "skills": {
-    "agent-launcher": {
-      "path": ".claude-library/skills/agent-launcher-skill/",
-      "description": "Intelligent agent selection and routing"
+    "launch-agent": {
+      "path": ".claude/commands/launch-agent.md",
+      "format": "native",
+      "description": "Intelligent agent selection and routing — invoke via /launch-agent"
     },
-    "doc-builder": {
-      "path": ".claude-library/skills/doc-builder-skill/",
-      "description": "Professional documentation generation"
+    "generate-docs": {
+      "path": ".claude/commands/generate-docs.md",
+      "format": "native",
+      "description": "Professional documentation generation — invoke via /generate-docs"
+    },
+    "review-code": {
+      "path": ".claude/commands/review-code.md",
+      "format": "native",
+      "description": "Code review for bugs, security, quality — invoke via /review-code"
     }
   }
 }
