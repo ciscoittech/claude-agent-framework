@@ -8,12 +8,14 @@
 4. [Agent Design Principles](#agent-design-principles)
 5. [Command Workflows](#command-workflows)
 6. [Context Management](#context-management)
-7. [Tool Configuration](#tool-configuration)
-8. [Parallel Execution](#parallel-execution)
-9. [Best Practices](#best-practices)
-10. [Performance Optimization](#performance-optimization)
-11. [Observability Pattern (Optional)](#observability-pattern-optional)
-12. [Hooks Pattern (Optional)](#hooks-pattern-optional)
+7. [Extended Context & Tool Search](#extended-context--tool-search)
+8. [Tool Configuration](#tool-configuration)
+9. [Parallel Execution](#parallel-execution)
+10. [Agent Teams](#agent-teams)
+11. [Best Practices](#best-practices)
+12. [Performance Optimization](#performance-optimization)
+13. [Observability (Optional)](#observability-optional)
+14. [Hooks (Optional)](#hooks-optional)
 
 ## Introduction
 
@@ -54,6 +56,9 @@ project-root/
 ├── .claude/                      # Minimal auto-loaded configuration
 │   ├── agent-launcher.md        # Dynamic agent loader (5-10KB)
 │   ├── settings.json            # Project metadata
+│   ├── agents/                  # Custom subagent types (NEW)
+│   │   ├── security-reviewer.md
+│   │   └── performance-analyst.md
 │   └── commands/                # User-facing commands
 │       ├── feature-loop.md     # TDD workflow command
 │       ├── debug.md            # Debugging command
@@ -314,6 +319,29 @@ function selectContexts(task) {
 }
 ```
 
+## Extended Context & Tool Search
+
+<!-- NEW in v2.0 -->
+
+### Extended Context Window
+Claude Code now supports up to 1M tokens of context. This means:
+- Agents can process entire codebases in a single pass
+- Less need for aggressive context pruning on small-medium projects
+- Large file reads (up to 2000 lines default) are more practical
+
+### MCP Tool Search (Deferred Loading)
+Tools from MCP servers can be loaded on-demand rather than all at startup:
+
+```python
+# Search for a tool by name or keyword
+ToolSearch(query="select:mcp__github__create_issue")
+
+# Keyword search for relevant tools
+ToolSearch(query="database query", max_results=5)
+```
+
+This reduces initial context load and enables access to hundreds of MCP tools without upfront cost.
+
 ## Tool Configuration
 
 ### MCP Tools Integration
@@ -343,6 +371,16 @@ Define what agents should NOT do:
 - AVOID creating new files (prefer editing existing)
 - NEVER commit without explicit user request
 ```
+
+### Managed Settings
+
+Claude Code supports managed settings via `~/.claude/settings.json` and project `.claude/settings.json`:
+- Permission presets (auto-approve specific tools)
+- MCP server configurations
+- Model preferences and effort levels
+- Hook configurations
+
+These replace manual CLAUDE.md instructions for tool permissions.
 
 ## Parallel Execution
 
@@ -384,6 +422,64 @@ await runAgent('researcher');
 - Dependent tasks (output feeds next input)
 - Progressive refinement
 - Validation chains
+
+## Agent Teams
+
+<!-- NEW in v2.0 -->
+
+Claude Code now supports **custom subagent types** defined in `.claude/agents/`. This replaces the need for `general-purpose` with persona-loaded prompts.
+
+### Defining Custom Agent Types
+
+Create `.claude/agents/<agent-name>.md`:
+
+```markdown
+# Security Reviewer
+
+You are a security-focused code reviewer specializing in OWASP Top 10 vulnerabilities.
+
+## Responsibilities
+- Review code for injection, XSS, CSRF vulnerabilities
+- Check authentication and authorization logic
+- Verify input validation and output encoding
+
+## Tools
+- Read, Grep, Glob (read-only access)
+
+## Output Format
+Report findings as: severity (Critical/High/Medium/Low), location, description, fix.
+```
+
+### Using Custom Agent Types
+
+```python
+# Launch with custom type instead of general-purpose
+Task(
+    description="Security review of auth module",
+    prompt="Review src/auth/ for security vulnerabilities",
+    subagent_type="security-reviewer"  # matches .claude/agents/security-reviewer.md
+)
+```
+
+### Agent Teams in Workflows
+
+```python
+# Parallel team of specialists
+[
+    Task(description="Security review", prompt="...", subagent_type="security-reviewer"),
+    Task(description="Performance review", prompt="...", subagent_type="performance-analyst"),
+    Task(description="Code quality", prompt="...", subagent_type="code-reviewer")
+]
+```
+
+### Team Composition Patterns
+
+| Project Type | Recommended Team | Agent Count |
+|-------------|-----------------|-------------|
+| Simple feature | engineer, reviewer | 2 |
+| API endpoint | architect, engineer, api-specialist | 3 |
+| Security-critical | engineer, security-reviewer, reviewer | 3 |
+| Full feature | architect, engineer, reviewer, test-engineer | 4 |
 
 ## Best Practices
 
@@ -433,10 +529,10 @@ Define failure behaviors:
 
 Keep users informed:
 ```markdown
-🏗️ Stage 1/3: Architecture Design
-✅ Architecture complete
-🏗️ Stage 2/3: Implementation
-⏳ Writing code (60% complete)...
+Stage 1/3: Architecture Design
+[complete] Architecture complete
+Stage 2/3: Implementation
+[in progress] Writing code (60% complete)...
 ```
 
 ## Performance Optimization
@@ -496,398 +592,37 @@ Structure your REGISTRY.json for fast lookup:
 3. **Progressive loading**: Start with minimal context
 4. **Early termination**: Stop on critical failures
 
-## Implementation Checklist
+## Observability (Optional)
 
-### Initial Setup
-- [ ] Create `.claude/` folder with agent-launcher.md
-- [ ] Create `.claude-library/` folder structure
-- [ ] Write REGISTRY.json with agent definitions
-- [ ] Create core agents (architect, engineer, reviewer)
-- [ ] Define first command workflow
+Track agent workflows with real-time monitoring. Two options:
 
-### Agent Development
-- [ ] Each agent has clear identity and responsibilities
-- [ ] Tool access is explicitly defined
-- [ ] Boundaries are clearly stated
-- [ ] Output format is specified
-- [ ] Error handling is defined
+1. **Local Observability** (SQLite-based, zero dependencies): See `.claude-library/observability/README.md`
+2. **Cloud Observability** (Logfire): Enable in REGISTRY.json with `"observability": { "enabled": true }`
 
-### Command Creation
-- [ ] Command has clear purpose
-- [ ] Workflow stages are defined
-- [ ] Parallel opportunities identified
-- [ ] Success criteria established
-- [ ] Progress reporting included
+Features: workflow traces, output validation, performance metrics, error tracking.
 
-### Context Management
-- [ ] Core project context created
-- [ ] Specialized contexts organized
-- [ ] Loading strategy defined
-- [ ] No agent-specific instructions in contexts
-
-### Testing & Validation
-- [ ] Test individual agents
-- [ ] Test command workflows
-- [ ] Verify parallel execution
-- [ ] Measure performance improvements
-- [ ] Document lessons learned
-
-## Observability Pattern (Optional)
-
-### Overview
-
-The **Observability Pattern** provides real-time monitoring, validation, and performance analysis for multi-agent workflows. This is a **completely optional** enhancement that can be enabled via a flag in your REGISTRY.json.
-
-**Important:** This pattern requires your own Logfire API key. Get a free account at https://logfire.pydantic.dev/
-
-### When to Use Observability
-
-✅ **Enable observability when you need:**
-- Real-time visibility into complex multi-agent workflows (5+ agents)
-- Output validation (verify agents actually created claimed files)
-- Performance metrics (execution time, context usage, tool usage)
-- Debugging complex agent interactions
-- Audit trails for production systems
-- Continuous learning about which agents/patterns work best
-
-❌ **Skip observability for:**
-- Simple projects (1-3 agents)
-- Rapid prototyping phase
-- Learning the framework basics
-- Minimal overhead requirements
-
-### What You Get
-
-**With observability enabled:**
-- 📊 **Workflow Traces**: Visual hierarchy showing agent execution (parent → children)
-- ✅ **Output Validation**: Automatic verification that files exist, tests pass, builds succeed
-- 📈 **Performance Metrics**: Duration, context usage, tool usage tracked per agent
-- 🐛 **Error Tracking**: Detailed failure analysis and debugging support
-- 📝 **Audit Logs**: Complete record of what agents did and when
-- 🎯 **Continuous Learning**: Identify successful patterns and common failure modes
-
-**Performance Impact:**
-- ~2-5 seconds added to workflow initialization
-- ~0.5-1 second per agent for logging
-- Negligible impact on actual agent work
-- **Total overhead: ~10-15%** for complex workflows
-
-### Architecture: Hybrid Observability Model
-
-The pattern uses a three-tier approach:
-
-```
-┌─────────────────────────────────────────────────────┐
-│         AGENT LAUNCHER (Orchestrator)               │
-│  - Initializes workflow context                     │
-│  - Logs workflow start/end to Logfire              │
-│  - Creates shared context file                     │
-│  - Tracks parallel groups                          │
-└──────────────┬──────────────────────────────────────┘
-               │
-               ├──► Creates: /tmp/claude-workflow-context.json
-               │
-               ▼
-    ┌──────────────────────────────────┐
-    │   PARALLEL AGENT GROUP           │
-    └──────────────────────────────────┘
-               │
-     ┌─────────┼─────────┐
-     │         │         │
-     ▼         ▼         ▼
-┌─────────┐ ┌─────────┐ ┌─────────┐
-│Architect│ │Engineer │ │Tester   │
-│ Logs to │ │ Logs to │ │ Logs to │
-│ Logfire │ │ Logfire │ │ Logfire │
-└─────────┘ └─────────┘ └─────────┘
-     │         │         │
-     └─────────┼─────────┘
-               │
-               ▼
-    ┌──────────────────────────────────┐
-    │   OBSERVER AGENT (Validator)     │
-    │  - Queries Logfire for traces    │
-    │  - Validates claimed outputs     │
-    │  - Checks files exist            │
-    │  - Reports validation results    │
-    └──────────────────────────────────┘
-```
-
-**Why This Works:**
-1. **Launcher** handles workflow coordination → logs structure
-2. **Agents** focus on tasks → log their specific outputs
-3. **Observer** validates reality vs. claims → ensures quality
-4. **Shared context** keeps everything synchronized via JSON file
-5. **OpenTelemetry spans** automatically create trace hierarchy
-
-### Quick Start
-
-#### 1. Get Logfire API Key (Required)
-
-```bash
-# Visit https://logfire.pydantic.dev/ to create free account
-# Get your API key and set it:
-export LOGFIRE_TOKEN="your-api-key-here"
-
-# Or add to .env file (recommended)
-echo "LOGFIRE_TOKEN=your-api-key-here" >> .env
-
-# Install Logfire SDK
-pip install logfire
-```
-
-⚠️ **Security:** Never commit your API key! Add `.env` to `.gitignore`.
-
-#### 2. Enable in REGISTRY.json
-
+Enable via REGISTRY.json settings:
 ```json
 {
   "settings": {
     "observability": {
       "enabled": true,
-      "provider": "logfire",
-      "config": {
-        "project_name": "my-agent-system",
-        "validate_outputs": true,
-        "auto_spawn_observer": false,
-        "log_level": "info"
-      }
+      "provider": "logfire"
     }
   }
 }
 ```
 
-#### 3. Add Observability Utilities
+See `.claude-library/observability/README.md` for full setup, configuration, and troubleshooting.
 
-Create `.claude-library/observability/logfire_helper.py` with helper functions for:
-- Workflow context creation/management
-- Agent task logging
-- Parallel group tracking
-- Output validation
+## Hooks (Optional)
 
-(See `.claude-library/observability/README.md` for complete implementation)
+Add deterministic control via shell commands at workflow points:
+- **PreToolUse**: Security checks, validation (can block operations)
+- **PostToolUse**: Formatting, notifications
+- **Stop/SubagentStop**: Team alerts, validation
 
-#### 4. Update Agents (Optional Sections)
-
-Add to each agent definition:
-
-```markdown
-## Observability (Optional - Active when enabled)
-
-After completing your task:
-
-```python
-import json
-from pathlib import Path
-
-registry = json.loads(Path('.claude-library/REGISTRY.json').read_text())
-if registry['settings'].get('observability', {}).get('enabled', False):
-    from observability.logfire_helper import log_agent_task
-
-    with log_agent_task('architect', 'Design authentication system') as span:
-        span.set_attribute('files_created', ['schema.md'])
-        span.set_attribute('tools_used', ['Read', 'Write'])
-        span.set_attribute('status', 'success')
-```
-```
-
-**Key Point:** Agents check the flag and only log when enabled. Zero overhead when disabled.
-
-### Directory Structure
-
-```
-.claude-library/
-├── REGISTRY.json                      # Has observability flag
-├── agents/
-│   ├── core/
-│   │   ├── architect.md              # Updated with optional observability section
-│   │   ├── engineer.md
-│   │   └── reviewer.md
-│   └── observability/                # NEW
-│       └── observer.md               # Validation agent
-└── observability/                    # NEW (optional pattern)
-    ├── README.md                     # Complete setup guide
-    ├── logfire_helper.py             # Logging utilities
-    └── patterns/
-        ├── agent-logging.md          # Agent integration snippets
-        └── launcher-init.md          # Launcher integration snippets
-```
-
-### Configuration Reference
-
-**REGISTRY.json Schema:**
-
-```json
-{
-  "settings": {
-    "observability": {
-      "enabled": false,                    // Master switch (default: OFF)
-      "provider": "logfire",               // "logfire" or "mongodb"
-      "config": {
-        "project_name": "agent-system",    // Your Logfire project name
-        "validate_outputs": true,          // Enable output validation
-        "auto_spawn_observer": false,      // Spawn Observer automatically?
-        "log_level": "info",               // "debug", "info", "warn", "error"
-        "track_context_size": true,        // Track KB of context loaded
-        "track_tool_usage": true           // Track which tools agents use
-      }
-    }
-  },
-  "agents": {
-    "architect": {
-      "observability_compatible": true     // Supports logging
-    },
-    "observer": {
-      "requires_observability": true       // Only works when enabled
-    }
-  }
-}
-```
-
-### Benefits vs. Overhead
-
-| Workflow Complexity | Without Observability | With Observability | Overhead |
-|--------------------|----------------------|-------------------|----------|
-| 1 agent | 10s | 11s | +10% |
-| 3 agents (parallel) | 15s | 17s | +13% |
-| 5 agents (mixed) | 25s | 28s | +12% |
-
-**Value Added:**
-- 60%+ reduction in debugging time
-- 95%+ validation accuracy
-- 2-3x faster workflow optimization after analysis
-
-**Verdict:** Observability pays for itself in complex workflows
-
-### Disabling Observability
-
-To turn off (zero impact):
-
-1. Set flag in REGISTRY.json: `"enabled": false`
-2. That's it! Agents automatically skip logging sections
-3. Remove `.claude-library/observability/` if desired
-
-### Migration to Other Providers
-
-Want to use MongoDB instead of Logfire?
-
-1. Change provider: `"provider": "mongodb"`
-2. Update `logfire_helper.py` to use MongoDB client
-3. Agent code stays the same (uses same helper functions)
-
-The pattern architecture is provider-agnostic!
-
-### Complete Documentation
-
-For full implementation details, setup instructions, troubleshooting, and code examples:
-
-**→ See `.claude-library/observability/README.md`**
-
-This pattern documentation includes:
-- Complete API key setup instructions
-- Helper function implementations
-- Agent integration examples
-- Observer agent definition
-- Validation workflows
-- Troubleshooting guide
-- Performance analysis
-
-### Best Practices
-
-1. **Start without observability** - learn the framework basics first
-2. **Enable for debugging** - turn it on when you need insight
-3. **Use small tasks** - easier to validate quickly
-4. **Review traces regularly** - learn from patterns
-5. **Validate incrementally** - don't wait until the end
-
-### Implementation Checklist
-
-When adding observability to your system:
-
-- [ ] Get Logfire API key and set LOGFIRE_TOKEN
-- [ ] Enable in REGISTRY.json
-- [ ] Create `.claude-library/observability/` folder
-- [ ] Add `logfire_helper.py` utilities
-- [ ] Update agent launcher with workflow initialization
-- [ ] Add optional observability sections to agents
-- [ ] Create Observer agent for validation
-- [ ] Test with simple workflow
-- [ ] Review traces in Logfire dashboard
-
-## Hooks Pattern (Optional)
-
-### Overview
-
-The **Hooks Pattern** provides deterministic control over Claude Code's behavior through shell commands that execute at specific workflow points. Unlike observability (which monitors), hooks actively control and can block operations.
-
-**Important:** This pattern requires no external services - completely self-contained using shell scripts and local file logging.
-
-### When to Use Hooks
-
-✅ **Enable hooks when you need:**
-- Automatic code formatting after file changes
-- Security gates to block dangerous operations
-- Custom validation before/after agent actions
-- Team notifications (Slack, Discord, email)
-- Lightweight metrics without external services
-- Project-specific business rules enforcement
-
-❌ **Skip hooks for:**
-- Simple single-agent workflows
-- Rapid prototyping phase
-- Learning the framework basics
-
-### Quick Start
-
-#### 1. Enable Hooks in REGISTRY.json
-
-```json
-{
-  "settings": {
-    "hooks": {
-      "enabled": true,
-      "scope": "project",
-      "configs": [
-        ".claude-library/hooks/configs/code-quality.json"
-      ],
-      "allow_blocking": true,
-      "timeout_ms": 5000,
-      "log_hook_output": true
-    }
-  }
-}
-```
-
-#### 2. Choose Pre-Built Configurations
-
-- `code-quality.json` - Auto-format and lint after file changes
-- `security.json` - Block dangerous bash commands
-- `performance.json` - Track agent timing metrics
-- `notifications.json` - Send team alerts on workflow events
-
-#### 3. Test It
-
-```bash
-# Make a code change - hooks will auto-format
-claude> "Add a new function to src/utils.py"
-
-# Hooks automatically run prettier, eslint, etc.
-```
-
-### Available Hook Events
-
-| Hook Event | When It Runs | Can Block? | Common Uses |
-|------------|--------------|------------|-------------|
-| `PreToolUse` | Before tool execution | ✅ Yes | Security checks, validation |
-| `PostToolUse` | After tool completes | ❌ No | Formatting, notifications |
-| `Stop` | Workflow completes | ❌ No | Team alerts, reports |
-| `SubagentStop` | Agent finishes | ❌ No | Output validation |
-| `SessionStart` | Session begins | ❌ No | Setup, initialization |
-
-### Common Hook Patterns
-
-#### Auto-Format Code
-
+Configure in `.claude/settings.json` or project settings:
 ```json
 {
   "hooks": {
@@ -904,119 +639,7 @@ claude> "Add a new function to src/utils.py"
 }
 ```
 
-#### Block Dangerous Commands
-
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [{
-          "type": "command",
-          "command": "python .claude-library/hooks/scripts/security_check.py \"$command\""
-        }]
-      }
-    ]
-  }
-}
-```
-
-#### Track Performance
-
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Task",
-        "hooks": [{
-          "command": "bash .claude-library/hooks/scripts/track_timing.sh start \"$description\""
-        }]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Task",
-        "hooks": [{
-          "command": "bash .claude-library/hooks/scripts/track_timing.sh end \"$description\""
-        }]
-      }
-    ]
-  }
-}
-```
-
-### Hooks vs Observability
-
-| Feature | Hooks | Observability |
-|---------|-------|---------------|
-| **Purpose** | Control & automation | Monitoring & insights |
-| **Can Block Operations** | ✅ Yes | ❌ No |
-| **External Service** | ❌ No | ✅ Logfire |
-| **Setup Time** | 2 min | 5 min |
-| **Overhead** | ~100ms | ~500ms |
-| **Use Cases** | Quality gates, security | Debugging, analytics |
-
-### Combined Pattern: Hooks + Observability
-
-For maximum power, use both together:
-
-```json
-{
-  "settings": {
-    "hooks": {
-      "enabled": true,
-      "configs": ["code-quality.json", "security.json"]
-    },
-    "observability": {
-      "enabled": true,
-      "provider": "logfire"
-    }
-  }
-}
-```
-
-**Result:**
-- Hooks enforce quality gates (blocking)
-- Observability tracks what happened (monitoring)
-
-### Directory Structure
-
-```
-.claude-library/
-├── hooks/                              # NEW: Hooks pattern
-│   ├── README.md                      # Complete hooks guide
-│   ├── configs/                       # Pre-built configurations
-│   │   ├── code-quality.json         # Auto-format, lint
-│   │   ├── security.json             # Security gates
-│   │   ├── performance.json          # Timing metrics
-│   │   └── notifications.json        # Team alerts
-│   ├── scripts/                       # Hook execution scripts
-│   │   ├── format_code.sh            # Multi-language formatter
-│   │   ├── security_check.py         # Security validator
-│   │   ├── track_timing.sh           # Performance metrics
-│   │   ├── notify_team.sh            # Slack/Discord alerts
-│   │   └── validate_agent_output.py  # Agent validation
-│   └── patterns/                      # Integration examples
-│       ├── workflow-gates.md         # Quality gate patterns
-│       ├── agent-validation.md       # Output validation
-│       └── lightweight-observability.md # Hooks-based metrics
-```
-
-### Best Practices
-
-1. **Start with one config** - Begin with `code-quality.json`
-2. **Make hooks fast** - Keep execution under 1 second
-3. **Never block on formatting** - Use `PostToolUse` and exit 0
-4. **Log everything** - Even successes, for audit trail
-5. **Use PreToolUse sparingly** - Only for critical security checks
-
-### Complete Documentation
-
-For full implementation details, hook scripts, and advanced patterns:
-
-**→ See `.claude-library/hooks/README.md`**
+See Claude Code docs for the full hook event reference and `.claude-library/hooks/README.md` for pre-built configurations.
 
 ## Conclusion
 
@@ -1038,5 +661,5 @@ Remember: Start simple with core agents, then progressively add specialization a
 
 ---
 
-*Framework Version 1.1 - Based on production patterns from real-world applications*
-*Now with optional Hooks Pattern for deterministic workflow control*
+*Framework Version 2.0 - Now with Agent Teams, Extended Context, and MCP Tool Search*
+*Optional Hooks and Observability patterns for production workflows*
