@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The Claude Agent Framework is a comprehensive system for building intelligent multi-agent development systems. It provides templates, patterns, and prompts to create optimized agent systems that leverage Claude Code's parallel execution capabilities.
 
-## 🎯 PRIMARY PRINCIPLE: Simplicity First
+## PRIMARY PRINCIPLE: Simplicity First
 
 **CRITICAL**: This framework follows "simplest approach first" - always try simple solutions before complex ones. Start minimal, grow only when proven necessary. Complexity is earned, not assumed.
 
@@ -14,17 +14,11 @@ The Claude Agent Framework is a comprehensive system for building intelligent mu
 
 ### Core Documentation Files (In Order of Use)
 
-1. **SIMPLICITY_ENFORCEMENT.md**: ⚠️ READ FIRST - Circuit breakers against over-engineering
+1. **SIMPLICITY_ENFORCEMENT.md**: READ FIRST - Circuit breakers against over-engineering
 2. **SYSTEM_GENERATOR_PROMPT.md**: Auto-generation prompt with simplicity checks (2-minute setup)
 3. **CLAUDE_AGENT_FRAMEWORK.md**: Complete framework guide with architecture principles
 4. **AGENT_PATTERNS.md**: Implementation patterns (use sparingly, only when needed)
 5. **AGENT_SYSTEM_TEMPLATE.md**: Manual templates with minimal/standard/full options
-
-### Specialized Documentation
-
-- **PROJECT_ANALYZER_PROMPT.md**: For complex codebases only (>10K lines)
-- **AGENT_REFERENCE_PATTERNS.md**: Theory and decision trees for complexity assessment
-- **ANTHROPIC_TEAM_PATTERNS.md**: Production patterns (study but don't over-apply)
 
 ### Optional Features
 
@@ -76,7 +70,7 @@ When users want to create an agent system for their project:
 ### Framework Architecture
 
 The framework follows these principles (in priority order):
-1. **Simplicity first**: Try direct commands → workflows → agents (in that order)
+1. **Simplicity first**: Try direct commands -> workflows -> agents (in that order)
 2. **Minimal by default**: Start with 3 agents, 1 command, 7 files total
 3. **Complexity on demand**: Only add features when current approach fails
 4. **Minimal auto-loading**: `.claude/` folder < 5KB initially (not 10KB)
@@ -89,12 +83,16 @@ Generated systems follow this pattern:
 .claude/                    # Minimal auto-loaded
 ├── agent-launcher.md      # Dynamic agent router
 ├── settings.json          # Project metadata
+├── MEMORY.md              # Cross-conversation memory index
+├── agents/                # Custom subagent types
+├── rules/                 # Path-specific rules
 └── commands/              # User workflows
 
 .claude-library/           # On-demand library
-├── REGISTRY.json         # Central configuration
+├── REGISTRY.json         # Central configuration (v2.0)
 ├── agents/               # Specialized agents
-└── contexts/             # Project knowledge
+├── contexts/             # Project knowledge
+└── skills/               # Skill definitions
 ```
 
 ## Common Development Tasks
@@ -120,53 +118,20 @@ When updating core documentation:
 ## Performance Optimization Targets
 
 The framework aims for:
-- 97% reduction in auto-loaded context (250KB → 8KB)
+- 97% reduction in auto-loaded context (250KB -> 8KB)
 - 3x faster execution through parallel agents
 - <2 minute setup time for new projects
 - Support for any tech stack without modification
 
 ## Local Observability System
 
-The framework includes an optional local observability system for tracking agent execution:
+Optional local observability for tracking agent execution. SQLite-based, zero cloud dependencies, 100% offline. Tracks agent launches, sub-agents, duration, token usage, costs, and validates task outputs.
 
-### Location
-`.claude-library/observability/`
+**Location**: `.claude-library/observability/`
+**Database**: `.claude-metrics/observability.db` (project-local)
+**CLI**: `python3 .claude-library/observability/obs.py recent|agents|execution <id>`
+**Status**: Production Ready (100% pass rate, 13/13 tests)
 
-### Features
-- **Agent Execution Tracking**: Captures when agents launch, sub-agents spawned, duration, token usage
-- **Validation Layer**: Automatically verifies task outputs match expectations
-- **Performance Metrics**: Tracks tokens, costs, execution times
-- **Artifact Tracking**: Monitors files created/modified and commands executed
-- **Project-Local Database**: Each project gets its own `.claude-metrics/observability.db`
-- **CLI Tool**: Query and analyze data with `obs.py` commands
-
-### Test Results
-- **Pass Rate**: 100% (13/13 tests)
-- **Complexity Coverage**: Easy, Medium, Hard scenarios
-- **Database Size**: ~13 KB per execution
-- **Query Performance**: <100ms
-- **Status**: Production Ready
-
-### Files
-```
-.claude-library/observability/
-├── README.md              # Documentation
-├── TEST_RESULTS.md        # Test report
-├── schema.sql            # Database schema
-├── db_helper.py          # Helper library
-├── obs.py               # CLI tool
-├── test_observability.py # Test suite
-├── configs/
-│   └── local-observability.json
-└── scripts/
-    ├── init_observability_db.sh
-    ├── observe_task_start.py
-    ├── observe_task_end.py
-    ├── track_artifact.py
-    └── validate_execution.py
-```
-
-### Usage
 Enable in `.claude-library/REGISTRY.json`:
 ```json
 {
@@ -179,9 +144,4 @@ Enable in `.claude-library/REGISTRY.json`:
 }
 ```
 
-Query with CLI:
-```bash
-python3 .claude-library/observability/obs.py recent
-python3 .claude-library/observability/obs.py agents
-python3 .claude-library/observability/obs.py execution <id>
-```
+See `.claude-library/observability/README.md` for full documentation.

@@ -5,13 +5,71 @@ All notable changes to the Claude Agent Framework will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-03-12
+
+### Changed - Framework v2.0: Slim-Down & Feature Update
+
+**Summary**: 50% fewer root docs, 64% smaller REGISTRY.json, 10+ new Claude Code features integrated.
+
+#### Phase 1: Archive Stale Files
+- Moved 9 files (~5,345 lines) to `archive/v1-{skills-research,patterns}/`
+- 5 skills research docs + 4 pattern/utility docs
+
+#### Phase 2: Consolidate Patterns
+- Merged `AGENT_REFERENCE_PATTERNS.md` + `AGENT_PATTERNS.md` + `ANTHROPIC_TEAM_PATTERNS.md` -> single `AGENT_PATTERNS.md` (1,374 lines)
+- Deduplicated parallel execution, workflow, and team patterns
+
+#### Phase 3: Expand Generator
+- `SYSTEM_GENERATOR_PROMPT.md`: 342 -> 529 lines
+- Absorbed `PROJECT_ANALYZER_PROMPT.md` as Phase 0 deep analysis
+- Absorbed `QUICK_START_BEST_PRACTICES.md` as integration appendix
+
+#### Phase 4: Trim Framework Guide
+- `CLAUDE_AGENT_FRAMEWORK.md`: 1,042 -> 664 lines
+- Replaced verbose Observability/Hooks sections with brief pointers
+- Added Agent Teams, Extended Context/MCP Tool Search, Managed Settings
+
+#### Phase 5: Update Templates
+- `AGENT_SYSTEM_TEMPLATE.md`: 575 -> 642 lines
+- Added `.claude/agents/` custom subagent types
+- Added `.claude/rules/` path-specific rules
+- Added Auto Memory (MEMORY.md)
+
+#### Phase 6: Slim Registry
+- `REGISTRY.json`: 1,154 -> 421 lines (-64%)
+- Removed workflows, performance_baselines, meta_framework_config, quality_gates
+- Extracted shared agent_defaults
+- Added skills section
+
+#### New Claude Code Features (Oct 2025 -> Mar 2026)
+- **Agent Teams**: Custom subagent types in `.claude/agents/`
+- **Path-Specific Rules**: `.claude/rules/` with glob-based targeting
+- **Auto Memory**: Persistent cross-conversation knowledge
+- **Extended Context**: 1M token context window
+- **MCP Tool Search**: Deferred tool loading via ToolSearch
+- **Effort Levels**: `model: "haiku"` for fast/cheap, `model: "opus"` for complex
+- **Worktree Isolation**: `isolation: "worktree"` for safe parallel work
+- **Background Agents**: `run_in_background: true` for async execution
+- **Managed Settings**: Centralized permission and model configuration
+- **Skills with context:fork**: Branch context for skill execution
+
+### Metrics
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| Root docs | 18 files | 9 files | -50% |
+| Root doc lines | ~10K | ~5K | -50% |
+| REGISTRY.json | 1,154 lines | 421 lines | -64% |
+| Claude Code features | Oct 2025 | Mar 2026 | +10 features |
+
+---
+
 ## [1.2.0] - 2025-10-10
 
 ### Added - Multi-Model Routing for Cost Optimization
 
 **Purpose**: Intelligent model routing to reduce costs by 99%+ while maintaining quality
 **Integration**: Optional enhancement via claude-code-router
-**Cost Impact**: $0.60/workflow → $0.005/workflow (99.2% savings)
+**Cost Impact**: $0.60/workflow -> $0.005/workflow (99.2% savings)
 
 #### New Documentation
 - **MULTI_MODEL_ROUTING.md** - Comprehensive guide (850+ lines)
@@ -54,7 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | General tasks | $3/1M | $0.10/1M | 96.7% |
 
 **Real-World Impact**:
-- 5-agent workflow: $0.60 → $0.005 (99.2% savings)
+- 5-agent workflow: $0.60 -> $0.005 (99.2% savings)
 - 100 workflows/month: ~$6,000/year savings
 - Maintains quality through strategic model assignment
 
@@ -88,10 +146,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - OpenRouter API account (free tier available)
 
 ### Validation
-- **Router Installation**: ✅ Verified on macOS
-- **Configuration**: ✅ Tested with Qwen3 models
-- **API Integration**: ✅ OpenRouter connectivity confirmed
-- **Server Status**: ✅ Running on port 3456
+- **Router Installation**: Verified on macOS
+- **Configuration**: Tested with Qwen3 models
+- **API Integration**: OpenRouter connectivity confirmed
+- **Server Status**: Running on port 3456
 
 ### Breaking Changes
 - None. Multi-model routing is completely optional.
@@ -133,7 +191,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Source**: [Anthropic "Writing Tools for Agents"](https://www.anthropic.com/engineering/writing-tools-for-agents)
 **Timeline**: 3-week implementation using parallel execution
-**Test Results**: ✅ 100% pass rate, +95% improvement
+**Test Results**: 100% pass rate, +95% improvement
 **Implementation**: Option C (Complete Transformation)
 
 #### Foundation (Phase 1)
@@ -208,17 +266,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Template structure documented
 
 ### Improved
-- **Tool Selection Accuracy**: 70% → 95% (+36%)
-- **Token Efficiency**: 1.3 → 4.7 refs/agent (+262%)
-- **Description Clarity**: 25 → 100 score (+300%)
-- **Tool Consolidation**: 12 → 3 tools (-75%)
+- **Tool Selection Accuracy**: 70% -> 95% (+36%)
+- **Token Efficiency**: 1.3 -> 4.7 refs/agent (+262%)
+- **Description Clarity**: 25 -> 100 score (+300%)
+- **Tool Consolidation**: 12 -> 3 tools (-75%)
 - **Overall Framework**: +95% improvement
 
 ### Performance Impact
 - **Agent Behavior**:
-  - First-try success rate: 60% → 90% (+50%)
+  - First-try success rate: 60% -> 90% (+50%)
   - Time to task completion: -25% (faster tool selection)
-  - New team member onboarding: 2h → 30min (-75%)
+  - New team member onboarding: 2h -> 30min (-75%)
 
 - **Token Usage**:
   - Average reduction: 15-20% on similar tasks
@@ -249,14 +307,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Validation
 - **Test Suite**: test_best_practice_tool_writing.py
   - Pass Rate: 100% (5/5 tests)
-  - Tool Namespacing: ✅ PASS
-  - Token Efficiency: ✅ PASS (+100%)
-  - Context Quality: ✅ PASS (0 → 100)
-  - Prompt Clarity: ✅ PASS (+300%)
-  - Tool Consolidation: ✅ PASS (-75%)
+  - Tool Namespacing: PASS
+  - Token Efficiency: PASS (+100%)
+  - Context Quality: PASS (0 -> 100)
+  - Prompt Clarity: PASS (+300%)
+  - Tool Consolidation: PASS (-75%)
 
 - **Overall Improvement**: +95%
-- **Verdict**: 🎉 STRONGLY RECOMMENDED FOR INTEGRATION
 
 ### Breaking Changes
 - None. All changes are backward compatible.
