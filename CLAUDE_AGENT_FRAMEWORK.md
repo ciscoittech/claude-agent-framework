@@ -54,9 +54,8 @@ Commands orchestrate agents through defined workflows:
 ```
 project-root/
 ├── .claude/                      # Minimal auto-loaded configuration
-│   ├── agent-launcher.md        # Dynamic agent loader (5-10KB)
-│   ├── settings.json            # Project metadata
-│   ├── agents/                  # Custom subagent types (NEW)
+│   ├── settings.json            # Hooks and permissions - nothing else
+│   ├── agents/                  # Subagent definitions: frontmatter + persona
 │   │   ├── security-reviewer.md
 │   │   └── performance-analyst.md
 │   └── commands/                # User-facing commands
@@ -80,78 +79,89 @@ project-root/
         └── standards.md       # Coding standards
 ```
 
-### The Agent Launcher
+### How routing actually works
 
-The `agent-launcher.md` is your system's brain. It:
-1. **Analyzes** user requests to determine intent
-2. **Loads** appropriate agents from the library
-3. **Routes** tasks to the right agents
-4. **Manages** context loading dynamically
+Earlier versions of this framework put a hand-written `agent-launcher.md` in
+`.claude/` and asked it to parse intent and dispatch. **Do not generate one.**
+Claude Code already does this, and does it from a field you control: each
+subagent's `description` in `.claude/agents/<name>.md` frontmatter. A launcher
+file competes with that routing rather than driving it, and it is auto-loaded
+context paid for on every session.
 
-```markdown
-# Agent Launcher
+What this means in practice:
 
-You are the agent launcher for [PROJECT NAME]. Your role is to:
-1. Parse user requests to determine intent
-2. Load appropriate agents from `.claude-library/`
-3. Route tasks to correct agents
-4. Manage context loading as needed
-
-## Quick Commands
-- `/feature "description"` - Build new feature
-- `/debug "issue"` - Debug problems
-- `/review` - Review code
-
-## Loading Strategy
-1. If input starts with `/`, load from `.claude/commands/`
-2. Match keywords to agents in REGISTRY.json
-3. Load relevant contexts based on task
-```
+1. **`description` is the routing surface.** Write what the agent is for and when
+   to reach for it, in the words a request would use. That string is what the
+   dispatcher matches on.
+2. **`REGISTRY.json` is framework metadata, not a dispatch table.** Claude Code
+   never reads it. It exists so the framework's own tooling - the validator, the
+   generator, the commands - has one source of truth.
+3. **Commands are the explicit path.** `.claude/commands/<name>.md` is invoked as
+   `/name` and orchestrates agents deliberately, for work where you do not want
+   the router deciding.
 
 ## Agent Design Principles
 
 ### Agent Definition Structure
 
-Every agent should follow this template:
+**An agent is two files.** The split is not organizational tidiness - the stub's
+body becomes the subagent's system prompt and is paid on every launch, while the
+playbook is read only when the agent needs it.
+
+**`.claude/agents/<name>.md`** - the real definition. Frontmatter is mandatory;
+without it the tier declarations are unenforced prose and the agent inherits
+whatever the session is running. Keep the body under ~100 lines.
 
 ```markdown
-# [Agent Name]
+---
+name: architect
+description: Designs system structure and interfaces. Use for design decisions, choosing patterns, and planning how a new component fits.
+model: opus
+effort: xhigh
+tools: Read, Write, Edit, Grep, Glob
+---
 
-You are a [role] specializing in [domain]. Your expertise includes [specific skills].
+You are a system architect. You decide structure and interfaces; you do not
+implement.
+
+## When you are the right agent
+Design questions, architectural trade-offs, planning a component's shape.
+Not: writing the implementation, reviewing finished code.
+
+## Before you start
+Read `.claude-library/agents/core/architect.md` for the full playbook.
+```
+
+Required keys, exactly these: `name`, `description`, `model`, `effort`, `tools`.
+`color` is optional. `tools` is a **comma-separated string**, never a YAML list.
+`name` must equal the filename. `description` is the routing surface - see *How
+routing actually works* above.
+
+**`.claude-library/agents/core/<name>.md`** - the playbook. Size is not a
+constraint here. This is where the responsibilities, boundaries, output format,
+worked examples, and failure modes live:
+
+```markdown
+# Architect
 
 ## Core Responsibilities
 1. **Primary Task**: What this agent primarily does
 2. **Secondary Tasks**: Supporting activities
 3. **Quality Assurance**: How it ensures quality
 
-## What You SHOULD Do
-- Specific positive actions
-- Expected behaviors
-- Quality standards to maintain
+## What You SHOULD Do / SHOULD NOT Do
+Boundaries, anti-patterns, and which work belongs to another agent.
 
-## What You SHOULD NOT Do
-- Boundaries and limitations
-- Tasks for other agents
-- Anti-patterns to avoid
-
-## Available Tools
-You have access to these tools:
-- **Read**: For reading files
-- **Write**: For creating files
-- **Edit**: For modifying files
-- **Task**: For spawning sub-agents (if orchestrator)
-- [Other specific tools]
-
-## Interaction Patterns
-- How to communicate with users
-- Output format specifications
-- Progress reporting style
+## Output Format
+The exact shape the caller expects back.
 
 ## Success Criteria
-- Measurable outcomes
-- Quality gates
-- Performance targets
+Measurable outcomes and quality gates.
 ```
+
+`REGISTRY.json` declares the same `model`, `effort`, and `tools` as the stub's
+frontmatter. `validate_agent_system.py` fails if the two disagree - a tier that
+exists only in the registry is a tier nothing enforces.
 
 ### Tool Configuration Guidelines
 
@@ -159,11 +169,15 @@ Agents should only have access to tools they need:
 
 | Agent Type | Typical Tools | Restricted Tools |
 |------------|--------------|------------------|
-| **Architect** | Read, Write, Grep | Bash, Edit (limited) |
-| **Engineer** | All tools (*) | None (full access) |
-| **Reviewer** | Read, Grep, Glob | Write, Edit, Bash |
-| **Orchestrator** | Task, Read | Direct file editing |
-| **Debugger** | Read, Bash, Edit | Write (new files) |
+| **Architect** | Read, Write, Grep, Glob | Bash |
+| **Engineer** | Read, Write, Edit, Grep, Glob, Bash | Agent |
+| **Reviewer** | Read, Grep, Glob, Bash | Write, Edit |
+| **Orchestrator** | Agent, Read, Grep, Glob | Write, Edit, Bash |
+| **Debugger** | Read, Edit, Grep, Glob, Bash | Write |
+
+Never grant `*`. A wildcard is not a shortcut for "I have not decided yet" - it
+is a decision to grant everything, and the validator rejects it. The subagent
+tool is named **`Agent`**; `Task` is its former name and matches nothing.
 
 ### Agent Categories
 
@@ -293,27 +307,22 @@ Running in parallel:
 
 ### Command Implementation
 
-Commands use the Task tool to launch agents:
+Commands use the `Agent` tool to launch subagents. Name the real
+`subagent_type` - the persona already lives in `.claude/agents/<name>.md`, so
+pasting it into the prompt duplicates it and pays for it twice:
 
 ```javascript
-// Parallel execution - all tasks in ONE message
-<Task>
-  <subagent_type>general-purpose</subagent_type>
-  <description>Architecture design</description>
-  <prompt>
-    [Load agent persona from .claude-library/agents/architect.md]
-    [Include relevant contexts]
-    Design architecture for: {feature}
-  </prompt>
-</Task>
-<Task>
-  <subagent_type>general-purpose</subagent_type>
-  <description>Test specifications</description>
-  <prompt>
-    [Load test engineer persona]
-    Create comprehensive test specs for: {feature}
-  </prompt>
-</Task>
+// Parallel execution - all Agent calls in ONE message
+Agent({
+  subagent_type: "architect",
+  description: "Architecture design",
+  prompt: "Design the architecture for: {feature}"
+})
+Agent({
+  subagent_type: "test-engineer",
+  description: "Test specifications",
+  prompt: "Write test specs for: {feature}"
+})
 ```
 
 ### Workflow Patterns
@@ -460,9 +469,10 @@ These replace manual CLAUDE.md instructions for tool permissions.
 
 ## Parallel Execution
 
-### Leveraging Claude Code's Task Tool
+### Leveraging Claude Code's Agent Tool
 
-The Task tool enables parallel agent execution:
+The `Agent` tool enables parallel subagent execution. (`Task` was its former
+name; nothing answers to it now.)
 
 ```javascript
 // WRONG - Sequential (slow)
@@ -471,11 +481,11 @@ await runAgent('test-writer');
 await runAgent('researcher');
 
 // RIGHT - Parallel (fast)
-// Send all Tasks in ONE message
+// Send all Agent calls in ONE message
 [
-  Task('architect', prompt1),
-  Task('test-writer', prompt2),
-  Task('researcher', prompt3)
+  Agent({subagent_type: 'architect',    prompt: prompt1}),
+  Agent({subagent_type: 'test-writer',  prompt: prompt2}),
+  Agent({subagent_type: 'researcher',   prompt: prompt3})
 ]
 ```
 
@@ -510,7 +520,13 @@ Claude Code now supports **custom subagent types** defined in `.claude/agents/`.
 Create `.claude/agents/<agent-name>.md`:
 
 ```markdown
-# Security Reviewer
+---
+name: security-reviewer
+description: Reviews code for OWASP Top 10 vulnerabilities. Use for security review of auth, input handling, and anything touching user data.
+model: sonnet
+effort: high
+tools: Read, Grep, Glob
+---
 
 You are a security-focused code reviewer specializing in OWASP Top 10 vulnerabilities.
 
@@ -519,18 +535,20 @@ You are a security-focused code reviewer specializing in OWASP Top 10 vulnerabil
 - Check authentication and authorization logic
 - Verify input validation and output encoding
 
-## Tools
-- Read, Grep, Glob (read-only access)
-
 ## Output Format
 Report findings as: severity (Critical/High/Medium/Low), location, description, fix.
 ```
 
+The tool grant lives in `tools:`, not in a prose section - a "## Tools" heading
+listing read-only access grants nothing. `model` and `effort` are two independent
+dials: `model` is the capability floor, `effort` is how much reasoning it spends
+there. See `MODEL_SELECTION.md`.
+
 ### Using Custom Agent Types
 
 ```python
-# Launch with custom type instead of general-purpose
-Task(
+# Launch with a custom type instead of general-purpose
+Agent(
     description="Security review of auth module",
     prompt="Review src/auth/ for security vulnerabilities",
     subagent_type="security-reviewer"  # matches .claude/agents/security-reviewer.md
@@ -542,9 +560,9 @@ Task(
 ```python
 # Parallel team of specialists
 [
-    Task(description="Security review", prompt="...", subagent_type="security-reviewer"),
-    Task(description="Performance review", prompt="...", subagent_type="performance-analyst"),
-    Task(description="Code quality", prompt="...", subagent_type="code-reviewer")
+    Agent(description="Security review", prompt="...", subagent_type="security-reviewer"),
+    Agent(description="Performance review", prompt="...", subagent_type="performance-analyst"),
+    Agent(description="Code quality", prompt="...", subagent_type="reviewer")
 ]
 ```
 
@@ -616,8 +634,8 @@ Stage 2/3: Implementation
 ### Context Reduction Strategies
 
 1. **Minimal .claude folder** (< 10KB)
-   - Only agent-launcher.md
-   - Basic settings.json
+   - Lean agent stubs - frontmatter plus a short persona, depth in the library
+   - `settings.json` for hooks and permissions only
    - Command shortcuts
 
 2. **On-demand loading** from .claude-library
@@ -636,19 +654,40 @@ Structure your REGISTRY.json for fast lookup:
 
 ```json
 {
-  "version": "1.0.0",
-  "settings": {
-    "auto_load_agents": false,
-    "max_parallel_agents": 3,
-    "cache_loaded_agents": true
-  },
+  "version": "2.0.0",
   "agents": {
     "architect": {
-      "path": ".claude-library/agents/architect.md",
-      "tools": ["Read", "Write", "Grep"],
+      "path": ".claude-library/agents/core/architect.md",
+      "type": "core",
+      "domain": "architecture",
+      "tools": ["Read", "Write", "Edit", "Grep", "Glob"],
+      "model": "opus",
+      "effort": "xhigh",
       "triggers": ["design", "architecture", "spec"],
-      "category": "core",
+      "contexts": ["project.md"],
       "priority": 1
+    },
+    "engineer": {
+      "path": ".claude-library/agents/core/engineer.md",
+      "type": "core",
+      "domain": "implementation",
+      "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
+      "model": "sonnet",
+      "effort": "high",
+      "triggers": ["implement", "build", "fix"],
+      "contexts": ["project.md"],
+      "priority": 1
+    },
+    "reviewer": {
+      "path": ".claude-library/agents/core/reviewer.md",
+      "type": "core",
+      "domain": "quality",
+      "tools": ["Read", "Grep", "Glob"],
+      "model": "sonnet",
+      "effort": "high",
+      "triggers": ["review", "quality"],
+      "contexts": ["project.md"],
+      "priority": 2
     }
   },
   "commands": {
@@ -657,9 +696,28 @@ Structure your REGISTRY.json for fast lookup:
       "agents": ["architect", "engineer", "reviewer"],
       "workflow": "parallel-sequential"
     }
+  },
+  "contexts": {
+    "project": {
+      "path": ".claude-library/contexts/project.md",
+      "description": "Stack, conventions, and layout"
+    }
+  },
+  "skills": {
+    "feature": {
+      "path": ".claude/commands/feature.md",
+      "description": "Build the feature described, using the project's agents",
+      "allowed_tools": ["Agent", "Read", "Write", "Edit", "Grep", "Glob"]
+    }
   }
 }
 ```
+
+Two path conventions, and mixing them is the most common generation error:
+`path` is **repo-root-relative**, while `contexts[]` entries are **bare
+filenames** resolved against `.claude-library/contexts/`. `model` and `effort`
+must match the agent's frontmatter exactly. Keys are `type` and `domain` - not
+`category`, not `file`.
 
 ### Workflow Optimization
 

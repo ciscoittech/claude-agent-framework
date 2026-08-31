@@ -377,7 +377,9 @@ names (`Agent`, not `Task`; `Edit`, not `MultiEdit`), and never `["*"]`.
       "model": "opus",
       "effort": "xhigh",
       "triggers": ["architecture", "design", "spec", "API", "database"],
-      "category": "core",
+      "type": "core",
+      "domain": "architecture",
+      "contexts": ["project.md"],
       "priority": 1
     },
     "engineer": {
@@ -388,7 +390,9 @@ names (`Agent`, not `Task`; `Edit`, not `MultiEdit`), and never `["*"]`.
       "model": "opus",
       "effort": "high",
       "triggers": ["implement", "code", "build", "fix", "debug"],
-      "category": "core",
+      "type": "core",
+      "domain": "implementation",
+      "contexts": ["project.md"],
       "priority": 1
     },
     "reviewer": {
@@ -399,7 +403,9 @@ names (`Agent`, not `Task`; `Edit`, not `MultiEdit`), and never `["*"]`.
       "model": "opus",
       "effort": "high",
       "triggers": ["review", "security", "performance", "quality"],
-      "category": "core",
+      "type": "core",
+      "domain": "quality",
+      "contexts": ["project.md"],
       "priority": 2
     }
   },

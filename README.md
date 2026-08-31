@@ -85,22 +85,19 @@ Build your dream team:
 ```
 your-project/
 ├── .claude/                    # Ultra-light core (<10KB)
-│   ├── agent-launcher.md      # Your mission control
-│   ├── settings.json          # Project metadata
-│   ├── MEMORY.md              # Cross-conversation memory
-│   ├── agents/                # Custom subagent types
-│   ├── rules/                 # Path-specific rules
-│   └── commands/              # Your power tools
-│       ├── build.md          # Feature development
-│       ├── debug.md          # Problem solving
-│       ├── test.md           # Quality assurance
-│       └── deploy.md         # Ship to production
+│   ├── settings.json          # Hooks and permissions - what the harness reads
+│   ├── agents/                # Subagent definitions: frontmatter + persona
+│   │   ├── architect.md      # model + effort declared here, or not at all
+│   │   ├── engineer.md
+│   │   └── reviewer.md
+│   └── commands/              # Your power tools, invoked as /name
+│       └── build.md          # Start with one; earn the rest
 │
 └── .claude-library/           # On-demand specialists
     ├── REGISTRY.json         # Central configuration (v2.0)
-    ├── agents/               # Your AI team
+    ├── agents/               # Full playbooks - depth lives here
     ├── contexts/             # Shared knowledge
-    └── skills/               # Skill definitions
+    └── hooks/                # Optional deterministic control
 ```
 
 ---

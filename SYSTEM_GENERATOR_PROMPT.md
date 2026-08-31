@@ -172,12 +172,12 @@ Extract ONLY what's essential:
 
 ## Step 3: Reference Framework Documentation
 
-> **§4.6b is normative and overrides everything you read here.** These documents are
-> background: they explain *why* the framework is shaped the way it is. Several of their
-> examples predate the current contract and show older shapes — registry entries without
-> `model`/`effort`, agent files without frontmatter, `agent-launcher.md`, `tools` as a
-> YAML list. Where any of them disagrees with §4.6b, §4.6b wins. If you are short on
-> time, read §4.6b and skip this step.
+> **§4.6b is normative.** These documents are background: they explain *why* the
+> framework is shaped the way it is. Their examples are now held to the same contract
+> by `test_v2_structure.py`, so a registry entry, agent file, or path convention copied
+> from any of them will validate. Where one still disagrees with §4.6b, §4.6b wins and
+> the disagreement is a bug worth reporting. If you are short on time, read §4.6b and
+> skip this step.
 
 Optional background, in `claude-agent-framework/`:
 1. `SIMPLICITY_ENFORCEMENT.md` - Circuit breakers against over-engineering (read first)

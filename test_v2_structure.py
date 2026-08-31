@@ -90,8 +90,16 @@ print(f"{'✓' if not portable_errors else '✗'} Agent system validation: "
 # === 5e. Doc examples must satisfy the rules those same docs state ===
 # C4/W3 class: the template's registry example referenced agents its own agents{}
 # block did not define, so anyone copying it failed the validator the same
-# document told them to run. Extract every JSON block from the generator and
-# template and hold it to the contract.
+# document told them to run. Extract every JSON block from the four documents a
+# generator run reads and hold it to the §4.6b contract.
+#
+# The generator prompt carries a standing warning that its background reading
+# "predates the current contract". That warning was accurate, which is the
+# problem: a reader who trusts an example still builds the wrong thing first.
+# These checks are what let the warning be deleted.
+CONTRACT_DOCS = ('SYSTEM_GENERATOR_PROMPT.md', 'AGENT_SYSTEM_TEMPLATE.md',
+                 'CLAUDE_AGENT_FRAMEWORK.md', 'AGENT_PATTERNS.md')
+
 def json_blocks(text):
     for m in re.finditer(r'```json\n(.*?)```', text, re.S):
         try:
@@ -99,7 +107,7 @@ def json_blocks(text):
         except json.JSONDecodeError:
             continue  # illustrative fragments are not all standalone JSON
 
-for doc in ('SYSTEM_GENERATOR_PROMPT.md', 'AGENT_SYSTEM_TEMPLATE.md'):
+for doc in CONTRACT_DOCS:
     doc_path = os.path.join(ROOT, doc)
     if not os.path.exists(doc_path):
         continue
@@ -110,16 +118,30 @@ for doc in ('SYSTEM_GENERATOR_PROMPT.md', 'AGENT_SYSTEM_TEMPLATE.md'):
         for aname, acfg in agents.items():
             if not isinstance(acfg, dict):
                 continue
-            check(acfg.get('model') is not None,
-                  f"{doc}: registry example agent '{aname}' has no model")
-            check(acfg.get('effort') is not None,
-                  f"{doc}: registry example agent '{aname}' has no effort")
+            where = f"{doc}: registry example agent '{aname}'"
+            check(acfg.get('model') is not None, f"{where} has no model")
+            check(acfg.get('effort') is not None, f"{where} has no effort")
             tools = acfg.get('tools') or []
-            check('*' not in tools,
-                  f"{doc}: registry example agent '{aname}' uses wildcard tools")
+            check('*' not in tools, f"{where} uses wildcard tools")
             for dead in ('Task', 'MultiEdit'):
-                check(dead not in tools,
-                      f"{doc}: registry example agent '{aname}' uses retired tool '{dead}'")
+                check(dead not in tools, f"{where} uses retired tool '{dead}'")
+
+            # Key vocabulary. `category` and `file` are the two spellings that
+            # were still in circulation; neither is read by anything.
+            check('category' not in acfg, f"{where} uses 'category' (the key is 'type')")
+            check('file' not in acfg, f"{where} uses 'file' (the key is 'path')")
+            check(acfg.get('type') is not None, f"{where} has no type")
+            check(acfg.get('domain') is not None, f"{where} has no domain")
+
+            # The two path conventions that get mixed up. `path` is
+            # repo-root-relative; `contexts[]` entries are bare filenames.
+            path = acfg.get('path')
+            check(path is None or path.startswith(('.claude/', '.claude-library/')),
+                  f"{where} path '{path}' is not repo-root-relative")
+            for ctx in acfg.get('contexts', []):
+                check('/' not in ctx and ctx.endswith('.md'),
+                      f"{where} context '{ctx}' must be a bare .md filename "
+                      f"resolved against .claude-library/contexts/")
         # commands must only reference agents the same example defines
         for cname, ccfg in (block.get('commands') or {}).items():
             if not isinstance(ccfg, dict):
@@ -129,6 +151,52 @@ for doc in ('SYSTEM_GENERATOR_PROMPT.md', 'AGENT_SYSTEM_TEMPLATE.md'):
                       f"{doc}: command example '{cname}' references agent "
                       f"'{ref}' not defined in the same example")
 print("✓ Doc registry examples satisfy their own stated contract")
+
+# === 5f. Agent-file examples must show frontmatter ===
+# An example agent file without frontmatter teaches that frontmatter is
+# optional. It is not: without it the model/effort declarations are prose and
+# the agent silently inherits whatever the session is running.
+AGENT_EXAMPLE = re.compile(
+    r'`?\.claude/agents/[^`\n]*`?[^\n]*\n+(?:[^\n]*\n){0,6}?```markdown\n(.*?)```',
+    re.S)
+for doc in CONTRACT_DOCS:
+    doc_path = os.path.join(ROOT, doc)
+    if not os.path.exists(doc_path):
+        continue
+    text = open(doc_path, encoding='utf-8').read()
+    for m in AGENT_EXAMPLE.finditer(text):
+        body = m.group(1)
+        line_no = text[:m.start()].count('\n') + 1
+        check(body.lstrip().startswith('---'),
+              f"{doc}:{line_no}: .claude/agents example has no frontmatter block")
+        if body.lstrip().startswith('---'):
+            head = body.split('---')[1]
+            for key in ('name', 'description', 'model', 'effort', 'tools'):
+                check(re.search(rf'^{key}:', head, re.M) is not None,
+                      f"{doc}:{line_no}: agent example frontmatter missing '{key}'")
+            tools_line = re.search(r'^tools:(.*)$', head, re.M)
+            check(tools_line is None or tools_line.group(1).strip() != '',
+                  f"{doc}:{line_no}: agent example shows tools as a YAML list; "
+                  f"it must be a comma-separated string")
+
+# `agent-launcher.md` is forbidden by §4.1. Naming it to say so is fine; showing
+# it in a directory tree is what teaches people to build one.
+LAUNCHER_IN_TREE = re.compile(r'^[\s│├└─]*agent-launcher\.md', re.M)
+for dirpath, dirnames, filenames in os.walk(ROOT):
+    dirnames[:] = [d for d in dirnames if d not in {'archive', '.git', '__pycache__'}]
+    for fn in filenames:
+        if not fn.endswith('.md'):
+            continue
+        rel = os.path.relpath(os.path.join(dirpath, fn), ROOT)
+        if rel == 'CHANGELOG.md':
+            continue
+        try:
+            content = open(os.path.join(dirpath, fn), encoding='utf-8').read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        check(not LAUNCHER_IN_TREE.search(content),
+              f"{rel}: shows agent-launcher.md in a directory tree (§4.1 forbids it)")
+print("✓ Doc agent examples carry real frontmatter")
 
 # === 6. Line count targets ===
 targets = {
