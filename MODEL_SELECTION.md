@@ -25,16 +25,27 @@ not pick an effort; set both deliberately.
 | Claude Opus 5 | `opus` | 1M | $5.00 | $25.00 |
 | Claude Fable 5 | `fable` | 1M | $10.00 | $50.00 |
 
-Rates are Anthropic first-party API prices. Bedrock and Vertex are partner-operated and
-bill separately.
+**Last verified: 2026-08-31** against the Anthropic price card (`/claude-api`, and
+https://claude.com/pricing). Every rate above was checked, not just the arithmetic built on
+it — a wrong rate makes every comparison in this file wrong in the same direction, and
+nothing here updates itself. Re-verify before relying on it for a tier decision, and move
+the date when you do.
+
+Rates are Anthropic first-party API prices. Claude on Microsoft Foundry bills at the same
+rates; Bedrock and Vertex are partner-operated and bill separately.
 
 **Haiku is the only current model at 200K.** Everything else is 1M. This is the single
 most consequential asymmetry in the table — a task that looks trivial ("rename this symbol
 everywhere") can still be a long-context task, and haiku will truncate on it.
 
-This table is the framework's reference for rates. Verify against the current Anthropic
-price card before relying on it for a tier decision — rates change, and this file will not
-update itself.
+**Effort is not a dial on every model.** The levels available depend on the model:
+`low` through `max` on Opus 5, Sonnet 5 and Fable 5, but the API rejects the effort
+parameter outright on Haiku 4.5. Treat a haiku agent's effort declaration as unenforced —
+if the reasoning depth matters, that is the signal to move up a model tier, which is why
+the validator warns on haiku above `medium`.
+
+**Fast mode** (`/fast`, Opus 5 only) is the same model at up to 2.5x output speed, priced
+at $10/$50 — Fable rates for Opus capability. It buys latency, not capability.
 
 ---
 
@@ -134,8 +145,13 @@ consolidated tool calls, less preamble, terser output. Most agents do not need `
 
 ### 2. Prompt caching
 
-Cached reads bill at roughly a tenth of fresh input. Caching is a **prefix match** — any
-byte change anywhere in the prefix invalidates everything after it.
+Cached reads bill at roughly a tenth of fresh input; **cache writes bill at about 1.25x**.
+That asymmetry is the whole game. A prefix that caches and is read many times is close to
+free after the first call; a prefix that is written every run and never hit costs 25% more
+than not caching at all. Measure `cache_read_input_tokens` rather than assuming.
+
+Caching is a **prefix match** — any byte change anywhere in the prefix invalidates
+everything after it.
 
 Assemble every agent prompt stable-first:
 
@@ -155,6 +171,13 @@ JSON, a tool list whose order varies between runs.
 ### 3. Model tier
 
 Choose the lowest tier that clears the capability bar, then stop.
+
+### Not a lever here: the Batch API
+
+Batch processing runs asynchronously at 50% of standard rates, which makes it the largest
+discount on this page — and it does not apply to anything in this framework. Agents run
+interactively through Claude Code, which is a synchronous surface. It is worth knowing
+about for offline work you build *with* the API, not for tiering the agents in it.
 
 ---
 

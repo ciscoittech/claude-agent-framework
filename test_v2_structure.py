@@ -283,6 +283,47 @@ for path in live_docs():
             stale_hits += 1
 print(f"{'✓' if stale_hits == 0 else '✗'} Stale model claims: {stale_hits} found")
 
+# === 8c. The rate table is dated, and its rates are pinned ===
+# Only the arithmetic built on these rates was ever tested; the rates themselves
+# were taken on trust. A wrong rate makes every comparison in MODEL_SELECTION.md
+# wrong in the same direction, and the tier assignments inherit the error.
+#
+# Pinning them here does not make them true - it makes a change deliberate. The
+# date is what carries the claim, so it is checked for shape and for age.
+EXPECTED_RATES = {
+    'Claude Haiku 4.5': ('200K', '$1.00', '$5.00'),
+    'Claude Sonnet 5': ('1M', '$2.00', '$10.00'),
+    'Claude Opus 5': ('1M', '$5.00', '$25.00'),
+    'Claude Fable 5': ('1M', '$10.00', '$50.00'),
+}
+model_doc = os.path.join(ROOT, 'MODEL_SELECTION.md')
+if os.path.exists(model_doc):
+    model_text = open(model_doc, encoding='utf-8').read()
+    for name, (ctx, inp, out) in EXPECTED_RATES.items():
+        row = re.search(rf'^\|\s*{re.escape(name)}\s*\|(.*)$', model_text, re.M)
+        check(row is not None, f"MODEL_SELECTION.md: no rate row for {name}")
+        if row:
+            cells = row.group(1)
+            for field, value in (('context', ctx), ('input rate', inp), ('output rate', out)):
+                check(value in cells,
+                      f"MODEL_SELECTION.md: {name} {field} changed - expected {value}. "
+                      f"If the price card changed, update EXPECTED_RATES here in the "
+                      f"same commit and move the Last verified date")
+
+    m = re.search(r'\*\*Last verified:\s*(\d{4})-(\d{2})-(\d{2})\*\*', model_text)
+    check(m is not None,
+          "MODEL_SELECTION.md has no '**Last verified: YYYY-MM-DD**' line - "
+          "an unverified rate table is indistinguishable from a verified one")
+    if m:
+        import datetime
+        verified = datetime.date(*(int(g) for g in m.groups()))
+        age = (datetime.date.today() - verified).days
+        # A warning, not an error: CI must not start failing on a calendar date.
+        check(age <= 180,
+              f"MODEL_SELECTION.md rates last verified {age} days ago "
+              f"({verified}) - re-check them against the price card", warn=True)
+        print(f"✓ Rate table pinned, last verified {verified} ({age}d ago)")
+
 # === 9. Context files updated ===
 contexts_dir = os.path.join(ROOT, '.claude-library/contexts')
 for ctx in ['claude-code-subagents.md', 'claude-code-best-practices.md', 'claude-code-mcp.md']:
