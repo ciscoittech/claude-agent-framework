@@ -5,6 +5,79 @@ All notable changes to the Claude Agent Framework will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-08-31
+
+### Fixed - Configuration the harness never reads
+
+The through-line of 2.1.0 continued: configuration declared in a
+framework-owned file that Claude Code does not load. Three more instances, each
+of which looked like it worked.
+
+- **`.claude-library/contexts/claude-code-hooks.md` documented a hooks API that
+  does not exist**, and three agents load it as "official Claude Code hooks
+  documentation": hooks enabled in `REGISTRY.json`, an
+  `event`/`script`/`blocking`/`filters` config shape, two invented events
+  (`PrePrompt`, `PostPrompt`), a payload read as `tool.name` / `tool.parameters`
+  / `result.usage` instead of `tool_name` / `tool_input` / `tool_response`, and
+  `sys.exit(1)` taught throughout as the way to block. Rewritten against
+  code.claude.com/docs/en/hooks.
+- **Hook commands used relative script paths.** Handlers run in the current
+  directory, so starting Claude Code from a subdirectory made every hook exit
+  127. All 29 occurrences are anchored with `"$CLAUDE_PROJECT_DIR"`.
+- **`run_tests.sh` still read argv** (#6) — the last script missed in 2.1.0.
+  Wired up it would have received nothing and exited 0. It now parses the stdin
+  payload and reports a red suite with `decision: block` instead of swallowing
+  it behind `|| true` and `2>/dev/null`.
+
+Also: `workflow-gates.md` taught `script.sh "$file_path"` in six configs and
+per-command `commands.<name>.hooks` blocks that nothing reads; `lint_code.sh`
+was referenced in two documents and has never existed; GNU-only `date +%s%3N`
+survived in the metrics example.
+
+### Fixed - Documentation that contradicted the contract (#9)
+
+The generator sent readers to four documents and then warned that their examples
+predated the contract. `CLAUDE_AGENT_FRAMEWORK.md` used `category`, showed an
+agent file with no frontmatter, granted an agent `All tools (*)`, and gave
+`agent-launcher.md` its own section — a file §4.1 forbids. `AGENT_PATTERNS.md`
+used `file` instead of `path`, made it library-relative, gave `contexts[]`
+extensionless entries, and declared `tools` as a YAML list. Both called the
+subagent tool `Task`; 19 `<Task>` blocks now say `Agent`. The Step 3 warning is
+retired rather than restated.
+
+### Added - Checks that run without being remembered
+
+- **`test_generated_system.py`** (#12): a canonical fixture built to the
+  contract, 28 negative fixtures each deviating in one way, and every registry
+  example in the documentation materialized into a real tree and validated. That
+  last part found `AGENT_SYSTEM_TEMPLATE.md` declaring three commands with no
+  `skills{}` entries — a system built from the template failed the validator the
+  same template tells you to run.
+- **`test_hooks.py`**: 43 checks that execute the hook scripts against real
+  payloads. Reading a script cannot distinguish a working hook from one that
+  approves everything.
+- **`run_checks.py`** and `.github/workflows/checks.yml`: one entry point, run
+  on push, on pull request, and by the PostToolUse hook — which now also fires
+  on root document edits, since the doc-example checks are the ones most likely
+  to regress and were the ones it was not watching.
+
+### Verified - Rate table (#8)
+
+Every rate in `MODEL_SELECTION.md` checked against the current price card; all
+four correct. Added the cache **write** rate (~1.25x, previously only the read
+side was given), the fact that the API rejects `effort` on Haiku 4.5, and fast
+mode's Opus-5-at-Fable-rates pricing. Rates are now pinned in
+`test_v2_structure.py` behind a dated `Last verified` line that warns past 180
+days.
+
+### Note on method
+
+Every check added in this release was confirmed to fail against a deliberately
+broken version before being accepted — a hook reading argv, a security gate at
+exit 1, a validator with one comparison removed, an un-anchored settings path.
+Two of this framework's worst bugs shipped green under tests that never
+exercised the real path.
+
 ## [2.1.0] - 2026-08-31
 
 ### Changed - Model tiering, real subagents, working hooks
