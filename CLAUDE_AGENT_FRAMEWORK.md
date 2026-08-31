@@ -684,7 +684,7 @@ Configure in `.claude/settings.json` or project settings:
         "matcher": "Write|Edit",
         "hooks": [{
           "type": "command",
-          "command": "bash .claude-library/hooks/scripts/format_code.sh \"$file_path\""
+          "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh"
         }]
       }
     ]

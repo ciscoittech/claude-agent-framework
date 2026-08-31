@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/track_timing.sh start",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/track_timing.sh start",
             "description": "Log agent start time"
           }
         ]
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/track_timing.sh end",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/track_timing.sh end",
             "description": "Log agent end time"
           }
         ]

@@ -8,6 +8,15 @@
 
 Quality gates ensure code meets standards before proceeding to next workflow stage. Hooks provide automatic, deterministic enforcement without agent intervention.
 
+**Two rules every example below depends on:**
+
+1. **A hook receives its payload as JSON on stdin, never as shell variables.** A
+   command written `script.sh "$file_path"` passes an empty string - `$file_path`
+   is not a variable the harness defines. Read the path with
+   `jq -r '.tool_input.file_path // empty'`. See README.md § Hook Input Contract.
+2. **On `PreToolUse`, exit 2 blocks the tool call; exit 1 does not.** A gate that
+   prints a refusal and exits 1 lets the command run anyway.
+
 ## Pattern: Auto-Format After Every Change
 
 ### Implementation
@@ -22,7 +31,7 @@ Quality gates ensure code meets standards before proceeding to next workflow sta
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/format_code.sh \"$file_path\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh"
           }
         ]
       }
@@ -56,7 +65,7 @@ Agent writes code → File saved → Hook triggers → Code auto-formatted → C
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/run_tests.sh \"$file_path\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/run_tests.sh"
           }
         ]
       }
@@ -90,7 +99,7 @@ Agent creates file → Tests run automatically → Results logged → Continue
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude-library/hooks/scripts/security_check.py \"$command\""
+            "command": "python \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/security_check.py"
           }
         ]
       }
@@ -124,15 +133,11 @@ Agent attempts bash command → Security check → Pass ✅ or Block 🚫
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/format_code.sh \"$file_path\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh"
           },
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/lint_code.sh \"$file_path\""
-          },
-          {
-            "type": "command",
-            "command": "bash .claude-library/hooks/scripts/run_tests.sh \"$file_path\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/run_tests.sh"
           }
         ]
       }
@@ -154,52 +159,41 @@ File written → Format → Lint → Test → Continue
 
 ## Pattern: Workflow-Specific Gates
 
-### Build Workflow
+**Hooks are not declared per command.** There is no `commands.<name>.hooks` block
+that Claude Code reads - every hook lives in `.claude/settings.json` and applies
+to the whole session. Scope it with the `matcher` (which tool fired) and with
+logic inside the script (which file, which branch, which environment), not by
+attaching it to a command.
 
 ```json
 {
-  "commands": {
-    "build": {
-      "hooks": {
-        "PostToolUse": [
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
           {
-            "matcher": "Write",
-            "hooks": [
-              {
-                "type": "command",
-                "command": "npm test -- --onlyChanged --bail"
-              }
-            ]
+            "type": "command",
+            "command": "python3 scripts/pre_deploy_check.py"
           }
         ]
       }
-    }
+    ]
   }
 }
 ```
 
-### Deploy Workflow
+The gate decides for itself whether this invocation is one it cares about:
 
-```json
-{
-  "commands": {
-    "deploy": {
-      "hooks": {
-        "PreToolUse": [
-          {
-            "matcher": "Bash",
-            "hooks": [
-              {
-                "type": "command",
-                "command": "python scripts/pre_deploy_check.py"
-              }
-            ]
-          }
-        ]
-      }
-    }
-  }
-}
+```python
+# scripts/pre_deploy_check.py - runs on every Bash call, acts on deploys only
+import json, sys
+payload = json.load(sys.stdin)
+command = payload.get("tool_input", {}).get("command", "")
+if "deploy" not in command:
+    sys.exit(0)
+...
+sys.exit(2)  # 2 blocks the tool call; 1 does not
 ```
 
 ## Pattern: Environment-Specific Gates
@@ -208,13 +202,18 @@ File written → Format → Lint → Test → Continue
 
 ```bash
 #!/bin/bash
-# smart_gate.sh
+# smart_gate.sh - PreToolUse gate, strict in production
+
+# The payload is on stdin. $file_path is not a variable the harness sets.
+file_path=$(jq -r '.tool_input.file_path // empty')
+[ -n "$file_path" ] || exit 0
 
 if [ "$ENVIRONMENT" = "production" ]; then
-    # Strict checks for production
-    python scripts/strict_validation.py "$file_path" || exit 1
-    npm test || exit 1
-    npm run build || exit 1
+    # Strict checks for production. exit 2 is the only code that blocks a
+    # PreToolUse call - `|| exit 1` here would print a refusal and proceed.
+    python3 scripts/strict_validation.py "$file_path" || exit 2
+    npm test || exit 2
+    npm run build || exit 2
 else
     # Lenient checks for development
     prettier --write "$file_path" 2>/dev/null || true
@@ -228,11 +227,12 @@ exit 0
 ### 1. Never Block on Non-Critical Checks
 
 ```bash
-# ✅ Good - never blocks
+# ✅ Good - a formatter that is missing or unhappy changes nothing
 prettier --write "$file_path" 2>/dev/null || true
 exit 0
 
-# ❌ Bad - can block workflow
+# ❌ Bad - the formatter's exit code silently becomes the hook's verdict, and a
+#    stray 2 from a PreToolUse hook blocks the tool call outright
 prettier --write "$file_path"
 exit $?
 ```
@@ -270,8 +270,9 @@ echo "$(date) | hook_name | result" >> .claude-metrics/hooks.log
 
 ### ❌ Blocking on Formatting Errors
 
-**Problem:** Hook exits non-zero, blocks workflow
-**Solution:** Always exit 0 for non-critical checks
+**Problem:** The hook inherits a tool's exit code. On `PreToolUse` a 2 blocks the
+call; any non-zero code surfaces stderr to Claude as a hook error.
+**Solution:** End non-critical checks with an explicit `exit 0`
 
 ### ❌ Running Full Test Suite Every Time
 
@@ -290,62 +291,48 @@ echo "$(date) | hook_name | result" >> .claude-metrics/hooks.log
 
 ## Integration with Commands
 
-### Feature Development Command
+A command cannot carry its own hooks, so the composition goes the other way: the
+command does its work, and session-wide hooks in `.claude/settings.json` react to
+the tools it uses.
 
 ```json
 {
-  "commands": {
-    "feature": {
-      "hooks": {
-        "PostToolUse": [
-          {
-            "matcher": "Write",
-            "hooks": [{"command": "bash hooks/scripts/format_code.sh \"$file_path\""}]
-          }
-        ],
-        "Stop": [
-          {
-            "matcher": "*",
-            "hooks": [{"command": "npm test && npm run build"}]
-          }
-        ]
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [{"type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh"}]
       }
-    }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [{"type": "command", "command": "npm test && npm run build"}]
+      }
+    ]
   }
 }
 ```
 
-### Debug Command
-
-```json
-{
-  "commands": {
-    "debug": {
-      "hooks": {
-        "Stop": [
-          {
-            "matcher": "*",
-            "hooks": [{"command": "bash hooks/scripts/notify_team.sh 'Debug' 'completed'"}]
-          }
-        ]
-      }
-    }
-  }
-}
-```
+`Stop` fires at the end of every turn, not at the end of one command. If a check
+should only run for some work, put that condition in the script - read the
+payload and return early - rather than hoping the event is narrower than it is.
 
 ## Metrics & Monitoring
 
 ### Track Hook Performance
 
 ```bash
-# In each hook script
-start_time=$(date +%s%3N)
+# In each hook script.
+# `date +%s%3N` is GNU-only - BSD/macOS date emits a literal "N" and the
+# arithmetic below then fails. python3 is already a framework dependency.
+now_ms() { python3 -c 'import time;print(int(time.time()*1000))'; }
+
+start_time=$(now_ms)
 
 # ... do work ...
 
-end_time=$(date +%s%3N)
-duration=$((end_time - start_time))
+duration=$(( $(now_ms) - start_time ))
 echo "${duration}ms | $hook_name" >> .claude-metrics/hook_performance.log
 ```
 

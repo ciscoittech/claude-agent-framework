@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude-library/hooks/scripts/security_check.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/security_check.py",
             "description": "Validate bash command safety"
           }
         ]

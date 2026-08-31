@@ -1,493 +1,353 @@
 # Claude Code Hooks Context
 
-**Source**: https://docs.claude.com/en/docs/claude-code/hooks-guide.md
-**Purpose**: Official guide to Claude Code's Hooks system
-**Auto-update**: Fetch latest from docs.claude.com
+**Source**: https://code.claude.com/docs/en/hooks (reference), https://code.claude.com/docs/en/hooks-guide (guide)
+**Purpose**: What Claude Code's hook system actually accepts and honors
+**Auto-update**: `/update-docs`, or WebFetch the two URLs above
 
 ---
 
-## Hooks Overview
+## Read this first
 
-### What are Hooks?
+Hooks are the one place in this framework where being approximately right is
+indistinguishable from being wrong. A hook with an invented config key does not
+error - it never runs. A hook that reads a field the payload does not contain
+gets `None` and approves whatever it was meant to stop. Every hook bug in this
+repo's history had that shape, and none was visible by reading the script.
 
-**Hooks** are scripts that run automatically at specific points in Claude Code's execution lifecycle. They enable:
-- Custom validation logic
-- Automated workflows
-- Security enforcement
-- Execution logging
-- Quality gates
+Three facts do most of the work:
 
-### Hook Events
-
-Claude Code supports these hook events:
-
-1. **SessionStart** - When Claude Code session begins
-2. **SessionEnd** - When Claude Code session ends
-3. **PreToolUse** - Before any tool is executed
-4. **PostToolUse** - After any tool completes
-5. **PrePrompt** - Before user prompt is processed
-6. **PostPrompt** - After response is generated
+1. **Hooks live in `.claude/settings.json`.** Claude Code does not read
+   `REGISTRY.json` - that is framework metadata. A hook declared there is inert.
+2. **A hook receives its payload as JSON on stdin.** Not argv, not environment
+   variables. `script.sh "$file_path"` passes an empty string, because
+   `$file_path` is not a variable anything sets.
+3. **On `PreToolUse`, exit 2 blocks. Exit 1 does not.** Exit 1 is a non-blocking
+   error: the transcript shows a hook-error notice and the tool call proceeds.
 
 ---
 
-## Hook Configuration
+## Configuration
 
-### Enable Hooks in REGISTRY.json
+### Where hooks are declared
 
-```json
-{
-  "settings": {
-    "hooks": {
-      "enabled": true,
-      "scope": "project",
-      "configs": [
-        ".claude-library/hooks/configs/my-hooks.json"
-      ],
-      "allow_blocking": false,
-      "timeout_ms": 5000,
-      "log_hook_output": true
-    }
-  }
-}
-```
+| Location | Scope | Shared |
+|---|---|---|
+| `.claude/settings.json` | this project | yes, committed |
+| `.claude/settings.local.json` | this project | no, gitignored |
+| `~/.claude/settings.json` | all your projects | no |
+| Managed policy settings | organization | admin-controlled |
+| Plugin `hooks/hooks.json` | while the plugin is enabled | yes |
+| Skill / subagent frontmatter | while that skill or subagent is active | yes |
 
-### Hook Config File Structure
+### Schema
+
+Three levels of nesting: **event → matcher group → handlers.**
 
 ```json
 {
-  "name": "my-hook-set",
-  "version": "1.0.0",
-  "description": "Custom hooks for my project",
-  "hooks": [
-    {
-      "event": "PreToolUse",
-      "script": ".claude-library/hooks/scripts/validate_tool.py",
-      "description": "Validate tool usage before execution",
-      "blocking": false,
-      "timeout_ms": 1000,
-      "filters": {
-        "tools": ["Write", "Edit", "Bash"]
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/security_check.py",
+            "timeout": 30,
+            "statusMessage": "Checking command safety..."
+          }
+        ]
       }
-    }
-  ]
+    ]
+  }
 }
 ```
 
+| Field | Meaning |
+|---|---|
+| `matcher` | Which tool the event applies to. Tool-name regex on tool events (`Bash`, `Edit\|Write`, `mcp__.*`). Omitted or empty = every occurrence of the event |
+| `type` | `command` (shell), `prompt` (a model decides), or `agent` (a subagent verifies) |
+| `command` | What runs. Shell form by default |
+| `args` | Present = **exec form**: `command` is spawned directly with this argument vector, no shell. Use it to sidestep quoting entirely |
+| `timeout` | Seconds |
+| `statusMessage` | Shown in the UI while the hook runs |
+| `if` | Permission-rule filter, e.g. `"Bash(git *)"`, `"Edit(*.ts)"`. **Tool events only** - on any other event a hook with `if` set never runs |
+
+### Reference scripts by path, not by luck
+
+Handlers run in the current directory, which is not necessarily the project
+root - start Claude Code from a subdirectory and every relative hook path breaks
+with `command not found`. Anchor them:
+
+```json
+"command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/check_structure.sh"
+```
+
+`CLAUDE_PROJECT_DIR` is the project root where the session started, exported into
+the hook's environment. Quote it - project paths contain spaces.
+
 ---
 
-## Hook Events in Detail
+## Events
 
-### SessionStart
+Claude Code fires far more events than a project normally needs. The ones this
+framework uses or is likely to:
 
-**When**: Once when Claude Code starts
-**Use For**:
-- Initialize databases
-- Load configuration
-- Set up environment
-- Create session tracking
+| Event | When it fires | Can block? |
+|---|---|---|
+| `SessionStart` | session begins or resumes | no |
+| `UserPromptSubmit` | you submit a prompt, before Claude sees it | **yes** |
+| `PreToolUse` | before a tool call executes | **yes** |
+| `PostToolUse` | after a tool call succeeds | no |
+| `PostToolUseFailure` | after a tool call fails | no |
+| `PermissionRequest` | a tool call needs a permission decision | via decision object |
+| `SubagentStart` / `SubagentStop` | a subagent is spawned / finishes | stop: **yes** |
+| `Stop` | Claude finishes responding | **yes** |
+| `PreCompact` / `PostCompact` | around context compaction | no |
+| `SessionEnd` | session ends | no |
 
-**Example** (session log setup):
+Also available: `Setup`, `UserPromptExpansion`, `PermissionDenied`,
+`PostToolBatch`, `Notification`, `MessageDisplay`, `TaskCreated`,
+`TaskCompleted`, `StopFailure`, `TeammateIdle`, `InstructionsLoaded`,
+`ConfigChange`, `CwdChanged`, `DirectoryAdded`, `FileChanged`,
+`WorktreeCreate`, `WorktreeRemove`, `PreModelSwitch`, `PostModelSwitch`,
+`Elicitation`, `ElicitationResult`.
+
+**There is no `PrePrompt` or `PostPrompt`.** An earlier version of this file
+listed both. A hook registered under a name Claude Code does not recognize is
+not an error - it simply never fires.
+
+---
+
+## Input contract
+
+The payload arrives as one JSON object on stdin. Common fields on every event:
+
+```json
+{
+  "session_id": "abc123",
+  "transcript_path": "/home/user/.claude/projects/.../transcript.jsonl",
+  "cwd": "/home/user/my-project",
+  "permission_mode": "default",
+  "hook_event_name": "PreToolUse"
+}
+```
+
+Tool events (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`,
+`PermissionRequest`, `PermissionDenied`) add:
+
+```json
+{
+  "tool_name": "Bash",
+  "tool_use_id": "toolu_01ABC123...",
+  "tool_input": { "command": "npm test", "description": "Run test suite" },
+  "tool_response": "output text here"
+}
+```
+
+Note the shape: **`tool_name` and `tool_input`, flat, at the top level.** Not
+`tool.name`, not `tool.parameters`, not `result.usage`. Reading a field that is
+not there yields `None`, and a check against `None` passes.
+
+Selected event-specific fields:
+
+| Event | Adds |
+|---|---|
+| `SessionStart` | `session_start_reason` (`startup\|resume\|clear\|compact\|fork`), `model` |
+| `UserPromptSubmit` | `user_prompt` |
+| `Stop` / `SubagentStop` | `last_assistant_message` |
+| `SessionEnd` | `session_end_reason` |
+| `FileChanged` | `file_path` |
+
+Inside a subagent the payload also carries `agent_id` and `agent_type`.
+
+### Reading it
+
 ```bash
-#!/bin/bash
-# init_session_log.sh
-
-METRICS_DIR=".claude-metrics"
-mkdir -p "${METRICS_DIR}"
-
-echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) session start" >> "${METRICS_DIR}/session.log"
+# bash
+file_path=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty')
+[ -n "$file_path" ] || exit 0
 ```
 
-### SessionEnd
-
-**When**: Once when Claude Code ends
-**Use For**:
-- Cleanup resources
-- Generate reports
-- Archive data
-- Close connections
-
-**Example**:
 ```python
-#!/usr/bin/env python3
-import sys
-from db_helper import end_session
-
-try:
-    end_session()
-    print("✅ Session ended successfully")
-except Exception as e:
-    print(f"⚠️ Error ending session: {e}", file=sys.stderr)
-    sys.exit(0)  # Don't block on error
+# python
+import json, sys
+payload = json.load(sys.stdin)
+command = payload.get("tool_input", {}).get("command", "")
 ```
 
-### PreToolUse
+Never let an empty payload read as "nothing to object to". Decide explicitly
+what an unreadable payload means, and make that decision visible in the code.
 
-**When**: Before each tool execution
-**Use For**:
-- Validate inputs
-- Check permissions
-- Block dangerous operations
-- Track tool usage
+---
 
-**Hook Input** (via stdin):
+## Output contract
+
+### Exit codes
+
+| Code | Effect |
+|---|---|
+| `0` | Success. stdout goes to the debug log only - **except** on `UserPromptSubmit`, `UserPromptExpansion`, `SessionStart` and `PostModelSwitch`, where plain-text stdout is added to Claude's context |
+| `2` | Blocking error. On an event that can block, exit 2 blocks whether or not you print JSON - it overrides even `"permissionDecision": "allow"`. The message shown is the reason from your JSON decision, or your stderr |
+| other | **Non-blocking.** The action proceeds and the transcript shows a hook-error notice. If stdout is valid JSON, the JSON alone decides the outcome |
+
+`PostToolUse` cannot block - the tool already ran. `WorktreeCreate` is the
+exception to the table: any non-zero exit aborts it.
+
+### JSON on stdout
+
+Universal fields, any event:
+
 ```json
 {
-  "tool": {
-    "name": "Write",
-    "parameters": {
-      "file_path": "/path/to/file.py",
-      "content": "..."
-    }
-  },
-  "context": {
-    "session_id": "abc123",
-    "timestamp": "2025-10-04T10:00:00Z"
+  "systemMessage": "Text Claude will see as context",
+  "suppressOutput": false,
+  "terminalSequence": "]9;4;1;desktop-notification"
+}
+```
+
+**`PreToolUse` and the other permission events** use the standard decision model:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "Destructive command blocked by hook",
+    "additionalContext": "Information for Claude that does not block",
+    "updatedInput": { "command": "safer command" }
   }
 }
 ```
 
-**Example**:
-```python
-#!/usr/bin/env python3
-import sys
-import json
+`permissionDecision` is `allow`, `deny`, or `review` (forces review, not
+auto-approval). When several hooks answer, the most restrictive wins:
+`deny` > `defer` > `ask` > `allow`. `additionalContext` from every hook is kept.
 
-hook_input = json.loads(sys.stdin.read())
-tool_name = hook_input['tool']['name']
+**`PostToolUse` and `Stop` use a different shape** - a top-level `decision`:
 
-# Block writes to sensitive files
-if tool_name == 'Write':
-    file_path = hook_input['tool']['parameters']['file_path']
-    if '.env' in file_path or 'secret' in file_path:
-        print(f"❌ Blocked: Cannot write to {file_path}", file=sys.stderr)
-        sys.exit(1)  # Non-zero exit blocks execution
-
-# Allow
-sys.exit(0)
-```
-
-### PostToolUse
-
-**When**: After each tool completes
-**Use For**:
-- Track results
-- Validate outputs
-- Log metrics
-- Trigger workflows
-
-**Hook Input**:
 ```json
-{
-  "tool": {...},
-  "result": {
-    "success": true,
-    "output": "...",
-    "usage": {
-      "input_tokens": 500,
-      "output_tokens": 200
-    }
-  },
-  "error": null,
-  "duration_ms": 1500
-}
+{ "decision": "block", "reason": "Tests failed:\n\n..." }
 ```
 
-**Example** (log subagent completions):
-```python
-#!/usr/bin/env python3
-import sys
-import json
-from pathlib import Path
+`PermissionRequest` uses a third shape, `hookSpecificOutput.decision.behavior`.
+Check the reference per event rather than assuming one form generalizes.
 
-hook_input = json.loads(sys.stdin.read())
-
-# The subagent tool is named 'Agent' ('Task' is its former name)
-if hook_input['tool']['name'] in ('Agent', 'Task'):
-    result = hook_input.get('result', {})
-    usage = result.get('usage', {})
-    agent = hook_input['tool']['parameters'].get('subagent_type', 'unknown')
-
-    Path('.claude-metrics').mkdir(exist_ok=True)
-    with open('.claude-metrics/agents.log', 'a') as f:
-        f.write(f"{agent} | {'ok' if result.get('success') else 'fail'} | "
-                f"{usage.get('input_tokens', 0)}in {usage.get('output_tokens', 0)}out\n")
-```
-
-### PrePrompt
-
-**When**: Before processing user prompt
-**Use For**:
-- Modify prompts
-- Add context
-- Validate requests
-- Inject instructions
-
-**Example**:
-```python
-#!/usr/bin/env python3
-import sys
-import json
-
-hook_input = json.loads(sys.stdin.read())
-user_prompt = hook_input['prompt']
-
-# Add project context
-enhanced_prompt = f"""
-{user_prompt}
-
-Project Context:
-- Tech Stack: Python, FastAPI, PostgreSQL
-- Follow PEP 8 style guide
-- Write tests for all new code
-"""
-
-# Output modified prompt
-print(json.dumps({"prompt": enhanced_prompt}))
-```
-
-### PostPrompt
-
-**When**: After generating response
-**Use For**:
-- Validate responses
-- Log outputs
-- Trigger post-processing
-- Update metrics
+`additionalContext` must be nested inside `hookSpecificOutput`. Placed at the top
+level it is silently ignored.
 
 ---
 
-## Hook Filters
+## Worked example: block destructive commands
 
-### Tool Filters
+`.claude/settings.json`:
 
-Only run hook for specific tools:
 ```json
 {
-  "event": "PostToolUse",
-  "script": "./track_writes.py",
-  "filters": {
-    "tools": ["Write", "Edit", "NotebookEdit"]
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/security_check.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
 ```
 
-### Custom Filters
+The script - see `.claude-library/hooks/scripts/security_check.py` for the
+shipped version:
 
-Add logic in script:
 ```python
-# Only track Task tool for specific agents
-tool_name = hook_input['tool']['name']
-if tool_name == 'Task':
-    agent_type = hook_input['tool']['parameters'].get('subagent_type')
-    if agent_type in ['framework-system-architect', 'framework-engineer']:
-        # Track this
-        pass
-    else:
-        # Skip
-        sys.exit(0)
+#!/usr/bin/env python3
+import json, re, sys
+
+payload = json.load(sys.stdin)
+command = payload.get("tool_input", {}).get("command", "")
+
+if re.search(r"rm\s+-rf\s+/", command):
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": "Destructive command blocked by hook",
+        }
+    }))
+    sys.exit(2)          # 2 blocks. 1 would print this and run the command anyway.
+
+sys.exit(0)              # no decision; the normal permission flow applies
 ```
 
 ---
 
-## Best Practices
+## Model-backed hooks
 
-### 1. Non-Blocking by Default
+For decisions that need judgment rather than a regex, a handler can be
+`type: "prompt"` (one model call, Haiku by default, `model` overridable) or
+`type: "agent"` (a subagent that can read files and run commands before
+deciding). Both answer with `{"ok": bool, "reason": str}`.
 
-```json
-{
-  "blocking": false,  // Don't block on errors
-  "timeout_ms": 1000  // Fast timeout
-}
-```
+On `PostToolUse`, a prompt hook's `ok: false` ends the turn with the reason as a
+warning by default; `continueOnBlock: true` feeds the reason back and continues.
+Agent hooks behave as if `continueOnBlock` were set.
 
-Use `blocking: true` only for critical validation.
-
-### 2. Fast Execution
-
-**Targets**:
-- SessionStart: <500ms
-- PreToolUse: <100ms
-- PostToolUse: <200ms
-- SessionEnd: <500ms
-
-**Optimization**:
-- Minimize I/O
-- Use efficient data structures
-- Cache when possible
-- Async where applicable
-
-### 3. Error Handling
-
-```python
-try:
-    # Hook logic
-    process_hook(hook_input)
-except Exception as e:
-    print(f"⚠️ Hook error: {e}", file=sys.stderr)
-    sys.exit(0)  # Don't block on error (unless critical)
-```
-
-### 4. Logging
-
-```python
-import sys
-
-# Log to stderr (appears in Claude Code output)
-print(f"📊 Tracking: {tool_name}", file=sys.stderr)
-
-# Log to file for persistence
-with open('.claude-metrics/hooks.log', 'a') as f:
-    f.write(f"{timestamp} - {tool_name} - {status}\n")
-```
-
-### 5. Security
-
-```python
-# Validate input
-assert isinstance(hook_input, dict)
-assert 'tool' in hook_input
-
-# Sanitize file paths
-file_path = hook_input['tool']['parameters']['file_path']
-if '..' in file_path or file_path.startswith('/etc'):
-    sys.exit(1)  # Block
-
-# Check permissions
-if tool_name in ['Bash', 'Write'] and not has_permission():
-    sys.exit(1)
-```
+Use a prompt hook when the payload alone is enough to decide, and an agent hook
+when the decision depends on the state of the codebase.
 
 ---
 
-## Framework Integration
+## What this framework ships
 
-### With Quality Gates
+| Script | Event | Behavior |
+|---|---|---|
+| `check_structure.sh` | PostToolUse, `Write\|Edit` | Runs `test_v2_structure.py` after edits under `.claude/` or `.claude-library/`; reports failures with `decision: block`. **Wired live** |
+| `security_check.py` | PreToolUse, `Bash` | Denies destructive commands; exit 2 |
+| `run_tests.sh` | PostToolUse, `Write\|Edit` | Runs the relevant suite; reports a red suite with `decision: block` |
+| `format_code.sh` | PostToolUse, `Write\|Edit` | Formats the edited file; never blocks |
+| `track_timing.sh` | Pre/PostToolUse, `Agent` | Millisecond timing per subagent |
+| `validate_agent_output.py` | SubagentStop | Checks subagent output shape |
+| `notify_team.sh` | Stop, SessionStart | Slack/Discord webhook, if configured |
 
-```json
-{
-  "event": "PostToolUse",
-  "script": ".claude-library/hooks/scripts/quality_gate.py",
-  "blocking": true,
-  "filters": {
-    "tools": ["Bash"]
-  }
-}
-```
+The subagent tool is named **`Agent`**. `Task` is its former name; a matcher
+still written as `Task` matches nothing.
 
-```python
-# quality_gate.py
-# Block if tests fail
-if 'pytest' in hook_input['tool']['parameters']['command']:
-    result = hook_input['result']
-    if result['exit_code'] != 0:
-        print("❌ Tests failed - blocking", file=sys.stderr)
-        sys.exit(1)
-```
+Ready-made configs to copy into `.claude/settings.json` live in
+`.claude-library/hooks/configs/`. They are examples, not live configuration -
+only `.claude/settings.json` is read.
 
-### With CI/CD
-
-```json
-{
-  "event": "SessionEnd",
-  "script": ".claude-library/hooks/scripts/ci_report.py"
-}
-```
-
-```python
-# ci_report.py
-# Generate CI report
-from db_helper import get_daily_summary
-
-summary = get_daily_summary(days=1)
-report = generate_ci_report(summary)
-
-# Upload to CI system
-upload_to_ci(report)
-```
-
----
-
-## Common Patterns
-
-### Pattern 1: Security Enforcement
-
-```python
-# Block dangerous operations
-BLOCKED_PATTERNS = ['.env', 'secret', 'password', 'token']
-
-for pattern in BLOCKED_PATTERNS:
-    if pattern in file_path.lower():
-        sys.exit(1)
-```
-
-### Pattern 2: Auto-Documentation
-
-```python
-# Auto-update docs when code changes
-if tool_name in ['Write', 'Edit']:
-    file_path = hook_input['tool']['parameters']['file_path']
-    if file_path.endswith('.py'):
-        # Extract docstrings
-        update_api_docs(file_path)
-```
-
-### Pattern 3: Performance Monitoring
-
-```python
-# Track slow operations
-duration_ms = hook_input['duration_ms']
-if duration_ms > 5000:
-    log_slow_operation(tool_name, duration_ms)
-    send_alert(f"Slow operation: {tool_name} took {duration_ms}ms")
-```
-
-### Pattern 4: Cost Tracking
-
-```python
-# Track token usage and costs
-usage = hook_input['result']['usage']
-tokens = usage['input_tokens'] + usage['output_tokens']
-cost = calculate_cost(tokens)
-
-update_budget(cost)
-if get_budget() < 0:
-    send_alert("Budget exceeded!")
-```
+`test_hooks.py` at the repo root executes each of these against real payloads.
+Anything added here should be added there, and the new check must be confirmed
+to fail against the broken version before it counts.
 
 ---
 
 ## Troubleshooting
 
-### Hook Not Running
-- Check `enabled: true` in REGISTRY.json
-- Verify config file path
-- Check script has execute permissions: `chmod +x script.py`
+**The hook never runs.** Check it is in `.claude/settings.json`, not
+`REGISTRY.json`. Check the event name against the table above. Check the matcher
+- an event with `if` set on a non-tool event never fires. Check the path: if the
+session started from a subdirectory, a relative command is not found. Run with
+`claude --debug` to see hook resolution.
 
-### Hook Blocking Execution
-- Check `blocking: false` unless critical
-- Verify script exits with 0 on success
-- Check timeout is sufficient
+**The hook runs but its JSON has no effect.** Shell-form hooks are spawned with
+`sh -c`, and some shell profiles print on startup. Anything printed before your
+JSON means stdout no longer begins with `{`, so it is treated as plain text and
+the decision is dropped silently. Guard profile output with
+`if [[ $- == *i* ]]; then ... fi`, or use exec form (`"args": []`).
 
-### Hook Too Slow
-- Profile script execution
-- Minimize I/O operations
-- Use caching
-- Consider async execution
+**The hook says it blocked but the command ran.** It exited 1. Only exit 2
+blocks, and only on an event that can block.
 
----
-
-## Resources
-
-**Official Docs**:
-- Hooks Guide: https://docs.claude.com/en/docs/claude-code/hooks-guide.md
-- Configuration: https://docs.claude.com/en/docs/claude-code/configuration
-
-**Framework Examples**:
-- Hook Scripts: `.claude-library/hooks/scripts/`
-- Hook Configs: `.claude-library/hooks/configs/`
-- Pattern Docs: `.claude-library/hooks/patterns/`
+**The hook is slow.** `timeout` is in seconds. Anything on `PreToolUse` runs
+before every matching call - keep it in the tens of milliseconds.
 
 ---
 
-**Last Updated**: October 4, 2025
-**Update Method**: `/update-docs` command or WebFetch
+**Last Updated**: August 31, 2026
+**Update Method**: `/update-docs`, or WebFetch the source URLs at the top

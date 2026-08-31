@@ -73,7 +73,7 @@ Hooks go in **`.claude/settings.json`** — the file Claude Code actually reads.
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/format_code.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh",
             "timeout": 30
           }
         ]
@@ -105,7 +105,7 @@ A hook that silently does nothing looks identical to one that works. Prove it:
 ```bash
 # 1. Pipe the payload straight in - does the command work at all?
 echo '{"tool_input":{"file_path":"'"$PWD"'/.claude-library/REGISTRY.json"}}' \
-  | bash .claude-library/hooks/scripts/check_structure.sh
+  | bash "$PWD"/.claude-library/hooks/scripts/check_structure.sh
 
 # 2. Validate the settings nesting (exit 0 = correct)
 jq -e '.hooks.PostToolUse[] | select(.matcher == "Write|Edit")
@@ -232,7 +232,7 @@ Automatically format and lint code after changes:
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/format_code.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh",
             "description": "Auto-format code based on file type"
           }
         ]
@@ -264,7 +264,7 @@ Block dangerous operations before they execute:
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude-library/hooks/scripts/security_check.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/security_check.py",
             "description": "Validate bash command safety"
           }
         ]
@@ -297,7 +297,7 @@ Lightweight metrics without external services:
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/track_timing.sh start",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/track_timing.sh start",
             "description": "Log agent start time"
           }
         ]
@@ -309,7 +309,7 @@ Lightweight metrics without external services:
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/track_timing.sh end",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/track_timing.sh end",
             "description": "Log agent end time"
           }
         ]
@@ -342,7 +342,7 @@ Alert team on workflow completion:
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/notify_team.sh \"$workflow_name\" \"completed\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/notify_team.sh 'workflow' 'completed'"
           }
         ]
       }
@@ -500,7 +500,7 @@ Different workflows can have different hook configurations:
             "hooks": [
               {
                 "type": "command",
-                "command": "bash .claude-library/hooks/scripts/notify_team.sh 'Build' 'completed'"
+                "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/notify_team.sh 'Build' 'completed'"
               }
             ]
           }
@@ -535,7 +535,7 @@ Different workflows can have different hook configurations:
             "hooks": [
               {
                 "type": "command",
-                "command": "bash .claude-library/hooks/scripts/notify_team.sh 'Deployment' 'completed'"
+                "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/notify_team.sh 'Deployment' 'completed'"
               }
             ]
           }
@@ -623,15 +623,11 @@ Different workflows can have different hook configurations:
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/format_code.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh"
           },
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/lint_code.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude-library/hooks/scripts/run_tests.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/run_tests.sh"
           }
         ]
       }
@@ -651,7 +647,7 @@ Different workflows can have different hook configurations:
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude-library/hooks/scripts/validate_agent_output.py"
+            "command": "python \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/validate_agent_output.py"
           }
         ]
       }

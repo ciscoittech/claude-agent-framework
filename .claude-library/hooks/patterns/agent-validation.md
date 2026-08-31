@@ -36,7 +36,7 @@ Agents sometimes claim to have created files or made changes, but validation ens
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude-library/hooks/scripts/validate_agent_output.py"
+            "command": "python \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/validate_agent_output.py"
           }
         ]
       }
@@ -363,7 +363,7 @@ if __name__ == "__main__":
       {
         "matcher": "*",
         "hooks": [{
-          "command": "python .claude-library/hooks/scripts/validation_report.py"
+          "command": "python3 scripts/validation_report.py"
         }]
       }
     ]

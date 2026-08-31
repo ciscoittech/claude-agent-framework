@@ -44,7 +44,7 @@ frontmatter, so a hand-rolled launcher only duplicates it and drifts.
       {
         "matcher": "Write|Edit",
         "hooks": [
-          { "type": "command", "command": "bash .claude-library/hooks/scripts/format_code.sh" }
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh" }
         ]
       }
     ]
@@ -495,7 +495,7 @@ reads. Add hooks here when you want something to happen automatically:
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/format_code.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh",
             "timeout": 30
           }
         ]

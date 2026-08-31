@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/check_structure.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/check_structure.sh",
             "statusMessage": "Checking framework structure...",
             "timeout": 30
           }

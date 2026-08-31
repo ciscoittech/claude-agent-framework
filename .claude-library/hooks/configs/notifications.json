@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/notify_team.sh \"workflow\" \"completed\"",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/notify_team.sh \"workflow\" \"completed\"",
             "description": "Notify team of workflow completion"
           }
         ]
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/notify_team.sh \"session\" \"started\"",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/notify_team.sh \"session\" \"started\"",
             "description": "Notify team of session start"
           }
         ]
