@@ -154,8 +154,19 @@ Useful payload fields:
 | `tool_response` | `PostToolUse` only |
 
 **A hook that fails open is worse than no hook.** If your script cannot determine what
-it is checking, exit non-zero or block — do not exit 0. Test with the payload the
-harness actually sends, not with argv.
+it is checking it must block, not proceed. Test with the payload the harness
+actually sends, not with argv.
+
+**Exit codes decide whether a `PreToolUse` hook actually blocks:**
+
+| Exit | Effect |
+|---|---|
+| `0` | Proceed |
+| **`2`** | **Blocking error — the tool call is stopped** |
+| any other non-zero | *Non-blocking* error; the tool call **proceeds** |
+
+Exiting `1` does not block. A hook that prints a block banner and exits 1
+announces a block that never happened.
 
 ---
 
@@ -409,7 +420,7 @@ DANGEROUS_PATTERNS = [
 for pattern in DANGEROUS_PATTERNS:
     if re.search(pattern, command, re.IGNORECASE):
         print(f"🚫 BLOCKED: Dangerous command detected: {command}", file=sys.stderr)
-        sys.exit(1)  # Non-zero exit blocks the command
+        sys.exit(2)  # exit 2 blocks; exit 1 would NOT block
 
 # Log all bash commands for audit
 with open('.claude-metrics/bash_commands.log', 'a') as f:

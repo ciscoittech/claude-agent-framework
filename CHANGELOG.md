@@ -5,6 +5,71 @@ All notable changes to the Claude Agent Framework will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-08-31
+
+### Changed - Model tiering, real subagents, working hooks
+
+**Model and effort are now two dials, not one.** Earlier versions documented
+"Effort Levels" as a list of `model:` values. Model sets the capability floor
+(`haiku` -> `sonnet` -> `opus` -> `fable`); effort sets reasoning depth
+(`low` -> `max`). Corrected across AGENT_PATTERNS.md, README, contexts, and the
+`/launch-agent` routing table.
+
+- All 10 agents declare `model` + `effort` in REGISTRY.json
+- Added the Fable tier as an opt-in escalation with a non-propagation rule:
+  a coordinator never passes its own model to agents it launches
+- Recorded the Haiku 200K context asymmetry (every other model is 1M)
+- `MULTI_MODEL_ROUTING.md` -> `MODEL_SELECTION.md`, Claude-native, correct
+  pricing (Opus 5 is $5/$25, not the $15 the old doc used as its baseline)
+
+**Agents are real subagents.** The 11 persona files had no YAML frontmatter and
+`.claude/agents/` did not exist, so every model instruction was unenforced prose.
+Added 10 lean definitions; full playbooks stay in `.claude-library/`.
+
+**Hooks fire.** The hooks README told users to enable hooks in REGISTRY.json,
+which Claude Code never reads. Moved to `.claude/settings.json`. Wiring this up
+surfaced that `security.json` passed `"$command"` to the security checker —
+a variable the harness never sets — so it received an empty string and approved
+every command. All hook scripts now parse the stdin JSON payload.
+
+### Added
+- `validate_agent_system.py` — portable validator usable against any generated
+  system, imported by `test_v2_structure.py` (309 -> 191 lines)
+- `.claude/settings.json` with a structure-check hook
+- Three missing context files referenced by up to 10 agents but never created
+- Hook Input Contract documentation
+
+### Fixed
+- REGISTRY.json had 8 dead paths, a phantom agent, and 4 phantom commands
+- 21 references to `framework-architect`, a subagent_type that never existed
+- `Task(` -> `Agent(` (47 occurrences); `performance.json` matcher
+- `date +%s%3N` is GNU-only; BSD emitted a literal "N" in every timestamp
+- `.claude-library/patterns/` registered — 4 of 5 files were unreachable
+
+### Removed
+- Observability subsystem -> `archive/v2-observability/` (unused, not ready)
+- `/self-improve` and the `observer` agent, which only consumed its data
+
+### Generator
+- `SYSTEM_GENERATOR_PROMPT.md` and `AGENT_SYSTEM_TEMPLATE.md` now emit real
+  frontmatter, both tiers, and working hooks — previously they taught the exact
+  bugs this release fixes, so every generated system inherited them
+
+### Generator verification
+
+The generator was tested by having an agent with no framework context follow
+`SYSTEM_GENERATOR_PROMPT.md` against a sample FastAPI project. Its output
+validated clean, but it surfaced contradictions a reader cannot resolve from the
+text: a file-count ceiling lower than the prompt's own minimal tree, "max 4
+commands (build only)" against "recommended for all projects", and three
+different size budgets. It also could not tell whether `contexts[]` entries were
+filenames or paths — a coin flip that happened to land right.
+
+Added §4.6b "Exact Output Contract" stating the required frontmatter keys, the
+two path conventions (`contexts[]` are bare filenames; `path` is repo-relative),
+the permissions shape, and where to run the validator from.
+
+
 ## [2.0.0] - 2026-03-12
 
 ### Changed - Framework v2.0: Slim-Down & Feature Update

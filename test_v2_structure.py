@@ -87,10 +87,56 @@ print(f"{'✓' if not portable_errors else '✗'} Agent system validation: "
       f"{len(portable_errors)} errors, {len(portable_warnings)} warnings "
       f"({len(registry.get('agents', {}))} agents)")
 
+# === 5e. Doc examples must satisfy the rules those same docs state ===
+# C4/W3 class: the template's registry example referenced agents its own agents{}
+# block did not define, so anyone copying it failed the validator the same
+# document told them to run. Extract every JSON block from the generator and
+# template and hold it to the contract.
+def json_blocks(text):
+    for m in re.finditer(r'```json\n(.*?)```', text, re.S):
+        try:
+            yield json.loads(m.group(1))
+        except json.JSONDecodeError:
+            continue  # illustrative fragments are not all standalone JSON
+
+for doc in ('SYSTEM_GENERATOR_PROMPT.md', 'AGENT_SYSTEM_TEMPLATE.md'):
+    doc_path = os.path.join(ROOT, doc)
+    if not os.path.exists(doc_path):
+        continue
+    for block in json_blocks(open(doc_path, encoding='utf-8').read()):
+        agents = block.get('agents')
+        if not isinstance(agents, dict) or not agents:
+            continue
+        for aname, acfg in agents.items():
+            if not isinstance(acfg, dict):
+                continue
+            check(acfg.get('model') is not None,
+                  f"{doc}: registry example agent '{aname}' has no model")
+            check(acfg.get('effort') is not None,
+                  f"{doc}: registry example agent '{aname}' has no effort")
+            tools = acfg.get('tools') or []
+            check('*' not in tools,
+                  f"{doc}: registry example agent '{aname}' uses wildcard tools")
+            for dead in ('Task', 'MultiEdit'):
+                check(dead not in tools,
+                      f"{doc}: registry example agent '{aname}' uses retired tool '{dead}'")
+        # commands must only reference agents the same example defines
+        for cname, ccfg in (block.get('commands') or {}).items():
+            if not isinstance(ccfg, dict):
+                continue
+            for ref in ccfg.get('agents', []):
+                check(ref in agents,
+                      f"{doc}: command example '{cname}' references agent "
+                      f"'{ref}' not defined in the same example")
+print("✓ Doc registry examples satisfy their own stated contract")
+
 # === 6. Line count targets ===
 targets = {
     'AGENT_PATTERNS.md': (1200, 1600),
-    'SYSTEM_GENERATOR_PROMPT.md': (450, 650),
+    # Raised from 650 in the v2.1 generator pass: the prompt now has to teach
+    # agent frontmatter, the model/effort split, .claude/settings.json, and
+    # running the validator - none of which it covered before.
+    'SYSTEM_GENERATOR_PROMPT.md': (450, 720),
     'CLAUDE_AGENT_FRAMEWORK.md': (550, 850),
     'AGENT_SYSTEM_TEMPLATE.md': (550, 750),
     'README.md': (180, 300),

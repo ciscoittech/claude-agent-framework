@@ -45,9 +45,12 @@ def load_registry(root):
         return {}, f"Missing {path}"
     try:
         with open(path, encoding='utf-8') as f:
-            return json.load(f), None
+            data = json.load(f)
     except json.JSONDecodeError as e:
         return {}, f"REGISTRY.json is not valid JSON: {e}"
+    if not isinstance(data, dict):
+        return {}, f"REGISTRY.json must be a JSON object, got {type(data).__name__}"
+    return data, None
 
 
 def parse_frontmatter(path):
@@ -59,7 +62,8 @@ def parse_frontmatter(path):
     if there is no frontmatter block or it is unterminated.
     """
     try:
-        with open(path, encoding='utf-8') as f:
+        # utf-8-sig so a BOM does not make line 1 fail the '---' test
+        with open(path, encoding='utf-8-sig') as f:
             lines = f.read().split('\n')
     except OSError:
         return None
@@ -71,7 +75,12 @@ def parse_frontmatter(path):
             return fm
         if ':' in line and not line.startswith((' ', '\t')):
             k, _, v = line.partition(':')
-            fm[k.strip()] = v.strip()
+            v = v.strip()
+            # `model: "opus"` is valid YAML; without stripping quotes it would
+            # compare unequal to the registry's bare `opus` and false-fail.
+            if len(v) >= 2 and v[0] == v[-1] and v[0] in ('"', "'"):
+                v = v[1:-1]
+            fm[k.strip()] = v
     return None
 
 
@@ -79,7 +88,7 @@ def check_referential_integrity(root, registry):
     """Every declared path and context must resolve. A missing context degrades
     an agent silently, which is why this is an error and not a warning."""
     errors = []
-    for section in ('agents', 'commands', 'contexts', 'skills'):
+    for section in ('agents', 'commands', 'contexts', 'skills', 'patterns'):
         for name, cfg in registry.get(section, {}).items():
             rel = cfg.get('path')
             if rel and not os.path.exists(os.path.join(root, rel)):
@@ -91,10 +100,11 @@ def check_referential_integrity(root, registry):
             if not os.path.exists(os.path.join(contexts_dir, ctx)):
                 errors.append(f"Agent '{name}' references missing context: {ctx}")
 
-    for name, cfg in registry.get('commands', {}).items():
-        for agent in cfg.get('agents', []):
-            if agent not in registry.get('agents', {}):
-                errors.append(f"Command '{name}' references unknown agent: {agent}")
+    for section in ('commands', 'patterns'):
+        for name, cfg in registry.get(section, {}).items():
+            for agent in cfg.get('agents', []):
+                if agent not in registry.get('agents', {}):
+                    errors.append(f"{section.capitalize()[:-1]} '{name}' references unknown agent: {agent}")
     return errors
 
 
@@ -194,15 +204,106 @@ def check_subagent_definitions(root, registry):
     return errors, warnings
 
 
+def check_not_empty(root, registry):
+    """
+    A registry with no agents passes every other check vacuously - each one
+    iterates an empty dict. A generator that crashed after writing REGISTRY.json,
+    or wrote a typo'd top-level key, would otherwise be reported as valid.
+    """
+    errors = []
+    if not isinstance(registry, dict):
+        return [f"REGISTRY.json must be a JSON object, got {type(registry).__name__}"]
+    if 'agents' not in registry:
+        errors.append("REGISTRY.json has no 'agents' section")
+    elif not registry['agents']:
+        errors.append("REGISTRY.json declares zero agents - nothing to validate")
+    return errors
+
+
+def check_tool_grants(root, registry):
+    """
+    `tools` is the least-privilege field, so its failure modes are silent by
+    nature: a wildcard, an empty value, or a YAML block list all compare equal
+    to something and pass. Each grants more than intended.
+    """
+    errors = []
+    for name, cfg in registry.get('agents', {}).items():
+        tools = cfg.get('tools')
+        if tools is None:
+            errors.append(f"Agent '{name}' declares no tools")
+        elif tools == ['*'] or '*' in (tools or []):
+            errors.append(f"Agent '{name}' uses wildcard tools ['*'] - list what the role needs")
+        elif not tools:
+            errors.append(f"Agent '{name}' has an empty tools list - it would inherit every tool")
+
+    agents_dir = os.path.join(root, '.claude/agents')
+    if os.path.isdir(agents_dir):
+        for fn in sorted(os.listdir(agents_dir)):
+            if not fn.endswith('.md'):
+                continue
+            fm = parse_frontmatter(os.path.join(agents_dir, fn))
+            if fm is None:
+                continue
+            raw = fm.get('tools', '')
+            if raw == '*':
+                errors.append(f".claude/agents/{fn}: tools '*' - list what the role needs")
+            elif not raw.strip():
+                # empty value = YAML block list on following lines, or nothing at
+                # all; either way the flat parser cannot see the real grant
+                errors.append(
+                    f".claude/agents/{fn}: tools is empty or a YAML block list - "
+                    f"use a comma-separated string on one line")
+    return errors
+
+
+def check_settings(root, registry):
+    """
+    .claude/settings.json is where hooks actually live. It is optional, but if it
+    exists it must parse - malformed JSON silently disables every setting in it.
+    """
+    errors, warnings = [], []
+    path = os.path.join(root, '.claude/settings.json')
+    if os.path.exists(path):
+        try:
+            with open(path, encoding='utf-8') as f:
+                settings = json.load(f)
+        except json.JSONDecodeError as e:
+            return [f".claude/settings.json is not valid JSON: {e}"], warnings
+        if not isinstance(settings, dict):
+            return [".claude/settings.json must be a JSON object"], warnings
+        for event, entries in (settings.get('hooks') or {}).items():
+            for entry in entries if isinstance(entries, list) else []:
+                matcher = entry.get('matcher', '')
+                if matcher and re.fullmatch(r'Task', matcher):
+                    errors.append(
+                        f".claude/settings.json: hook matcher '{matcher}' uses the retired "
+                        f"tool name - the subagent tool is 'Agent'")
+
+    # Hooks declared in REGISTRY.json do nothing - the harness never reads it.
+    if isinstance(registry, dict) and isinstance(registry.get('settings'), dict):
+        if 'hooks' in registry['settings'] and registry['settings']['hooks']:
+            warnings.append(
+                "REGISTRY.json declares settings.hooks - Claude Code never reads this file; "
+                "hooks belong in .claude/settings.json")
+    return errors, warnings
+
+
 def validate(root, registry):
     """Run every portable check. Returns (errors, warnings)."""
     errors, warnings = [], []
+    errors += check_not_empty(root, registry)
+    if errors:
+        return errors, warnings  # nothing else is meaningful on an empty system
     errors += check_referential_integrity(root, registry)
     errors += check_subagent_references(root, registry)
     e, w = check_tiers(root, registry)
     errors += e
     warnings += w
     e, w = check_subagent_definitions(root, registry)
+    errors += e
+    warnings += w
+    errors += check_tool_grants(root, registry)
+    e, w = check_settings(root, registry)
     errors += e
     warnings += w
     return errors, warnings

@@ -53,7 +53,7 @@ alongside yourself multiplies the cost of the entire build and buys nothing.
 **You Use the Task Tool**:
 ```python
 # Example: Build a new feature using framework agents
-Task(
+Agent(
     description="Design validation pattern",
     prompt="""
     Design a validation pattern for framework features.
@@ -114,7 +114,7 @@ Task(
 **Example Usage**:
 ```
 # Launch architect for design
-Task(
+Agent(
   description="Design task validation system",
   prompt="""
   Design a validation system for framework tasks.
@@ -310,12 +310,12 @@ Cost: 150KB+, slow (3 sequential round trips)
 Cost: 60KB, fast (1 round trip)
 
 ❌ Bad: Vague Task prompts cause sub-agent exploration
-Task("Build validation", "Create validation for tasks")
+Agent("Build validation", "Create validation for tasks")
 → Sub-agent researches extensively, explores options
 Cost: 100KB+ (sub-agent wastes tokens figuring out what you want)
 
 ✅ Good: Specific Task prompts with complete context
-Task("Build validation", """
+Agent("Build validation", """
   Build task validation system.
   Design: [include design]
   Requirements: [specific requirements]
@@ -324,7 +324,7 @@ Task("Build validation", """
 Cost: 30KB (sub-agent knows exactly what to build)
 
 ❌ Bad: Launching agents for simple coordination tasks
-Task("Update REGISTRY", "Add new agent to REGISTRY.json")
+Agent("Update REGISTRY", "Add new agent to REGISTRY.json")
 → Launches full agent to do one Edit operation
 Cost: 25KB for simple edit
 
@@ -392,11 +392,11 @@ Do It Yourself (use tools directly):
 # Sub-Agent Prompt Quality
 
 Bad Prompt (causes exploration):
-Task("Design feature", "Design a new feature")
+Agent("Design feature", "Design a new feature")
 → Sub-agent explores options, researches broadly
 
 Good Prompt (focused execution):
-Task("Design feature", """
+Agent("Design feature", """
 Design [specific feature name]
 
 Context: [current state]
@@ -522,7 +522,7 @@ This division minimizes your token usage while maximizing sub-agent effectivenes
 1. **Research Phase** (Parallel)
    ```python
    # Launch research specialist to get latest docs
-   research = Task(
+   research = Agent(
        description="Research Claude Code patterns for [feature]",
        prompt=f"""
        Research official Claude Code documentation for: {feature_name}
@@ -547,7 +547,7 @@ This division minimizes your token usage while maximizing sub-agent effectivenes
 2. **Design Phase** (Sequential)
    ```python
    # Use architect with research results
-   design = Task(
+   design = Agent(
        description="Design [feature] following best practices",
        prompt=f"""
        Design: {feature_name}
@@ -576,7 +576,7 @@ This division minimizes your token usage while maximizing sub-agent effectivenes
    ```python
    # Launch engineer and reviewer in parallel
    [implementation, review_prep] = [
-       Task(
+       Agent(
            description="Implement [feature]",
            prompt=f"""
            Implement: {feature_name}
@@ -594,7 +594,7 @@ This division minimizes your token usage while maximizing sub-agent effectivenes
            """,
            subagent_type="framework-senior-engineer"
        ),
-       Task(
+       Agent(
            description="Prepare review criteria",
            prompt=f"""
            Create review checklist for: {feature_name}
@@ -614,7 +614,7 @@ This division minimizes your token usage while maximizing sub-agent effectivenes
 4. **Validation Phase** (Sequential)
    ```python
    # Test implementation
-   tests = Task(
+   tests = Agent(
        description="Test [feature] implementation",
        prompt=f"""
        Test: {feature_name}
@@ -634,7 +634,7 @@ This division minimizes your token usage while maximizing sub-agent effectivenes
    )
 
    # Audit compliance
-   audit = Task(
+   audit = Agent(
        description="Audit [feature] compliance",
        prompt=f"""
        Audit: {feature_name}
@@ -655,7 +655,7 @@ This division minimizes your token usage while maximizing sub-agent effectivenes
 
 5. **Documentation Phase** (Parallel)
    ```python
-   docs = Task(
+   docs = Agent(
        description="Document [feature]",
        prompt=f"""
        Document: {feature_name}
@@ -717,7 +717,7 @@ This division minimizes your token usage while maximizing sub-agent effectivenes
 1. **Quick Compliance Check**
    ```python
    # Launch auditor for changed files
-   audit = Task(
+   audit = Agent(
        description="Audit recent changes",
        prompt="""
        Audit framework changes:

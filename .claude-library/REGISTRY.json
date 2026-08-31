@@ -306,6 +306,33 @@
     }
   },
 
+  "patterns": {
+    "output-format-guide": {
+      "path": ".claude-library/patterns/output-format-guide.md",
+      "description": "Standard output formats for agent reports"
+    },
+    "tool-usage-architect": {
+      "path": ".claude-library/patterns/tool-usage-architect.md",
+      "description": "Tool usage patterns for design and architecture work",
+      "agents": ["framework-system-architect"]
+    },
+    "tool-usage-engineer": {
+      "path": ".claude-library/patterns/tool-usage-engineer.md",
+      "description": "Tool usage patterns for implementation work",
+      "agents": ["framework-senior-engineer"]
+    },
+    "tool-usage-reviewer": {
+      "path": ".claude-library/patterns/tool-usage-reviewer.md",
+      "description": "Tool usage patterns for review and audit work",
+      "agents": ["framework-code-reviewer", "framework-best-practice-auditor"]
+    },
+    "tool-usage-researcher": {
+      "path": ".claude-library/patterns/tool-usage-researcher.md",
+      "description": "Tool usage patterns for research and documentation work",
+      "agents": ["framework-research-specialist", "best-practice-analyzer"]
+    }
+  },
+
   "contexts": {
     "framework-architecture": {
       "path": ".claude-library/contexts/framework-architecture.md",
