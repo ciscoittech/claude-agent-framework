@@ -1,3 +1,8 @@
+---
+description: Analyze code and generate professional documentation (api, readme, architecture, guide, changelog)
+allowed-tools: Read, Write, Edit, Grep, Glob, Agent, Bash(git log:*), Bash(git tag:*)
+---
+
 # /generate-docs - Documentation Generation
 
 **Purpose**: Analyze code and generate professional documentation

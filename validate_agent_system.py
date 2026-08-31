@@ -288,6 +288,114 @@ def check_settings(root, registry):
     return errors, warnings
 
 
+# Claude Code accepts several truthy spellings in frontmatter booleans.
+TRUTHY = {'true', 'yes', 'on', '1'}
+
+
+def _split_tools(raw):
+    """
+    `allowed-tools` appears comma-separated AND space-separated in the wild -
+    the official docs' own examples use `Bash(git add *) Bash(git commit *)`.
+    Split on commas, then on whitespace *between* parenthesised groups, so
+    `Bash(git diff:*)` survives intact either way.
+    """
+    if not raw:
+        return []
+    parts = [p.strip() for p in raw.split(',')] if ',' in raw else [raw]
+    out = []
+    for part in parts:
+        out.extend(t for t in re.findall(r'[A-Za-z_][\w-]*(?:\([^)]*\))?', part) if t)
+    return out
+
+
+def _grants_wildcard(tool):
+    """`*`, `Bash(*)`, `Bash(*:*)` and `Bash(* *)` all grant unrestricted use."""
+    if tool == '*':
+        return True
+    m = re.match(r'^[A-Za-z_][\w-]*\((.*)\)$', tool)
+    return bool(m) and m.group(1).strip().strip(':').replace('*', '').strip() == '' \
+        and '*' in m.group(1)
+
+
+def check_skills(root, registry):
+    """
+    Commands are only skills if they carry frontmatter. Frontmatter is what lets
+    the author control the description the model matches on, pre-approve tools,
+    and opt out of model invocation - none of which a bare markdown file does.
+
+    The registry declares them and the file carries them - same contract as
+    agents. If the two disagree, the declaration is decoration.
+    """
+    errors, warnings = [], []
+    commands_dir = os.path.join(root, '.claude/commands')
+    declared = registry.get('skills', {})
+
+    if not os.path.isdir(commands_dir):
+        if declared:
+            errors.append("REGISTRY declares skills but .claude/commands/ does not exist")
+        return errors, warnings
+
+    on_disk = {f[:-3] for f in os.listdir(commands_dir) if f.endswith('.md')}
+    for orphan in sorted(on_disk - set(declared)):
+        errors.append(f".claude/commands/{orphan}.md has no REGISTRY.json skills entry")
+    # Do not rely on check_referential_integrity for this: it only fires when the
+    # entry happens to carry a `path`, which is optional.
+    for missing in sorted(set(declared) - on_disk):
+        errors.append(f"REGISTRY skill '{missing}' has no .claude/commands/{missing}.md")
+
+    for name in sorted(set(declared) & on_disk):
+        path = os.path.join(commands_dir, f'{name}.md')
+        fm = parse_frontmatter(path)
+        cfg = declared[name]
+        if fm is None:
+            errors.append(
+                f".claude/commands/{name}.md has no frontmatter - the description, "
+                f"tool pre-approval, and invocation controls are all unset")
+            continue
+
+        if not fm.get('description'):
+            errors.append(f".claude/commands/{name}.md missing frontmatter key: description")
+        elif fm['description'] != cfg.get('description'):
+            errors.append(f".claude/commands/{name}.md description does not match REGISTRY")
+
+        # Validate the frontmatter side on its own terms FIRST, so a registry that
+        # omits allowed_tools cannot skip the file check entirely.
+        fm_tools = _split_tools(fm.get('allowed-tools', ''))
+        if not fm_tools:
+            errors.append(
+                f".claude/commands/{name}.md has no allowed-tools - every tool use "
+                f"will prompt, or be denied outright in non-interactive runs")
+        for t in fm_tools:
+            if _grants_wildcard(t):
+                errors.append(f".claude/commands/{name}.md grants unrestricted '{t}'")
+
+        reg_tools = cfg.get('allowed_tools')
+        if reg_tools is None:
+            errors.append(f"REGISTRY skill '{name}' declares no allowed_tools")
+        elif sorted(fm_tools) != sorted(reg_tools):
+            # sorted: reordering the JSON is a no-op that must not fail CI
+            errors.append(
+                f".claude/commands/{name}.md allowed-tools {sorted(fm_tools)} "
+                f"!= REGISTRY {sorted(reg_tools)}")
+
+        declared_off = bool(cfg.get('disable_model_invocation'))
+        file_off = str(fm.get('disable-model-invocation', '')).strip().lower() in TRUTHY
+        if declared_off != file_off:
+            errors.append(
+                f".claude/commands/{name}.md disable-model-invocation={file_off} "
+                f"!= REGISTRY {declared_off}")
+
+        # One command, one description. Two registry sections declaring the same
+        # field is how drift starts.
+        cmd_entry = registry.get('commands', {}).get(name)
+        if cmd_entry and cmd_entry.get('description') and cfg.get('description') \
+                and cmd_entry['description'] != cfg['description']:
+            warnings.append(
+                f"REGISTRY '{name}' has different descriptions in commands{{}} and "
+                f"skills{{}} - skills{{}} is the one that reaches the file")
+    return errors, warnings
+
+
 def validate(root, registry):
     """Run every portable check. Returns (errors, warnings)."""
     errors, warnings = [], []
@@ -303,6 +411,9 @@ def validate(root, registry):
     errors += e
     warnings += w
     errors += check_tool_grants(root, registry)
+    e, w = check_skills(root, registry)
+    errors += e
+    warnings += w
     e, w = check_settings(root, registry)
     errors += e
     warnings += w

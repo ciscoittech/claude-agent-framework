@@ -1,3 +1,8 @@
+---
+description: Audit the framework against Claude Code best practices and score compliance
+allowed-tools: Read, Grep, Glob, Agent
+---
+
 # /audit-practices - Audit Framework Best Practices Compliance
 
 **Purpose**: Comprehensive audit of framework against Claude Code best practices

@@ -1,3 +1,9 @@
+---
+description: Build a framework feature end to end using the framework's own agents
+allowed-tools: Agent, Read, Write, Edit, Bash
+disable-model-invocation: true
+---
+
 # /build-feature - Self-Building Feature Development
 
 **Purpose**: Use Claude Agent Framework to build framework features using framework's own agents

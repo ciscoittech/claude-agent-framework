@@ -1,3 +1,8 @@
+---
+description: Fetch the latest Claude Code documentation and refresh framework context files
+allowed-tools: WebFetch, Read, Write, Edit, Agent
+---
+
 # /update-docs - Update Claude Code Documentation
 
 **Purpose**: Fetch latest Claude Code documentation and update framework context files

@@ -521,6 +521,27 @@ echo '{"tool_input":{"file_path":"README.md"}}' | bash your_hook.sh   # does it 
 jq -e '.hooks.PostToolUse[0].hooks[0].command' .claude/settings.json  # exit 0 = valid
 ```
 
+### Step 8: Write `GETTING_STARTED.md`
+
+Put it in the project root. This is the artifact that explains what you built — six
+months from now, or to a teammate who did not build it, the two directories alone say
+nothing about how they work or whether they still do.
+
+Cover, in this order:
+
+1. **How to verify it works** — `python3 validate_agent_system.py .` and what a pass
+   looks like. First, because it is the first thing anyone needs.
+2. **What you created** — the `.claude/` vs `.claude-library/` split and why.
+3. **The agents** — name, model/effort, and why that tier. Include the rule that a
+   coordinator never propagates its model to agents it launches.
+4. **How to use it** — available commands, and launching an agent by `subagent_type`.
+5. **How to extend it** — adding an agent, a skill, a hook.
+6. **The two rules broken most often**: registry and frontmatter must agree; hooks go in
+   `.claude/settings.json`, never `REGISTRY.json`.
+
+Describe what you actually built. A getting-started doc that does not match the system
+on disk is worse than none — it sends people looking for things that are not there.
+
 ## Customization Guide
 
 ### Adding Specialized Agents

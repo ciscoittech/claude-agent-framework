@@ -20,7 +20,7 @@ Before generating ANYTHING, follow these rules:
    the project demonstrably needs (e.g. `/test` when tests exist)
 3. **NO specialized agents** unless explicitly detected and justified
 4. **Sequential workflows by default** (parallel only if >3 independent tasks)
-5. **Target <5KB for `.claude/`** on simple projects (`.claude-library/` is not counted)
+5. **Keep `.claude/` under 10KB** (see Step 5; `.claude-library/` is not counted)
 
 ## Your Mission
 
@@ -148,10 +148,11 @@ The directory must contain enough substance to warrant one (see thresholds in St
 
 **If SIMPLE -> Use MINIMAL configuration**
 
-Expect ~9 files for the base (3 agent definitions + 3 playbooks + registry +
-1 command + settings.json), plus one file per justified addition below. A simple
-project with tests and the recommended utility commands lands around 13 — that is
-correct, not bloat. The number to keep small is `.claude/`, not the file count.
+Expect ~11 files for the base: 3 agent definitions + 3 playbooks + registry +
+`contexts/project.md` + 1 command + `settings.json` + `GETTING_STARTED.md`. Add one
+per justified addition below — a simple project with tests and the recommended utility
+commands lands around 14, which is correct, not bloat. The number to keep small is
+`.claude/`, not the file count.
 **If MEDIUM -> Add 1-2 specialized agents MAX**
 **If COMPLEX -> Full system may be appropriate**
 
@@ -171,7 +172,14 @@ Extract ONLY what's essential:
 
 ## Step 3: Reference Framework Documentation
 
-Read the framework documentation located in `claude-agent-framework/`:
+> **§4.6b is normative and overrides everything you read here.** These documents are
+> background: they explain *why* the framework is shaped the way it is. Several of their
+> examples predate the current contract and show older shapes — registry entries without
+> `model`/`effort`, agent files without frontmatter, `agent-launcher.md`, `tools` as a
+> YAML list. Where any of them disagrees with §4.6b, §4.6b wins. If you are short on
+> time, read §4.6b and skip this step.
+
+Optional background, in `claude-agent-framework/`:
 1. `SIMPLICITY_ENFORCEMENT.md` - Circuit breakers against over-engineering (read first)
 2. `CLAUDE_AGENT_FRAMEWORK.md` - Core principles and architecture
 3. `AGENT_SYSTEM_TEMPLATE.md` - Quick start templates
@@ -191,6 +199,8 @@ Read the framework documentation located in `claude-agent-framework/`:
 ├── commands/
 │   └── build.md              # ONLY build command initially
 └── settings.json             # Hooks + permissions (the file the harness reads)
+
+GETTING_STARTED.md            # Explains what was created (see 4.8)
 
 .claude-library/              # Loaded on demand
 ├── REGISTRY.json             # Source of truth for tiers and wiring
@@ -404,6 +414,12 @@ registry key.
 `".claude-library/agents/core/architect.md"`. The two conventions differ — this
 is the single most common generation error.
 
+**Registry top level:** `version`, `agents`, `commands`, `contexts`, `skills`.
+`commands` entries carry `path`, `agents` (which agents the command orchestrates), and
+`workflow`; the human-facing `description` lives in `skills`, not here — one field, one
+home. `contexts` entries are `{key: {path, description}}` where the key is the filename
+stem.
+
 **Registry keys per agent:** `path`, `type`, `domain`, `tools`, `model`,
 `effort`, `triggers`, `contexts`, `priority`. Optional: `restrictions`.
 Agent keys must equal the `.claude/agents/*.md` filenames.
@@ -416,8 +432,33 @@ one is noise. Permissions shape:
 { "permissions": { "allow": ["Bash(pytest:*)", "Read"], "deny": [] } }
 ```
 
-**Command files** are plain markdown, invoked as `/name`. Frontmatter is
-optional; add `description:` so the command shows text in the slash menu.
+**Command files** are invoked as `/name` and require frontmatter, plus a matching
+`REGISTRY.json` -> `skills` entry. The validator fails on a command file with neither.
+
+```markdown
+---
+description: Build the feature described, using the project's agents
+allowed-tools: Agent, Read, Write, Edit, Grep, Glob
+---
+```
+
+```json
+"skills": {
+  "build": {
+    "path": ".claude/commands/build.md",
+    "description": "Build the feature described, using the project's agents",
+    "allowed_tools": ["Agent", "Read", "Write", "Edit", "Grep", "Glob"]
+  }
+}
+```
+
+`description` and `allowed_tools` must match the frontmatter exactly. Note the key
+spellings differ by side: frontmatter uses `allowed-tools` (hyphen), the registry uses
+`allowed_tools` (underscore). `allowed-tools` **pre-approves** tools rather than
+restricting them, so scope `Bash` to what the command runs — `Bash(pytest:*)`, not bare
+`Bash` — and never `*` or `Bash(*)`. Add `disable-model-invocation: true` (registry:
+`"disable_model_invocation": true`) for a command expensive enough that firing it should
+be a deliberate human act.
 
 **If you generate a hook, generate the script it calls.** `.claude-library/hooks/scripts/`
 is not in the minimal tree — create it, or reference only scripts you wrote.
@@ -459,6 +500,33 @@ Hard requirements (key list and path conventions are in 4.6b):
 4. `Agent` not `Task`, `Edit` not `MultiEdit`, never `["*"]`.
 5. **No hooks here** — Claude Code does not read this file (see 4.2).
 
+### 4.8 Generate `GETTING_STARTED.md`
+
+Write this into the **project root** (not `.claude/`). It is the only artifact that
+explains what you just created — without it the user is handed two directories and no
+way to tell whether they work.
+
+**Generate it from what you actually created**, not from a template. Every agent, tier,
+and command it names must exist. A getting-started doc describing a different system
+than the one on disk is worse than none.
+
+It must cover:
+
+1. **What was created and why** — the two-directory split, keyed to this project's stack.
+2. **The agents you got** — name, model/effort, and *why that tier*. State the
+   non-propagation rule: a coordinator never passes its own model to agents it launches.
+3. **How to use it** — the commands available, and launching an agent by
+   `subagent_type` (the filename in `.claude/agents/`).
+4. **How to verify it works** — the exact validator command, and what a pass looks like.
+   Put this early; it is the first thing a user needs.
+5. **How to extend it** — adding an agent, a skill, or a hook, each in a few steps.
+6. **The two rules most often broken later**:
+   - `REGISTRY.json` and `.claude/agents/` frontmatter must agree, or the tier is
+     unenforced prose.
+   - Hooks go in `.claude/settings.json`. Claude Code never reads `REGISTRY.json`.
+
+Keep it under ~120 lines. It is a starting point, not a manual.
+
 ## Step 5: Optimization
 
 Apply these optimizations:
@@ -474,7 +542,7 @@ Apply these optimizations:
 **Run the validator. Do not eyeball it.**
 
 ```bash
-python3 validate_agent_system.py <generated-project-root>
+python3 /path/to/claude-agent-framework/validate_agent_system.py <generated-project-root>
 ```
 
 It checks exactly what silently breaks a generated system:
@@ -505,14 +573,14 @@ Execute this plan:
 ## Expected Output
 
 **FOR SIMPLE PROJECTS (DEFAULT):**
-- ~9 base files, ~13 with tests and utility commands (NOT 20+)
+- ~11 base files, ~14 with tests and utility commands (NOT 20+)
 - Minimal functional system
 - ONLY essential customizations
 - Single build command to start
 - Brief documentation
 
 **FOR MEDIUM PROJECTS:**
-- 10-12 files maximum
+- ~14-18 files (more agents and commands than SIMPLE, still no speculative ones)
 - Core + 1-2 specialists
 - 2-3 commands
 - Targeted customizations
@@ -530,98 +598,16 @@ Start by reading CLAUDE.md and analyzing the project structure.
 
 ---
 
-## Appendix: Best Practice Integration
+## Appendix: Framework Maintenance
 
-This section describes how to continuously improve the framework by ingesting
-and validating best practices from Anthropic documentation and other sources.
+This prompt generates a system for *your* project. Maintaining the framework itself
+(ingesting new Anthropic guidance, validating framework changes) is a separate
+workflow documented in its own commands:
 
-### Integration Workflow
+- `.claude/commands/ingest-best-practice.md` — ingest guidance, extract principles, analyze gaps
+- `.claude/commands/validate-framework.md` — validate framework changes against metrics
 
-The integration process follows four stages:
-
-1. **Ingest**: Fetch and extract principles from Anthropic docs or other best practice sources
-2. **Analyze**: Compare extracted principles against the current framework to identify gaps
-3. **Test**: Validate proposed improvements with concrete, measurable metrics
-4. **Integrate**: Merge approved changes into the framework after passing all checks
-
-### Integration Criteria
-
-Each proposed change is evaluated against three thresholds:
-
-**APPROVED:**
-- Pass rate >= 90%
-- Average improvement >= 10%
-- Simplicity maintained (no unnecessary bloat added)
-- Action: Merge to main framework
-
-**REVIEW:**
-- Pass rate 70-89%
-- Improvement 5-9%
-- Minor simplicity concerns that need discussion
-- Action: Refine the approach and re-test
-
-**REJECTED:**
-- Pass rate < 70%
-- Improvement < 5%
-- Violates the simplicity-first principle
-- Action: Archive with documentation explaining why
-
-### Available Commands
-
-**`/ingest-best-practice <URL>`**
-Fetches and analyzes a new best practice document. Outputs:
-- Context document with extracted principles
-- Gap analysis comparing principles to current framework
-- Summary report with prioritized action items
-
-Example:
-```bash
-/ingest-best-practice https://www.anthropic.com/engineering/writing-tools-for-agents
-```
-
-**`/validate-framework <name>`**
-Runs validation tests for a specific best practice integration. Outputs:
-- Test results with pass rate and per-metric scores
-- Before/after comparison showing concrete improvements
-- Simplicity compliance check
-- Final verdict: APPROVED / REVIEW / REJECTED
-
-Example:
-```bash
-/validate-framework tool-writing
-```
-
-### Integration File Structure
-
-After running the integration workflow, files are organized as:
-```
-.claude-library/
-├── contexts/anthropic-best-practices/
-│   └── <best-practice-name>.md          # Extracted principles
-├── experiments/
-│   └── <best-practice-name>/
-│       ├── gap-analysis.md              # Detailed comparison
-│       ├── baseline/                    # Original files
-│       ├── improved/                    # Enhanced files
-│       └── test-results/               # Validation reports
-└── agents/specialized/
-    ├── best-practice-analyzer.md        # Ingestion agent
-    └── framework-gap-analyzer.md        # Analysis agent
-
-.claude/commands/
-├── ingest-best-practice.md              # Ingestion workflow
-└── validate-framework.md               # Validation workflow
-```
-
-### Tips for Best Practice Integration
-
-- Start with quick wins: high impact, low effort changes
-- Run tests frequently to catch regressions early
-- Keep simplicity as the top priority at all times
-- Document why each change was made or rejected
-- Archive experiment data after integration is complete
-
----
+Neither is needed to generate or use a project agent system.
 
 ## How to Use This Prompt
 

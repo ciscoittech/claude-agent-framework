@@ -6,7 +6,8 @@
 2. [Core Philosophy](#core-philosophy)
 3. [System Architecture](#system-architecture)
 4. [Agent Design Principles](#agent-design-principles)
-5. [Command Workflows](#command-workflows)
+5. [Skills (Commands)](#skills-commands)
+6. [Command Workflows](#command-workflows)
 6. [Context Management](#context-management)
 7. [Extended Context & Tool Search](#extended-context--tool-search)
 8. [Tool Configuration](#tool-configuration)
@@ -184,6 +185,82 @@ Organize agents by function:
    - Documentation Writer: Docs and comments
    - Test Engineer: Test creation and execution
    - Deployment Manager: CI/CD and releases
+
+## Skills (Commands)
+
+A **skill** is a procedure a user invokes as `/name`. Two forms exist:
+
+- `.claude/commands/<name>.md` — what this framework uses and what the validator checks.
+- `.claude/skills/<name>/SKILL.md` — the richer form, supporting bundled resources and
+  path-scoped auto-activation. A `SKILL.md` takes precedence over a same-named command
+  file. This repo does not use it; reach for it when a skill needs more than one file.
+
+Either way the skill is declared in `REGISTRY.json`'s `skills` section.
+
+### Skill vs agent vs neither
+
+This is the decision that matters, and most of the time the answer is "neither".
+
+| You have | Build |
+|---|---|
+| A repeatable procedure with known steps that a person triggers | **Skill** |
+| A role that exercises judgment across varying inputs | **Agent** |
+| A one-off instruction, or something a direct tool call handles | **Neither** |
+
+A skill is a *procedure*; an agent is a *role*. `/review-code` is a skill — the steps
+are known, a human starts it. `framework-code-reviewer` is an agent — it decides what
+matters in code it has not seen before. The skill can launch the agent; they are not
+alternatives to each other.
+
+Per SIMPLICITY_ENFORCEMENT, do not create either until the direct approach has actually
+failed. A skill that wraps one tool call is worse than the tool call.
+
+### Required frontmatter
+
+**Frontmatter is what gives you control.** Without it a command still loads — Claude
+Code falls back to the first paragraph for a description — but you get whatever that
+paragraph happens to say, no tool pre-approval, and no way to opt out of model
+invocation. The declared form is the one you can reason about.
+
+```markdown
+---
+description: Review code changes for bugs, security issues, and quality
+allowed-tools: Read, Grep, Glob, Agent, Bash(git diff:*)
+---
+```
+
+- **`description`** — what the model matches on. Write what the command *does*, not what
+  it is called. This is the field that makes a skill discoverable.
+- **`allowed-tools`** — **pre-approves** tools; it does not sandbox them. Unlisted tools
+  remain callable and fall through to your normal permission settings, so an incomplete
+  list causes prompts (or denials in non-interactive runs), not hard failures. Scope
+  `Bash` with permission-rule syntax: `Bash(git diff:*)` pre-approves exactly that, where
+  bare `Bash` pre-approves everything. Never `*` or `Bash(*)`.
+  Use `disallowed-tools` when you need to actually restrict.
+  Note a rule matches each command independently — `Bash(git diff:*)` does not cover
+  `git diff | head`, and it does not cover `gh pr diff`.
+- **`disable-model-invocation: true`** — optional. Set it when the skill is expensive or
+  far-reaching enough that firing it should be a deliberate human act. `/build-feature`
+  sets it because it spawns a chain across eight agents.
+
+### The registry and the file must agree
+
+`REGISTRY.json` declares each skill's `description` and `allowed_tools`; the file repeats
+them in frontmatter. `validate_agent_system.py` fails if they drift, if a command has no
+registry entry, or if frontmatter is missing.
+
+This mirrors how agents work, and for the same reason: a declaration the harness never
+reads is decoration. `REGISTRY.json` is framework metadata — Claude Code reads
+`.claude/commands/*.md` frontmatter, and nothing else.
+
+### Adding a skill
+
+1. Add an entry to `REGISTRY.json` -> `skills` with `path`, `description`, `allowed_tools`.
+2. Create `.claude/commands/<name>.md` with matching frontmatter.
+3. Write the procedure in the body — steps, not prose.
+4. Run `python3 validate_agent_system.py .` — it fails on any disagreement.
+
+---
 
 ## Command Workflows
 

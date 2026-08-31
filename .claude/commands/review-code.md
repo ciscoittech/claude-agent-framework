@@ -1,3 +1,8 @@
+---
+description: Review code changes for bugs, security issues, and quality
+allowed-tools: Read, Grep, Glob, Agent, Bash(git diff:*), Bash(gh pr diff:*)
+---
+
 # /review-code - Code Review
 
 **Purpose**: Review code changes for bugs, security issues, and quality

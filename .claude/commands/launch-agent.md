@@ -1,3 +1,8 @@
+---
+description: Analyze a task and launch the optimal agent with the right model, effort, and tools
+allowed-tools: Agent, Read, Grep, Glob
+---
+
 # /launch-agent - Intelligent Agent Selection & Launch
 
 **Purpose**: Analyze a task and launch the optimal agent with correct model, tools, and context
