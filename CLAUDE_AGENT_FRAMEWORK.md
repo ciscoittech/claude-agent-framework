@@ -14,8 +14,7 @@
 10. [Agent Teams](#agent-teams)
 11. [Best Practices](#best-practices)
 12. [Performance Optimization](#performance-optimization)
-13. [Observability (Optional)](#observability-optional)
-14. [Hooks (Optional)](#hooks-optional)
+13. [Hooks (Optional)](#hooks-optional)
 
 ## Introduction
 
@@ -592,29 +591,6 @@ Structure your REGISTRY.json for fast lookup:
 3. **Progressive loading**: Start with minimal context
 4. **Early termination**: Stop on critical failures
 
-## Observability (Optional)
-
-Track agent workflows with real-time monitoring. Two options:
-
-1. **Local Observability** (SQLite-based, zero dependencies): See `.claude-library/observability/README.md`
-2. **Cloud Observability** (Logfire): Enable in REGISTRY.json with `"observability": { "enabled": true }`
-
-Features: workflow traces, output validation, performance metrics, error tracking.
-
-Enable via REGISTRY.json settings:
-```json
-{
-  "settings": {
-    "observability": {
-      "enabled": true,
-      "provider": "logfire"
-    }
-  }
-}
-```
-
-See `.claude-library/observability/README.md` for full setup, configuration, and troubleshooting.
-
 ## Hooks (Optional)
 
 Add deterministic control via shell commands at workflow points:
@@ -662,4 +638,4 @@ Remember: Start simple with core agents, then progressively add specialization a
 ---
 
 *Framework Version 2.0 - Now with Agent Teams, Extended Context, and MCP Tool Search*
-*Optional Hooks and Observability patterns for production workflows*
+*Optional Hooks patterns for production workflows*

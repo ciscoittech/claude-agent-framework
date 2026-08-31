@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Auto Memory**: Persistent cross-conversation knowledge
 - **Extended Context**: 1M token context window
 - **MCP Tool Search**: Deferred tool loading via ToolSearch
-- **Effort Levels**: `model: "haiku"` for fast/cheap, `model: "opus"` for complex
+- **Model + Effort**: two independent dials — `model` sets capability (`haiku`/`sonnet`/`opus`/`fable`), `effort` sets reasoning depth (`low`-`max`)
 - **Worktree Isolation**: `isolation: "worktree"` for safe parallel work
 - **Background Agents**: `run_in_background: true` for async execution
 - **Managed Settings**: Centralized permission and model configuration

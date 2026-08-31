@@ -114,7 +114,7 @@ your-project/
 | [CLAUDE_AGENT_FRAMEWORK.md](./CLAUDE_AGENT_FRAMEWORK.md) | Architecture guide | Learn the system |
 | [AGENT_PATTERNS.md](./AGENT_PATTERNS.md) | Implementation patterns | Optimize |
 | [AGENT_SYSTEM_TEMPLATE.md](./AGENT_SYSTEM_TEMPLATE.md) | Manual setup | Custom control |
-| [MULTI_MODEL_ROUTING.md](./MULTI_MODEL_ROUTING.md) | Cost optimization | Save costs |
+| [MODEL_SELECTION.md](./MODEL_SELECTION.md) | Model and effort tiers, cost levers | Choosing a tier |
 
 ---
 
@@ -185,7 +185,7 @@ claude> Study CLAUDE_AGENT_FRAMEWORK.md and build custom system
 - **Auto Memory**: Persistent cross-conversation knowledge via MEMORY.md
 - **Extended Context**: 1M token context window
 - **MCP Tool Search**: Deferred tool loading via ToolSearch
-- **Effort Levels**: `model: "haiku"` for fast/cheap, `model: "opus"` for complex
+- **Model + Effort**: two independent dials — `model` sets capability (`haiku`/`sonnet`/`opus`/`fable`), `effort` sets reasoning depth (`low`-`max`)
 - **Worktree Isolation**: `isolation: "worktree"` for safe parallel work
 - **Background Agents**: `run_in_background: true` for async execution
 - **Managed Settings**: Centralized permission and model configuration
@@ -195,15 +195,11 @@ claude> Study CLAUDE_AGENT_FRAMEWORK.md and build custom system
 
 ## Optional Patterns
 
-### Observability
-Track agent workflows with local SQLite-based monitoring. Zero cloud dependencies.
-[Learn more ->](./.claude-library/observability/README.md)
-
 ### Hooks
 Add deterministic control: auto-format, block dangerous operations, validate outputs.
 [Learn more ->](./.claude-library/hooks/README.md)
 
-Both patterns disabled by default. Zero overhead when off.
+Disabled by default. Zero overhead when off.
 
 ---
 

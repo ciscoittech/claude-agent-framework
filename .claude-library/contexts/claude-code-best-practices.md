@@ -76,11 +76,12 @@
 - Add custom tools and data sources
 - Integrate with external services
 
-**Effort Levels** (NEW):
-- Use `model: "haiku"` in Agent tool for fast, cheap tasks (formatting, simple searches)
-- Use `model: "opus"` for complex reasoning, architecture decisions
-- Default (sonnet) works for most tasks
-- Match effort to task complexity for optimal cost/quality
+**Model and Effort** (two independent dials):
+- `model` sets the capability floor: `haiku` -> `sonnet` -> `opus` -> `fable`
+- `effort` sets reasoning depth: `low` -> `medium` -> `high` -> `xhigh` -> `max`
+- `xhigh` is the Claude Code default and suits most coding and agentic work
+- Choosing a model does not choose an effort; set both deliberately
+- Haiku is the only current model at 200K context - never send long-context work to it
 
 **Extended Context** (NEW):
 - Claude Code supports up to 1M tokens of context
@@ -164,7 +165,6 @@
 - Use `/clear` between agent tasks
 - Minimize context per agent (<10KB)
 - Leverage parallel execution
-- Monitor with observability
 
 ### For Self-Building System
 
@@ -177,14 +177,12 @@
 **Iterative Enhancement**:
 - Start with MVP implementation
 - Test thoroughly at each step
-- Use observability to track
-- Refine based on metrics
+- Refine based on results
 
 **Quality Assurance**:
 - Write tests before features
 - Use subagents for validation
 - Automate compliance checks
-- Track with observability
 
 ---
 
@@ -196,7 +194,6 @@
 - [ ] Tests exist and pass before implementation
 - [ ] Context is optimized (<10KB per agent)
 - [ ] Subagents used for complex tasks
-- [ ] Observability tracks all executions
 - [ ] Documentation is complete and clear
 - [ ] Performance targets are met
 - [ ] Quality gates are enforced
@@ -219,4 +216,4 @@
 ---
 
 **Last Updated**: March 12, 2026
-**Update Method**: `python3 .claude-library/observability/obs.py` or `/update-docs` command
+**Update Method**: `/update-docs` command

@@ -57,9 +57,24 @@ def format_duration(ms: Optional[int]) -> str:
 
 def format_cost(usd: Optional[float]) -> str:
     """Format cost in USD"""
-    if usd is None or usd == 0:
-        return 'N/A'
+    if usd is None:
+        return '?'        # cost unknown (unpriced model) - not the same as free
+    if usd == 0:
+        return '$0.0000'
     return f"${usd:.4f}"
+
+
+def format_tier(row) -> str:
+    """Render model/effort as 'opus/xhigh'. Executions logged before tiers were
+    tracked have no model; show them as '-' rather than blank."""
+    try:
+        model = row['model']
+        effort = row['effort']
+    except (KeyError, IndexError):
+        return '-'
+    if not model:
+        return '-'
+    return f"{model}/{effort}" if effort else model
 
 
 def cmd_recent(args):
@@ -71,8 +86,8 @@ def cmd_recent(args):
         return
 
     print(f"\n📊 Recent Executions (last {len(executions)}):\n")
-    print(f"{'ID':<5} {'Agent':<20} {'Status':<10} {'Duration':<10} {'Tokens':<10} {'Cost':<12} {'Time':<20}")
-    print("-" * 100)
+    print(f"{'ID':<5} {'Agent':<20} {'Status':<10} {'Model':<14} {'Duration':<10} {'Tokens':<10} {'Cost':<12} {'Time':<20}")
+    print("-" * 116)
 
     for e in executions:
         status_icon = '✅' if e['status'] == 'success' else '❌'
@@ -80,6 +95,7 @@ def cmd_recent(args):
             f"{e['id']:<5} "
             f"{e['agent_name'][:19]:<20} "
             f"{status_icon} {e['status']:<8} "
+            f"{format_tier(e):<14} "
             f"{format_duration(e['duration_ms']):<10} "
             f"{e['tokens_total']:<10} "
             f"{format_cost(e['cost_usd']):<12} "
@@ -120,7 +136,11 @@ def cmd_execution(args):
     print(f"Task: {execution['task_description'] if execution['task_description'] else 'N/A'}")
     print(f"Started: {execution['started_at']}")
     print(f"Duration: {format_duration(execution['duration_ms'])}")
-    print(f"Tokens: {execution['tokens_total']} (cost: {format_cost(execution['cost_usd'])})")
+    fresh = execution.get('tokens_fresh', execution['tokens_total'])
+    cached = execution['tokens_total'] - fresh
+    print(f"Tokens: {execution['tokens_total']} total "
+          f"({fresh} fresh + {cached} cache) "
+          f"(cost: {format_cost(execution['cost_usd'])})")
 
     # Sub-agents
     sub_agents = get_execution_sub_agents(args.id)
@@ -192,19 +212,87 @@ def cmd_agents(args):
         return
 
     print(f"\n🤖 Agent Performance:\n")
-    print(f"{'Agent':<25} {'Executions':<12} {'Success Rate':<15} {'Avg Time':<12} {'Avg Tokens':<12} {'Total Cost':<12}")
-    print("-" * 100)
+    print(f"{'Agent':<25} {'Model':<14} {'Executions':<12} {'Success Rate':<15} {'Avg Time':<12} {'Avg Tokens':<12} {'Total Cost':<12}")
+    print("-" * 116)
 
     for a in agents:
         success_rate = f"{a['successful']/a['total_executions']*100:.0f}%" if a['total_executions'] > 0 else 'N/A'
         print(
             f"{a['agent_name'][:24]:<25} "
+            f"{format_tier(a):<14} "
             f"{a['total_executions']:<12} "
             f"{success_rate:<15} "
             f"{format_duration(a['avg_duration_ms']):<12} "
             f"{int(a['avg_tokens']) if a['avg_tokens'] else 0:<12} "
             f"{format_cost(a['total_cost_usd']):<12}"
         )
+
+
+def cmd_cost_by_model(args):
+    """Show cost aggregated by model tier"""
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM v_cost_by_model").fetchall()
+
+    if not rows:
+        print("No completed executions to report on")
+        return
+
+    print(f"\n💰 Cost by Model Tier:\n")
+    print(f"{'Model':<18} {'Effort':<9} {'Runs':<7} {'OK':<6} {'Avg Time':<11} {'In':<10} {'Out':<10} {'CacheRd':<10} {'CacheWr':<10} {'Total':<12} {'Per Success':<12}")
+    print("-" * 128)
+
+    for r in rows:
+        print(
+            f"{r['model'][:17]:<18} "
+            f"{r['effort']:<9} "
+            f"{r['executions']:<7} "
+            f"{r['successful']:<6} "
+            f"{format_duration(r['avg_duration_ms']):<11} "
+            f"{r['tokens_input']:<10} "
+            f"{r['tokens_output']:<10} "
+            f"{r['tokens_cached']:<10} "
+            f"{r['tokens_cache_write']:<10} "
+            f"{format_cost(r['total_cost_usd']):<12} "
+            f"{format_cost(r['cost_per_success']):<12}"
+        )
+
+    warnings = []
+
+    unrecorded = sum(r['executions'] for r in rows if r['model'] == 'unrecorded')
+    if unrecorded:
+        warnings.append(f"{unrecorded} execution(s) have no recorded model — cost could not be computed.")
+
+    # A model string that IS recorded but has no rate entry prices as NULL. Without
+    # this it renders as an ordinary row costing $0.00 and reads as a free tier.
+    unpriced = sum(r['unpriced'] or 0 for r in rows)
+    if unpriced:
+        priced_models = ', '.join(sorted({r['model'] for r in rows if r['unpriced']}))
+        warnings.append(
+            f"{unpriced} execution(s) ran on a model with no rate in pricing.py "
+            f"({priced_models}) — their cost is UNKNOWN, not zero."
+        )
+
+    # v_cost_by_model only covers completed executions. Anything that crashed or was
+    # killed is excluded along with its cost - and those are disproportionately the
+    # long, expensive runs. Report what is missing rather than under-total silently.
+    with get_db() as conn:
+        excl = conn.execute("""
+            SELECT COUNT(*) AS n, COALESCE(SUM(m.cost_usd), 0.0) AS cost
+            FROM executions e
+            LEFT JOIN execution_metrics m ON m.execution_id = e.id
+            WHERE e.completed_at IS NULL
+        """).fetchone()
+    if excl and excl['n']:
+        warnings.append(
+            f"{excl['n']} incomplete execution(s) excluded (never completed), "
+            f"carrying {format_cost(excl['cost'])} in recorded cost."
+        )
+
+    for w in warnings:
+        print(f"\n  ⚠  {w}")
+
+    print("\n  Cost per success is the number to compare across tiers, not total cost:")
+    print("  a cheaper tier that retries is not cheaper.")
 
 
 def cmd_session(args):
@@ -378,6 +466,9 @@ def main():
     p_agents.set_defaults(func=cmd_agents)
 
     # Session info
+    p_cost = subparsers.add_parser('cost-by-model', help='Show cost aggregated by model tier')
+    p_cost.set_defaults(func=cmd_cost_by_model)
+
     p_session = subparsers.add_parser('session', help='Show current session')
     p_session.set_defaults(func=cmd_session)
 

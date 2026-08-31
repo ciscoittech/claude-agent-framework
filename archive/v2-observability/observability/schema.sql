@@ -17,6 +17,11 @@ CREATE TABLE IF NOT EXISTS executions (
     duration_ms INTEGER,
     status TEXT CHECK(status IN ('running', 'success', 'failed', 'timeout', 'cancelled')) DEFAULT 'running',
     error_message TEXT,
+    -- Model tier and reasoning effort this execution ran at. Two independent dials:
+    -- model sets the capability floor, effort sets reasoning depth. Nullable so
+    -- executions logged before this column existed still read back cleanly.
+    model TEXT,
+    effort TEXT,
     FOREIGN KEY (parent_execution_id) REFERENCES executions(id) ON DELETE CASCADE
 );
 
@@ -29,7 +34,10 @@ CREATE TABLE IF NOT EXISTS execution_metrics (
     execution_id INTEGER NOT NULL UNIQUE,
     tokens_input INTEGER DEFAULT 0,
     tokens_output INTEGER DEFAULT 0,
-    tokens_cached INTEGER DEFAULT 0,
+    tokens_cached INTEGER DEFAULT 0,          -- cache READS (billed ~0.1x input)
+    tokens_cache_write INTEGER DEFAULT 0,     -- cache CREATION (billed ~1.25x input)
+    -- Fresh billable tokens only. Cache reads/writes are counted separately, so
+    -- this deliberately excludes them; views expose the all-in figure instead.
     tokens_total INTEGER GENERATED ALWAYS AS (tokens_input + tokens_output) STORED,
     cost_usd DECIMAL(10,6) DEFAULT 0.0,
     FOREIGN KEY (execution_id) REFERENCES executions(id) ON DELETE CASCADE
@@ -125,6 +133,7 @@ CREATE INDEX IF NOT EXISTS idx_executions_agent ON executions(agent_name);
 CREATE INDEX IF NOT EXISTS idx_executions_status ON executions(status);
 CREATE INDEX IF NOT EXISTS idx_executions_started ON executions(started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_executions_parent ON executions(parent_execution_id);
+CREATE INDEX IF NOT EXISTS idx_executions_model ON executions(model);
 
 CREATE INDEX IF NOT EXISTS idx_artifacts_execution ON artifacts(execution_id);
 CREATE INDEX IF NOT EXISTS idx_artifacts_type ON artifacts(artifact_type);
@@ -143,6 +152,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_id ON sessions(session_id);
 -- ==============================================================================
 
 -- View: Recent executions with metrics
+DROP VIEW IF EXISTS v_recent_executions;
 CREATE VIEW IF NOT EXISTS v_recent_executions AS
 SELECT
     e.id,
@@ -153,8 +163,12 @@ SELECT
     e.completed_at,
     e.duration_ms,
     e.status,
-    COALESCE(m.tokens_total, 0) as tokens_total,
-    COALESCE(m.cost_usd, 0.0) as cost_usd,
+    e.model,
+    e.effort,
+    COALESCE(m.tokens_total, 0) as tokens_fresh,
+    COALESCE(m.tokens_total, 0) + COALESCE(m.tokens_cached, 0)
+        + COALESCE(m.tokens_cache_write, 0) as tokens_total,
+    m.cost_usd as cost_usd,
     (SELECT COUNT(*) FROM sub_agents WHERE parent_execution_id = e.id) as sub_agents_count,
     (SELECT COUNT(*) FROM artifacts WHERE execution_id = e.id) as artifacts_count,
     (SELECT passed FROM validations WHERE execution_id = e.id LIMIT 1) as validation_passed
@@ -163,6 +177,7 @@ LEFT JOIN execution_metrics m ON m.execution_id = e.id
 ORDER BY e.started_at DESC;
 
 -- View: Failed executions
+DROP VIEW IF EXISTS v_failed_executions;
 CREATE VIEW IF NOT EXISTS v_failed_executions AS
 SELECT
     e.id,
@@ -177,6 +192,7 @@ WHERE e.status = 'failed'
 ORDER BY e.started_at DESC;
 
 -- View: Daily summary
+DROP VIEW IF EXISTS v_daily_summary;
 CREATE VIEW IF NOT EXISTS v_daily_summary AS
 SELECT
     DATE(e.started_at) as date,
@@ -184,7 +200,8 @@ SELECT
     SUM(CASE WHEN e.status = 'success' THEN 1 ELSE 0 END) as successful,
     SUM(CASE WHEN e.status = 'failed' THEN 1 ELSE 0 END) as failed,
     ROUND(AVG(e.duration_ms), 0) as avg_duration_ms,
-    SUM(COALESCE(m.tokens_total, 0)) as total_tokens,
+    SUM(COALESCE(m.tokens_total, 0) + COALESCE(m.tokens_cached, 0)
+        + COALESCE(m.tokens_cache_write, 0)) as total_tokens,
     ROUND(SUM(COALESCE(m.cost_usd, 0.0)), 4) as total_cost_usd,
     COUNT(DISTINCT e.agent_name) as unique_agents
 FROM executions e
@@ -193,20 +210,50 @@ WHERE e.completed_at IS NOT NULL
 GROUP BY DATE(e.started_at)
 ORDER BY date DESC;
 
+-- View: Cost by model tier — answers "did this tier pay off"
+DROP VIEW IF EXISTS v_cost_by_model;
+CREATE VIEW IF NOT EXISTS v_cost_by_model AS
+SELECT
+    COALESCE(e.model, 'unrecorded') as model,
+    COALESCE(e.effort, '-') as effort,
+    COUNT(*) as executions,
+    SUM(CASE WHEN e.status = 'success' THEN 1 ELSE 0 END) as successful,
+    ROUND(AVG(e.duration_ms), 0) as avg_duration_ms,
+    SUM(COALESCE(m.tokens_input, 0)) as tokens_input,
+    SUM(COALESCE(m.tokens_output, 0)) as tokens_output,
+    SUM(COALESCE(m.tokens_cached, 0)) as tokens_cached,
+    SUM(COALESCE(m.tokens_cache_write, 0)) as tokens_cache_write,
+    -- Runs whose model could not be priced. Their cost is NULL, not 0, so they
+    -- must be surfaced rather than quietly averaged in as free.
+    SUM(CASE WHEN m.cost_usd IS NULL AND m.execution_id IS NOT NULL THEN 1 ELSE 0 END) as unpriced,
+    -- No COALESCE: a group whose costs are all NULL must total NULL ("unknown"),
+    -- not 0.0 ("free"). SUM ignores NULLs, so a mixed group still totals what is known.
+    ROUND(SUM(m.cost_usd), 4) as total_cost_usd,
+    ROUND(SUM(m.cost_usd) / NULLIF(SUM(CASE WHEN e.status = 'success' THEN 1 ELSE 0 END), 0), 4) as cost_per_success
+FROM executions e
+LEFT JOIN execution_metrics m ON m.execution_id = e.id
+WHERE e.completed_at IS NOT NULL
+GROUP BY e.model, e.effort
+ORDER BY total_cost_usd DESC;
+
 -- View: Agent performance
+DROP VIEW IF EXISTS v_agent_performance;
 CREATE VIEW IF NOT EXISTS v_agent_performance AS
 SELECT
     e.agent_name,
+    e.model,
+    e.effort,
     COUNT(*) as total_executions,
     SUM(CASE WHEN e.status = 'success' THEN 1 ELSE 0 END) as successful,
     SUM(CASE WHEN e.status = 'failed' THEN 1 ELSE 0 END) as failed,
     ROUND(AVG(e.duration_ms), 0) as avg_duration_ms,
-    ROUND(AVG(COALESCE(m.tokens_total, 0)), 0) as avg_tokens,
+    ROUND(AVG(COALESCE(m.tokens_total, 0) + COALESCE(m.tokens_cached, 0)
+        + COALESCE(m.tokens_cache_write, 0)), 0) as avg_tokens,
     ROUND(SUM(COALESCE(m.cost_usd, 0.0)), 4) as total_cost_usd
 FROM executions e
 LEFT JOIN execution_metrics m ON m.execution_id = e.id
 WHERE e.completed_at IS NOT NULL
-GROUP BY e.agent_name
+GROUP BY e.agent_name, e.model, e.effort
 ORDER BY total_executions DESC;
 
 -- ==============================================================================
@@ -273,6 +320,7 @@ CREATE INDEX IF NOT EXISTS idx_tool_usage_tool ON tool_usage(tool_name);
 CREATE INDEX IF NOT EXISTS idx_tool_usage_timestamp ON tool_usage(timestamp);
 
 -- View: Tool usage statistics
+DROP VIEW IF EXISTS v_tool_stats;
 CREATE VIEW IF NOT EXISTS v_tool_stats AS
 SELECT
     tool_name,
@@ -289,6 +337,7 @@ GROUP BY tool_name
 ORDER BY total_calls DESC;
 
 -- View: Tool efficiency (tokens per success)
+DROP VIEW IF EXISTS v_tool_efficiency;
 CREATE VIEW IF NOT EXISTS v_tool_efficiency AS
 SELECT
     tool_name,

@@ -14,7 +14,7 @@
 - Custom validation logic
 - Automated workflows
 - Security enforcement
-- Observability tracking
+- Execution logging
 - Quality gates
 
 ### Hook Events
@@ -86,26 +86,15 @@ Claude Code supports these hook events:
 - Set up environment
 - Create session tracking
 
-**Example** (from observability system):
+**Example** (session log setup):
 ```bash
 #!/bin/bash
-# init_observability_db.sh
+# init_session_log.sh
 
 METRICS_DIR=".claude-metrics"
-DB_FILE="${METRICS_DIR}/observability.db"
-
 mkdir -p "${METRICS_DIR}"
 
-if [[ ! -f "${DB_FILE}" ]]; then
-    echo "✅ Initializing observability database"
-    sqlite3 "${DB_FILE}" < schema.sql
-fi
-
-python3 << 'PYTHON'
-from db_helper import get_session_id
-session_id = get_session_id()
-print(f"Session ID: {session_id[:8]}...")
-PYTHON
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) session start" >> "${METRICS_DIR}/session.log"
 ```
 
 ### SessionEnd
@@ -203,33 +192,25 @@ sys.exit(0)
 }
 ```
 
-**Example** (from observability):
+**Example** (log subagent completions):
 ```python
 #!/usr/bin/env python3
 import sys
 import json
-from db_helper import update_execution, insert_metrics
+from pathlib import Path
 
 hook_input = json.loads(sys.stdin.read())
 
-if hook_input['tool']['name'] == 'Task':
-    execution_id = get_current_execution_id()
-    result = hook_input['result']
-
-    # Update execution
-    update_execution(
-        execution_id=execution_id,
-        status='success' if result['success'] else 'failed',
-        duration_ms=hook_input['duration_ms']
-    )
-
-    # Track metrics
+# The subagent tool is named 'Agent' ('Task' is its former name)
+if hook_input['tool']['name'] in ('Agent', 'Task'):
+    result = hook_input.get('result', {})
     usage = result.get('usage', {})
-    insert_metrics(
-        execution_id=execution_id,
-        tokens_input=usage.get('input_tokens', 0),
-        tokens_output=usage.get('output_tokens', 0)
-    )
+    agent = hook_input['tool']['parameters'].get('subagent_type', 'unknown')
+
+    Path('.claude-metrics').mkdir(exist_ok=True)
+    with open('.claude-metrics/agents.log', 'a') as f:
+        f.write(f"{agent} | {'ok' if result.get('success') else 'fail'} | "
+                f"{usage.get('input_tokens', 0)}in {usage.get('output_tokens', 0)}out\n")
 ```
 
 ### PrePrompt
@@ -298,7 +279,7 @@ Add logic in script:
 tool_name = hook_input['tool']['name']
 if tool_name == 'Task':
     agent_type = hook_input['tool']['parameters'].get('subagent_type')
-    if agent_type in ['framework-architect', 'framework-engineer']:
+    if agent_type in ['framework-system-architect', 'framework-engineer']:
         # Track this
         pass
     else:
@@ -379,15 +360,6 @@ if tool_name in ['Bash', 'Write'] and not has_permission():
 ---
 
 ## Framework Integration
-
-### With Local Observability
-
-The observability system uses 5 hooks:
-1. **SessionStart**: `init_observability_db.sh` - Initialize database
-2. **PreToolUse**: `observe_task_start.py` - Track agent launch
-3. **PostToolUse**: `observe_task_end.py` - Track completion
-4. **PostToolUse**: `track_artifact.py` - Track files/commands
-5. **PostToolUse**: `validate_execution.py` - Validate against expectations
 
 ### With Quality Gates
 
@@ -511,9 +483,9 @@ if get_budget() < 0:
 - Configuration: https://docs.claude.com/en/docs/claude-code/configuration
 
 **Framework Examples**:
-- Observability Hooks: `.claude-library/observability/scripts/`
-- Hook Configs: `.claude-library/observability/configs/`
-- Pattern Docs: `.claude-library/observability/patterns/`
+- Hook Scripts: `.claude-library/hooks/scripts/`
+- Hook Configs: `.claude-library/hooks/configs/`
+- Pattern Docs: `.claude-library/hooks/patterns/`
 
 ---
 

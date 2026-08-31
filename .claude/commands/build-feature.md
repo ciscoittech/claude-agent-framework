@@ -10,19 +10,48 @@
 ## Command Usage
 
 ```bash
-/build-feature <feature_name> [--description "Feature description"]
+/build-feature <feature_name> [--description "Feature description"] [--model opus|fable]
 ```
 
 **Arguments**:
 - `feature_name` (required): Name of the feature to build
 - `--description` (optional): Detailed feature description
+- `--model` (optional): Coordinator model. Defaults to `opus`.
 
 **Examples**:
 ```bash
 /build-feature task-validation
 /build-feature performance-optimizer --description "Optimize agent execution speed"
 /build-feature context-caching --description "Add context caching for faster loading"
+/build-feature registry-v3 --model fable   # opt-in escalation, see below
 ```
+
+---
+
+## Model Selection
+
+The coordinator runs on **`opus` at `xhigh` effort by default**. This is the right tier for
+essentially every feature build — do not change it without a reason.
+
+`--model fable` escalates **the coordinator only**. Use it when:
+- The design phase has already failed on opus for this feature, or
+- The feature spans >10 files or multiple subsystems and needs one coherent long-horizon plan.
+
+**Cost of escalating**: Fable is $10/$50 per 1M tokens vs Opus at $5/$25 — 2x. Thinking is
+always on (it cannot be disabled) and turns run substantially longer, so the real-world
+multiple on a full build is higher than 2x, not lower.
+
+**Hard constraint — the flag never propagates.** Every sub-agent launched in Phases 1-5 keeps
+the model and effort assigned to it in `REGISTRY.json`, regardless of `--model`. A Fable
+coordinator that spawned six Fable sub-agents would multiply the bill across the whole build
+for no benefit: the sub-agents are doing bounded, well-specified work that opus and sonnet
+already handle. When launching each sub-agent, pass its registry tier explicitly rather than
+inheriting the coordinator's.
+
+If a build is failing, try in this order before reaching for `--model fable`:
+1. Tighten `--description` — most design-phase failures are underspecified requests.
+2. Narrow the scope and build in two passes.
+3. Then escalate.
 
 ---
 
@@ -32,7 +61,7 @@ This is **the most important command** in the framework - it proves the framewor
 
 **The Meta-Building Process**:
 1. **Research Phase**: framework-research-specialist fetches relevant Claude Code patterns
-2. **Design Phase**: framework-architect designs feature following best practices
+2. **Design Phase**: framework-system-architect designs feature following best practices
 3. **Implementation Phase**: framework-senior-engineer implements (parallel with review prep)
 4. **Validation Phase**: framework-validation-engineer tests + framework-best-practice-auditor audits
 5. **Documentation Phase**: documentation-specialist creates usage docs
@@ -83,7 +112,7 @@ Task:
 
 ### Phase 2: Design (30s)
 
-**Agent**: framework-architect
+**Agent**: framework-system-architect
 **Execution**: Sequential (needs research results)
 
 ```markdown
@@ -111,7 +140,7 @@ Task:
     - Integration plan (how it fits in framework)
     - Success criteria (how to validate it works)
     - Performance targets (speed, token usage)
-  subagent_type: "framework-architect"
+  subagent_type: "framework-system-architect"
 ```
 
 ### Phase 3: Implementation (60s)
@@ -327,15 +356,9 @@ Summary:
 └─ Status: READY FOR MERGE
 
 Files Created/Modified:
-├─ .claude-library/observability/scripts/validate_task.py (new)
-├─ .claude-library/observability/schema.sql (modified)
-└─ .claude-library/observability/VALIDATION.md (new)
-
-Observability Tracking:
-├─ Execution ID: 42
-├─ Sub-agents launched: 6
-├─ All tracked in .claude-metrics/observability.db
-└─ Query: python3 .claude-library/observability/obs.py execution 42
+├─ .claude-library/hooks/scripts/validate_task.py (new)
+├─ .claude-library/hooks/configs/code-quality.json (modified)
+└─ .claude-library/hooks/VALIDATION.md (new)
 
 Quality Gates: ✅ ALL PASSED
 ├─ Tests: 13/13 (100%)
@@ -430,44 +453,6 @@ Build is blocked when:
 
 ---
 
-## Integration with Observability
-
-**Every build is fully tracked**:
-
-```sql
--- View the feature build
-SELECT * FROM v_recent_executions
-WHERE agent_name = 'framework-feature-builder'
-ORDER BY started_at DESC
-LIMIT 1;
-
--- See all sub-agents launched
-SELECT * FROM v_agent_hierarchy
-WHERE root_agent = 'framework-feature-builder';
-
--- Check validation results
-SELECT * FROM validations
-WHERE execution_id = (
-    SELECT id FROM executions
-    WHERE agent_name = 'framework-feature-builder'
-    ORDER BY started_at DESC LIMIT 1
-);
-```
-
-**CLI queries**:
-```bash
-# View recent builds
-python3 .claude-library/observability/obs.py recent
-
-# Deep dive into specific build
-python3 .claude-library/observability/obs.py execution <id>
-
-# See all framework-feature-builder performance
-python3 .claude-library/observability/obs.py agents
-```
-
----
-
 ## Integration with Other Commands
 
 ### Before Building
@@ -483,9 +468,6 @@ python3 .claude-library/observability/obs.py agents
 ```bash
 # Verify framework still compliant
 /audit-practices
-
-# If issues found, improve
-/self-improve
 ```
 
 ### Complete Workflow
@@ -514,7 +496,6 @@ If the Claude Agent Framework can:
 1. Use its own agents (via Task tool)
 2. Follow its own patterns (via context files)
 3. Validate its own quality (via auditor)
-4. Track its own progress (via observability)
 5. Build new features for itself
 
 Then it proves the framework can build **anything**.
@@ -530,7 +511,7 @@ Then it proves the framework can build **anything**.
 **What Happens**:
 1. framework-feature-builder reads the request
 2. Launches framework-research-specialist to research validation patterns
-3. Launches framework-architect to design the validation system
+3. Launches framework-system-architect to design the validation system
 4. Launches framework-senior-engineer + framework-code-reviewer in parallel
 5. Engineer creates validate_task.py hook and updates schema
 6. Launches framework-validation-engineer to test it
@@ -539,7 +520,7 @@ Then it proves the framework can build **anything**.
 9. Validates all quality gates
 10. Reports: READY FOR MERGE
 
-**Result**: New feature built entirely by framework's own agents, following its own best practices, tracked by its own observability system.
+**Result**: New feature built entirely by framework's own agents, following its own best practices.
 
 **Proof**: Framework can build itself = Framework can build anything.
 
@@ -549,12 +530,12 @@ Then it proves the framework can build **anything**.
 
 ### If Agent Launch Fails
 ```markdown
-❌ Phase 2 Failed: Could not launch framework-architect
+❌ Phase 2 Failed: Could not launch framework-system-architect
 
 Error: Agent not found in REGISTRY.json
 
 Resolution:
-1. Check REGISTRY.json has framework-architect entry
+1. Check REGISTRY.json has framework-system-architect entry
 2. Verify agent file exists at path
 3. Re-run /build-feature after fix
 ```
@@ -619,21 +600,6 @@ Recommendations:
 
 ---
 
-## Observability Metrics
-
-Tracked for every build:
-- Total duration (target: <3 min)
-- Tokens used (all phases)
-- Cost in USD
-- Number of sub-agents launched
-- Quality gate pass/fail
-- Compliance score
-- Test pass rate
-- Performance vs targets
-
-**Query with**:
-```bash
-python3 .claude-library/observability/obs.py agents
 # Look for: framework-feature-builder stats
 ```
 

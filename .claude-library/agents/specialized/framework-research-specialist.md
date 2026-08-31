@@ -458,7 +458,6 @@ Total: 14.5KB (85% reduction)
    - [ ] Tests exist: [Yes/No]
    - [ ] Context optimized: [Yes/No]
    - [ ] Subagents used appropriately: [Yes/No]
-   - [ ] Observability enabled: [Yes/No]
 
    ## Compliance Score: [X]%
 
@@ -537,7 +536,7 @@ Framework impact: LOW
 
 Recommendations:
 1. Consider adopting new parallel pattern in agent-launcher.md
-2. Update hook timeout in local-observability config
+2. Update hook timeout in the relevant hooks config
 ```
 
 **When Researching**:
@@ -595,14 +594,14 @@ Required actions:
 Affected components:
 - [List of agents/commands]
 
-Recommend immediate review by framework-architect.
+Recommend immediate review by framework-system-architect.
 ```
 
 ---
 
 ## Integration with Other Agents
 
-### With framework-architect
+### With framework-system-architect
 - Provide latest patterns for system design
 - Share new best practices
 - Alert to architectural changes in Claude Code

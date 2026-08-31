@@ -31,7 +31,6 @@
    - Workflow structure
    - Subagent implementation
    - Context optimization
-   - Observability integration
    - Documentation quality
    - Performance compliance
 
@@ -101,7 +100,6 @@ The Claude Agent Framework demonstrates **good compliance** with Claude Code bes
 
 **Key Strengths**:
 - Excellent context optimization (10/10)
-- Comprehensive observability (9/10)
 - Strong workflow patterns (9/10)
 
 **Areas for Improvement**:
@@ -121,7 +119,6 @@ The Claude Agent Framework demonstrates **good compliance** with Claude Code bes
 | Workflow Structure | 9/10 | ✅ Excellent | Strong | +1 |
 | Subagent Implementation | 7/10 | ⚠️ Acceptable | Needs work | 0 |
 | Context Optimization | 10/10 | ✅ Excellent | Perfect | +2 |
-| Observability Integration | 9/10 | ✅ Excellent | Strong | +3 |
 | Documentation Quality | 8/10 | ✅ Good | Solid | 0 |
 | Performance Compliance | 9/10 | ✅ Excellent | Strong | +1 |
 | **TOTAL** | **69/80** | **87%** | **B - Good** | **+5%** |
@@ -140,28 +137,7 @@ The Claude Agent Framework demonstrates **good compliance** with Claude Code bes
 
 **Best Practice Alignment**: Exceeds recommendations from claude-code-best-practices.md
 
-### Observability Integration (9/10)
-**What's Working**:
-- Local SQLite tracking operational
-- All executions captured
-- Sub-agent hierarchy tracked
-- Validation system implemented
-- CLI tool functional
-
-**Minor Gap**: Could add more task expectations (-1 point)
-
-### Workflow Structure (9/10)
-**What's Working**:
-- Follows Explore → Plan → Code → Commit
-- Clear command definitions
-- Appropriate agent selection
-- Performance targets set
-
-**Minor Gap**: Some commands could use TDD validation (-1 point)
-
----
-
-## ⚠️ Areas for Improvement (70-89% compliance)
+### ⚠️ Areas for Improvement (70-89% compliance)
 
 ### Subagent Implementation (7/10)
 **Findings**:
@@ -240,7 +216,7 @@ No critical violations detected. Framework maintains quality standards.
 ### LOW Priority (Optional enhancements)
 4. **Update CLAUDE.md with Recent Features**
    - File: `CLAUDE.md`
-   - Action: Add observability and self-building sections
+   - Action: Add self-building sections
    - Effort: 30 minutes
    - Benefit: Better project overview
 
@@ -253,7 +229,7 @@ No critical violations detected. Framework maintains quality standards.
 | Sep 15, 2025 | 82% | B | - |
 | Oct 4, 2025 | 87% | B | ↑ +5% |
 
-**Analysis**: Framework is improving. Observability addition (+3 points) and context optimization (+2 points) drove improvement. Continue current trajectory.
+**Analysis**: Framework is improving. Context optimization (+2 points) drove improvement. Continue current trajectory.
 
 **Projection**: If HIGH priority items addressed, next audit could reach 90%+ (A grade).
 
@@ -379,24 +355,9 @@ Command succeeds when:
 # Monthly cycle
 /update-docs
 /audit-practices
-/self-improve    # Based on audit findings
 ```
 
 ---
-
-## Observability
-
-Tracked metrics:
-- Audit duration
-- Compliance score
-- Changes from previous audit
-- Categories needing attention
-- Tokens and cost
-
-Query with:
-```bash
-python3 .claude-library/observability/obs.py execution <id>
-```
 
 ---
 

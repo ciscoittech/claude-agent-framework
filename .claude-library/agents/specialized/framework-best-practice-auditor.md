@@ -190,7 +190,7 @@ Bash(
 
 **Audit Philosophy**: Search systematically, validate selectively, report comprehensively
 
-**Token Budget**: 60K tokens typical for full framework audit (8 categories)
+**Token Budget**: 60K tokens typical for full framework audit (7 categories)
 
 **Allocation Strategy**:
 1. **Audit Phase** (70% - ~42K tokens): Systematic compliance checking
@@ -216,7 +216,7 @@ Cost: 50KB+ for simple checks
 Grep("tools.*:", glob="agents/**/*.md") → Read specific sections only
 Cost: 5KB for same information
 
-❌ Bad: Sequential auditing of 8 categories
+❌ Bad: Sequential auditing of 7 categories
 Audit CLAUDE.md → Audit tools → Audit workflows → ... (8 sequential checks)
 Cost: High tokens, slow
 
@@ -243,7 +243,7 @@ Cost: Lower tokens, faster
    Targeted Read with offset/limit for flagged files
 
 4. Calculate scores and generate report
-   Systematic scoring across all 8 categories
+   Systematic scoring across all 7 categories
 
 # Targeted Component Audit
 1. Grep to find component location
@@ -288,11 +288,6 @@ Bash("find .claude -type f -exec wc -c {} + | sort -n")
 → Check file sizes against <5KB limit
 Cost: 1KB
 
-# 6. Observability (Config check)
-Grep("hooks.*enabled", glob="**/*.json")
-Read REGISTRY.json observability section
-Cost: 3KB
-
 # 7. Documentation Quality (Grep coverage)
 Grep("## Available Tools", glob="agents/**/*.md", output_mode="count")
 Grep("## Token Efficiency", glob="agents/**/*.md", output_mode="count")
@@ -323,7 +318,7 @@ Cost: 3KB
 - ✅ Read selectively only flagged or suspicious files
 - ✅ Parallel Grep searches for independent categories
 - ✅ Bash for metrics (file sizes, counts) not content search
-- ✅ Systematic scoring: Check all 8 categories every audit
+- ✅ Systematic scoring: Check all 7 categories every audit
 - ✅ Focus on deviations, not compliant files
 
 **Tool Efficiency for Auditing**:
@@ -343,12 +338,12 @@ Cost: 3KB
 1. Read all agents (20 files × 5KB) → 100KB
 2. Read all contexts (10 files × 3KB) → 30KB
 3. Read all configs (5 files × 2KB) → 10KB
-4. Manual check all 8 categories → 10KB
+4. Manual check all 7 categories → 10KB
 Total: 150KB
 
 # Efficient Approach (25KB tokens)
 1. Glob inventory (50 files) → 0.5KB
-2. Grep 8 category patterns in parallel → 10KB
+2. Grep 7 category patterns in parallel → 10KB
 3. Read 5 flagged files selectively → 10KB
 4. Bash metrics (sizes, counts) → 2KB
 5. Generate report → 3KB
@@ -358,14 +353,14 @@ Total: 25.5KB (83% reduction)
 **Audit Scoring with Minimal Tokens**:
 
 ```markdown
-For each of 8 categories:
+For each of 7 categories:
 1. Grep for compliance patterns (0.5-2KB each)
 2. Count matches vs expected
 3. Calculate score based on coverage
 4. Flag files for detailed review if score < 7/10
 5. Read flagged files only (selective validation)
 
-Total: ~20KB for complete 8-category audit
+Total: ~20KB for complete 7-category audit
 ```
 
 ---
@@ -484,11 +479,6 @@ Score: [X]/10
 Score: [X]/10
 ```
 
-### 6. Observability Integration
-
-```markdown
-## Observability Audit
-
 ### Tracking Enabled
 - [ ] Hooks configured
 - [ ] Database initialized
@@ -573,7 +563,6 @@ Score: [X]/10
    - Workflow structure
    - Subagent implementation
    - Context optimization
-   - Observability integration
    - Documentation quality
    - Performance compliance
 
@@ -611,7 +600,6 @@ Score: [X]/10
    | Workflows | [X]/10 | [✅/⚠️/❌] |
    | Subagents | [X]/10 | [✅/⚠️/❌] |
    | Context | [X]/10 | [✅/⚠️/❌] |
-   | Observability | [X]/10 | [✅/⚠️/❌] |
    | Documentation | [X]/10 | [✅/⚠️/❌] |
    | Performance | [X]/10 | [✅/⚠️/❌] |
 
@@ -774,14 +762,12 @@ See: `.claude-library/patterns/output-format-guide.md`
 | Workflows | 9/10 | ✅ Excellent |
 | Subagents | 7/10 | ⚠️ Acceptable |
 | Context | 10/10 | ✅ Excellent |
-| Observability | 9/10 | ✅ Excellent |
 | Documentation | 8/10 | ✅ Good |
 | Performance | 9/10 | ✅ Excellent |
 
 ## ✅ Strengths
 
 1. **Context Management**: Excellent optimization, well under 5KB limit
-2. **Observability**: Comprehensive tracking with local SQLite
 3. **Workflows**: Follow Explore → Plan → Code pattern
 4. **Performance**: All targets met or exceeded
 
@@ -812,7 +798,6 @@ See: `.claude-library/patterns/output-format-guide.md`
    - Define quality criteria
 
 3. **[LOW]** Update CLAUDE.md with recent features
-   - Add observability section
    - Document self-building capabilities
    - Include usage examples
 
@@ -851,7 +836,7 @@ Status: **Improving** ✅
 - Provides quality gates
 - Ensures compliance
 
-### With framework-architect
+### With framework-system-architect
 - Reviews design decisions
 - Validates architecture choices
 - Suggests best practice patterns
@@ -904,7 +889,6 @@ Auditing categories:
 ✅ Workflows: 9/10 (Excellent)
 ⚠️ Subagents: 7/10 (Acceptable - needs context)
 ✅ Context: 10/10 (Excellent)
-✅ Observability: 9/10 (Excellent)
 ✅ Documentation: 8/10 (Good)
 ✅ Performance: 9/10 (Excellent)
 
@@ -920,7 +904,6 @@ Full report generated: See above
 Recommendations:
 1. Enhance Task prompts with detailed context
 2. Add performance targets to all agents
-3. Update CLAUDE.md with observability info
 
 Framework is in good shape ✅
 Continue current practices and address HIGH priority items.

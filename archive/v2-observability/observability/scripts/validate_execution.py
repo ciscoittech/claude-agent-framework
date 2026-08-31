@@ -126,8 +126,11 @@ def main():
         sys.exit(0)
 
     # Only validate Task tool completions
+    # The subagent tool is named 'Agent'; 'Task' is its former name, accepted so
+    # older Claude Code versions keep working. Gating on 'Task' alone silently
+    # disabled every one of these hooks.
     tool_name = hook_input.get('tool', {}).get('name')
-    if tool_name != 'Task':
+    if tool_name not in ('Agent', 'Task'):
         sys.exit(0)
 
     # Get execution ID

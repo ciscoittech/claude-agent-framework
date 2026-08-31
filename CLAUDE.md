@@ -22,13 +22,8 @@ The Claude Agent Framework is a comprehensive system for building intelligent mu
 
 ### Optional Features
 
-- **Local Observability** (`.claude-library/observability/`): SQLite-based agent execution tracking
-  - Track agent launches, sub-agents, duration, token usage, and costs
-  - Validate task outputs against expectations
-  - Project-local database (`.claude-metrics/observability.db`)
-  - CLI tool (`obs.py`) for querying and analysis
-  - Zero cloud dependencies, 100% offline
-  - See `README.md` and `TEST_RESULTS.md` for details
+- **Hooks** (`.claude-library/hooks/`): Deterministic shell commands at workflow points —
+  auto-format, block dangerous operations, validate agent output. Disabled by default.
 
 ## Working with the Framework
 
@@ -80,20 +75,29 @@ The framework follows these principles (in priority order):
 
 Generated systems follow this pattern:
 ```
-.claude/                    # Minimal auto-loaded
-├── agent-launcher.md      # Dynamic agent router
-├── settings.json          # Project metadata
-├── MEMORY.md              # Cross-conversation memory index
-├── agents/                # Custom subagent types
-├── rules/                 # Path-specific rules
-└── commands/              # User workflows
+.claude/                    # Auto-loaded — keep lean
+├── agents/                # Subagent definitions (frontmatter + brief persona)
+├── commands/              # User workflows, invoked as /command-name
+├── rules/                 # Path-specific rules (optional)
+├── settings.json          # Project metadata, permissions, hooks
+└── MEMORY.md              # Cross-conversation memory index
 
-.claude-library/           # On-demand library
-├── REGISTRY.json         # Central configuration (v2.0)
-├── agents/               # Specialized agents
+.claude-library/           # On-demand — size is not a constraint here
+├── REGISTRY.json         # Central configuration and source of truth
+├── agents/               # Full agent playbooks
 ├── contexts/             # Project knowledge
-└── skills/               # Skill definitions
+├── patterns/             # Tool-usage guidance
+└── hooks/                # Optional deterministic control
 ```
+
+**Agents live in two places by design.** `.claude/agents/<name>.md` is the real subagent
+definition — YAML frontmatter (`name`, `description`, `model`, `effort`, `tools`) plus a
+short persona. Its body becomes that subagent's system prompt and is paid on every launch,
+so keep it under ~100 lines. The full playbook stays in `.claude-library/agents/` and is
+read on demand.
+
+`REGISTRY.json` is the source of truth for tiers; the stubs are generated to match it, and
+`test_v2_structure.py` fails if the two drift.
 
 ## Common Development Tasks
 
@@ -118,30 +122,22 @@ When updating core documentation:
 ## Performance Optimization Targets
 
 The framework aims for:
-- 97% reduction in auto-loaded context (250KB -> 8KB)
+- Minimal auto-loaded context: `.claude/` under 10KB (under 5KB for a generated system)
+- High cache hit rate on a stable prompt prefix
 - 3x faster execution through parallel agents
 - <2 minute setup time for new projects
 - Support for any tech stack without modification
 
-## Local Observability System
+**On the context-reduction target.** Earlier versions led with "97% reduction in
+auto-loaded context (250KB -> 8KB)". That was the right optimization when context was
+scarce and every token was billed fresh. It is no longer the metric that matters most:
+all current models except Haiku 4.5 have a 1M window, and cached reads bill at roughly a
+tenth of fresh input.
 
-Optional local observability for tracking agent execution. SQLite-based, zero cloud dependencies, 100% offline. Tracks agent launches, sub-agents, duration, token usage, costs, and validates task outputs.
+Minimizing bytes and maximizing cache hits pull in opposite directions — a context set
+assembled fresh per task is small but never caches. For an agent that runs repeatedly, a
+larger *stable* bundle costs less than a smaller one rebuilt each call. Keep `.claude/`
+lean because it is auto-loaded on every session; beyond that, optimize for prefix
+stability, not raw size.
 
-**Location**: `.claude-library/observability/`
-**Database**: `.claude-metrics/observability.db` (project-local)
-**CLI**: `python3 .claude-library/observability/obs.py recent|agents|execution <id>`
-**Status**: Production Ready (100% pass rate, 13/13 tests)
-
-Enable in `.claude-library/REGISTRY.json`:
-```json
-{
-  "settings": {
-    "hooks": {
-      "enabled": true,
-      "configs": [".claude-library/observability/configs/local-observability.json"]
-    }
-  }
-}
-```
-
-See `.claude-library/observability/README.md` for full documentation.
+See `MODEL_SELECTION.md` for the full cost-lever ordering.

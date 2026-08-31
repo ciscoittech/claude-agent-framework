@@ -266,70 +266,6 @@ fi
 exit 0  # Never block
 ```
 
-## Integration with Observability
-
-### Combined Pattern: Hooks + Observability
-
-When both are enabled, hooks validate and observability tracks:
-
-```python
-#!/usr/bin/env python3
-"""Validation with observability tracking"""
-
-import sys
-from pathlib import Path
-import json
-
-# Check if observability is enabled
-registry = json.loads(Path('.claude-library/REGISTRY.json').read_text())
-obs_enabled = registry.get('settings', {}).get('observability', {}).get('enabled', False)
-
-def validate_with_tracking(agent_name, claimed_outputs):
-    """Validate and optionally track to Logfire"""
-
-    validation_results = {
-        'agent': agent_name,
-        'claimed': claimed_outputs,
-        'validated': [],
-        'missing': [],
-        'failed': []
-    }
-
-    # Perform validation
-    for file_path in claimed_outputs:
-        if Path(file_path).exists():
-            validation_results['validated'].append(file_path)
-        else:
-            validation_results['missing'].append(file_path)
-
-    # Track to observability if enabled
-    if obs_enabled:
-        try:
-            from observability.logfire_helper import log_validation_result
-            log_validation_result(agent_name, validation_results)
-        except ImportError:
-            pass  # Observability not available
-
-    # Log locally
-    log_file = ".claude-metrics/validation.log"
-    with open(log_file, 'a') as f:
-        import json
-        from datetime import datetime
-        f.write(f"{datetime.now()} | {json.dumps(validation_results)}\n")
-
-    # Report to user
-    if validation_results['missing']:
-        print(f"⚠️  Agent {agent_name} validation issues:")
-        for missing in validation_results['missing']:
-            print(f"   - Missing: {missing}")
-
-    return len(validation_results['missing']) == 0
-
-if __name__ == "__main__":
-    # Example usage
-    validate_with_tracking('architect', ['schema.md', 'api_spec.md'])
-```
-
 ## Best Practices
 
 ### 1. Validate Immediately After Agent Completes
@@ -443,6 +379,5 @@ Agent validation hooks provide:
 - ✅ Improve agent reliability
 - ✅ Audit trail of agent work
 - ✅ Identify problematic agents
-- ✅ Works with or without observability
 
 Start with simple file existence checks, add content validation, then layer in test/build verification as needed.

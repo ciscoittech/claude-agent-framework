@@ -696,33 +696,53 @@ async function aggregateResults(agents) {
 
 > **Diminishing returns**: Beyond 5-7 parallel agents, coordination overhead reduces gains. The sweet spot is 3-5 parallel agents for most tasks.
 
-### Effort Levels <!-- NEW in v2.0 -->
+### Model Tiers and Effort Levels
 
-Use the `model` parameter to match agent cost/speed to task complexity:
+**These are two independent dials.** Model sets the capability floor; effort sets how hard
+the model thinks. An Opus agent at `low` effort and a Haiku agent are different things —
+choosing one does not choose the other.
 
-| Model | Use For | Speed | Cost |
-|-------|---------|-------|------|
-| `model: "haiku"` | Simple tasks: linting, formatting, file moves | Fastest | Lowest |
-| `model: "sonnet"` | Standard tasks: implementation, testing, review | Fast | Medium |
-| `model: "opus"` | Complex reasoning: architecture, debugging, security | Slower | Highest |
+**Model** — capability floor:
 
-```javascript
-// Fast/cheap: use haiku for simple file operations
-<Task>
-  <subagent_type>general-purpose</subagent_type>
-  <model>haiku</model>
-  <description>Format and lint check</description>
-  <prompt>Run linter and fix formatting issues in src/</prompt>
-</Task>
+| Model | Use for | Context | Cost /1M |
+|-------|---------|---------|----------|
+| `haiku` | Mechanical work: file existence checks, formatting, simple lookups | 200K | $1 / $5 |
+| `sonnet` | Standard work: implementation, testing, docs, research | 1M | $2 / $10 |
+| `opus` | Design, review, debugging, anything requiring judgment | 1M | $5 / $25 |
+| `fable` | Opt-in escalation only: long-horizon, multi-subsystem work | 1M | $10 / $50 |
 
-// Complex: use opus for architecture decisions
-<Task>
-  <subagent_type>general-purpose</subagent_type>
-  <model>opus</model>
-  <description>System architecture review</description>
-  <prompt>Review system architecture for scalability and security concerns</prompt>
-</Task>
+**Effort** — reasoning depth: `low` → `medium` → `high` → `xhigh` → `max`. `xhigh` is the
+Claude Code default and the sweet spot for most coding and agentic work. Use `low` for
+mechanical subagents, `high`/`xhigh` for design and review, `max` only when correctness
+matters more than cost.
+
+```python
+# Mechanical: cheap model, shallow reasoning
+Agent(
+    description="Format and lint check",
+    prompt="Run linter and fix formatting issues in src/",
+    subagent_type="general-purpose",
+    model="haiku",
+)
+
+# Judgment: capable model, deep reasoning
+Agent(
+    description="System architecture review",
+    prompt="Review system architecture for scalability and security concerns",
+    subagent_type="framework-system-architect",
+    model="opus",
+)
 ```
+
+**Two constraints worth remembering:**
+
+- Haiku is the only current model at 200K; everything else is 1M. Never route
+  long-context work to it.
+- A coordinator never propagates its own model to the agents it launches. Each sub-agent
+  runs at its own tier from `REGISTRY.json`. A coordinator escalated to `fable` that leaked
+  its tier into six sub-agents would multiply the cost of the whole workflow for no benefit.
+
+See `MODEL_SELECTION.md` for per-agent tier assignments.
 
 ---
 
@@ -917,6 +937,34 @@ class ContextHierarchy {
 | Cached Load | 0.1s | 10KB | 85% |
 | Pruned Load | 0.3s | 5KB | 60% |
 
+### Prompt Caching and Prefix Stability
+
+Cached reads bill at roughly a tenth of fresh input, which makes caching the largest cost
+lever in a multi-agent system. Caching is a **prefix match**: any byte change anywhere in
+the prefix invalidates everything after it.
+
+Assemble every agent prompt stable-first:
+
+```
+persona → pinned contexts → volatile task
+```
+
+**This is in direct tension with lazy loading.** Lazy loading minimizes bytes resident;
+caching rewards those bytes staying byte-identical between runs. Selecting a different
+context set per task produces a different prefix every time and a near-zero hit rate — so
+a larger *stable* bundle can cost less than a smaller one rebuilt each call.
+
+Resolve the tension by how often the agent runs:
+
+| Agent runs | Favor | Why |
+|---|---|---|
+| Repeatedly, same shape | Fixed context bundle | Prefix stays identical; cache hits compound |
+| Once, ad hoc | Lazy loading | No second call to amortize a cache write |
+
+Silent invalidators to audit for: a timestamp or run ID in the persona, unsorted JSON, a
+tool list whose order varies, or interpolating the task into the middle of the prompt
+instead of the end.
+
 ### Extended Context <!-- NEW in v2.0 -->
 
 Claude Code now supports up to 1M token context windows. This changes context strategy:
@@ -933,7 +981,7 @@ Claude Code now supports up to 1M token context windows. This changes context st
 | Agent persona/instructions | <2KB | Keep personas focused |
 | Project context (CLAUDE.md) | <5KB | Auto-loaded, keep lean |
 | Domain contexts | 5-20KB each | Loaded on demand |
-| Code being analyzed | Up to 100KB | Use Grep to find relevant sections first |
+| Code being analyzed | Grep first, then Read | Locate before loading; relevance beats volume |
 | Previous agent output | <10KB | Summarize, don't pass raw output |
 
 **Anti-pattern**: Loading entire codebases into context. Even with 1M tokens, relevance matters more than volume. A focused 10KB context outperforms an unfocused 500KB dump.

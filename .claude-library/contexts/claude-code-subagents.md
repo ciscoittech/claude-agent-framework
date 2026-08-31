@@ -112,11 +112,11 @@ Task(
 ### Specialized Types (Framework-Specific)
 **Note**: Custom subagent types are defined in `.claude-library/REGISTRY.json`
 
-Example custom types:
-- `framework-architect`: System design
-- `framework-engineer`: Implementation
-- `framework-reviewer`: Code review
-- `framework-validator`: Testing
+Example custom types (these are the real registry agents; see `REGISTRY.json`):
+- `framework-system-architect`: System design
+- `framework-senior-engineer`: Implementation
+- `framework-code-reviewer`: Code review
+- `framework-validation-engineer`: Testing
 
 ### Custom Subagent Types (Agent Teams)
 
@@ -257,7 +257,6 @@ test = Task(
 **Monitor Performance**:
 - Track subagent duration
 - Measure parallel speedup
-- Use observability for insights
 
 ### Advanced Subagent Features
 
@@ -304,14 +303,6 @@ Available: "opus" (complex), "sonnet" (balanced), "haiku" (fast/cheap)
 ---
 
 ## Framework Integration
-
-### With Local Observability
-
-Subagents are automatically tracked:
-- `observe_task_start.py` captures launch
-- `observe_task_end.py` captures completion
-- `track_artifact.py` captures outputs
-- `validate_execution.py` validates against expectations
 
 ### With Agent Launcher
 
@@ -371,7 +362,7 @@ research_results = [
 design = Task(
     description="Design system",
     prompt=f"Design based on:\n{research_results}",
-    subagent_type="framework-architect"
+    subagent_type="framework-system-architect"
 )
 
 # Phase 3: Implement (parallel)
@@ -384,7 +375,7 @@ implementations = [
 tests = Task(
     description="Test all",
     prompt=f"Test:\n{implementations}",
-    subagent_type="framework-validator"
+    subagent_type="framework-validation-engineer"
 )
 ```
 
@@ -416,7 +407,7 @@ coordinator = Task(
 
     Coordinate their work and ensure consistency.
     """,
-    subagent_type="framework-architect"
+    subagent_type="framework-system-architect"
 )
 # The coordinator launches its own subagents
 ```
@@ -433,12 +424,11 @@ coordinator = Task(
 ### Slow Execution
 - Minimize context in prompts
 - Use parallel where possible
-- Check observability for bottlenecks
 
 ### Inconsistent Results
 - Provide more context
 - Use sequential for dependencies
-- Validate outputs with observer
+- Verify claimed outputs actually exist
 
 ---
 
@@ -451,7 +441,7 @@ coordinator = Task(
 **Framework Docs**:
 - Agent Patterns: `AGENT_PATTERNS.md`
 - Performance: `performance-optimization.md`
-- Observability: `.claude-library/observability/README.md`
+- Hooks: `.claude-library/hooks/README.md`
 
 ---
 

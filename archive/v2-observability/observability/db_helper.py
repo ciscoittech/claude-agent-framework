@@ -13,6 +13,12 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
+# Local module; same directory. Provides model rates and calculate_cost().
+try:
+    import pricing
+except ImportError:  # imported as part of a package
+    from . import pricing
+
 # Database location (project-local)
 DB_PATH = Path('.claude-metrics/observability.db')
 SCHEMA_PATH = Path(__file__).parent / 'schema.sql'
@@ -41,19 +47,54 @@ def get_db():
         conn.close()
 
 
+# Columns added after the original schema shipped. ALTER TABLE ADD COLUMN is not
+# idempotent in SQLite and executescript() cannot branch, so migrations run here.
+MIGRATIONS = [
+    ("executions", "model", "TEXT"),
+    ("executions", "effort", "TEXT"),
+    ("execution_metrics", "tokens_cache_write", "INTEGER DEFAULT 0"),
+]
+
+
+def _apply_migrations(conn):
+    """Add any missing columns. Safe to run on every init."""
+    applied = []
+    for table, column, coltype in MIGRATIONS:
+        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if not existing:
+            continue  # table doesn't exist yet; schema.sql will create it
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+            applied.append(f"{table}.{column}")
+    return applied
+
+
 def init_database():
-    """Initialize database with schema if it doesn't exist"""
+    """
+    Initialize the database: apply pending column migrations, then the schema.
+
+    Migrations MUST run before executescript(). schema.sql contains statements
+    that reference columns added by migrations (e.g. an index on executions.model).
+    On a database predating those columns, `CREATE TABLE IF NOT EXISTS` is a no-op,
+    so such a statement fails, the whole script rolls back, and the migration that
+    would have repaired the database never runs — leaving it permanently broken.
+    """
     # Create directory
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    # Apply schema
-    if SCHEMA_PATH.exists():
-        with get_db() as conn:
-            schema_sql = SCHEMA_PATH.read_text()
-            conn.executescript(schema_sql)
-        return True
-    else:
+    if not SCHEMA_PATH.exists():
         raise FileNotFoundError(f"Schema file not found: {SCHEMA_PATH}")
+
+    # 1. Bring an existing database up to the current column set. On a fresh
+    #    database the tables don't exist yet and this is a no-op.
+    with get_db() as conn:
+        _apply_migrations(conn)
+
+    # 2. Create anything missing (tables, indexes, views) and refresh views.
+    with get_db() as conn:
+        conn.executescript(SCHEMA_PATH.read_text())
+
+    return True
 
 
 # ==============================================================================
@@ -104,13 +145,41 @@ def end_session():
 
 
 # ==============================================================================
+# AGENT TIER RESOLUTION
+# ==============================================================================
+
+# REGISTRY.json is the source of truth for each agent's model and effort.
+REGISTRY_PATH = Path('.claude-library/REGISTRY.json')
+_registry_cache: Optional[Dict[str, Any]] = None
+
+
+def resolve_agent_tier(agent_name: str) -> tuple:
+    """
+    Look up (model, effort) for an agent from REGISTRY.json.
+
+    Returns (None, None) for an unknown agent or an unreadable registry — a
+    missing tier must never break tracking, it just means cost can't be computed.
+    """
+    global _registry_cache
+    if _registry_cache is None:
+        try:
+            _registry_cache = json.loads(REGISTRY_PATH.read_text())
+        except (OSError, json.JSONDecodeError):
+            _registry_cache = {}
+    agent = _registry_cache.get('agents', {}).get(agent_name, {})
+    return agent.get('model'), agent.get('effort')
+
+
+# ==============================================================================
 # EXECUTION TRACKING
 # ==============================================================================
 
 def insert_execution(
     agent_name: str,
     task_description: Optional[str] = None,
-    parent_id: Optional[int] = None
+    parent_id: Optional[int] = None,
+    model: Optional[str] = None,
+    effort: Optional[str] = None
 ) -> int:
     """
     Insert new execution record
@@ -119,6 +188,11 @@ def insert_execution(
         agent_name: Name of the agent being executed
         task_description: Description of the task
         parent_id: ID of parent execution (for sub-agents)
+        model: Model tier this execution ran at (haiku/sonnet/opus/fable)
+        effort: Reasoning effort (low/medium/high/xhigh/max)
+
+    model and effort are optional so existing hook scripts keep working; without
+    them cost cannot be computed for the execution.
 
     Returns:
         Execution ID
@@ -127,9 +201,10 @@ def insert_execution(
 
     with get_db() as conn:
         cursor = conn.execute("""
-            INSERT INTO executions (session_id, agent_name, task_description, parent_execution_id, status)
-            VALUES (?, ?, ?, ?, 'running')
-        """, (session_id, agent_name, task_description, parent_id))
+            INSERT INTO executions
+                (session_id, agent_name, task_description, parent_execution_id, status, model, effort)
+            VALUES (?, ?, ?, ?, 'running', ?, ?)
+        """, (session_id, agent_name, task_description, parent_id, model, effort))
         return cursor.lastrowid
 
 
@@ -168,15 +243,50 @@ def insert_metrics(
     tokens_input: int = 0,
     tokens_output: int = 0,
     tokens_cached: int = 0,
-    cost_usd: float = 0.0
+    tokens_cache_write: int = 0,
+    cost_usd: Optional[float] = None
 ):
-    """Insert or update execution metrics"""
+    """
+    Insert or update execution metrics.
+
+    tokens_cached is cache READS; tokens_cache_write is cache CREATION. Both are
+    separate from tokens_input.
+
+    If cost_usd is not supplied it is computed from the execution's recorded model.
+    A model that cannot be priced yields NULL (cost unknown) rather than 0.0 —
+    storing zero would make an unpriced tier look free. Pass an explicit cost_usd
+    only when you have an authoritative figure.
+    """
+    if cost_usd is None:
+        # Single connection: read the tier and write the metrics atomically.
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT model FROM executions WHERE id = ?", (execution_id,)
+            ).fetchone()
+            cost_usd = pricing.calculate_cost(
+                row['model'] if row else None,
+                tokens_input=tokens_input,
+                tokens_output=tokens_output,
+                tokens_cached=tokens_cached,
+                tokens_cache_write=tokens_cache_write,
+            )
+            conn.execute("""
+                INSERT OR REPLACE INTO execution_metrics
+                (execution_id, tokens_input, tokens_output, tokens_cached,
+                 tokens_cache_write, cost_usd)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (execution_id, tokens_input, tokens_output, tokens_cached,
+                  tokens_cache_write, cost_usd))
+        return
+
     with get_db() as conn:
         conn.execute("""
             INSERT OR REPLACE INTO execution_metrics
-            (execution_id, tokens_input, tokens_output, tokens_cached, cost_usd)
-            VALUES (?, ?, ?, ?, ?)
-        """, (execution_id, tokens_input, tokens_output, tokens_cached, cost_usd))
+            (execution_id, tokens_input, tokens_output, tokens_cached,
+             tokens_cache_write, cost_usd)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (execution_id, tokens_input, tokens_output, tokens_cached,
+              tokens_cache_write, cost_usd))
 
 
 # ==============================================================================

@@ -8,18 +8,6 @@
     "auto_load_agents": false,
     "max_parallel_agents": 5,
     "cache_loaded_agents": true,
-    "observability": {
-      "enabled": true,
-      "provider": "logfire",
-      "config": {
-        "project_name": "claude-agent-framework",
-        "validate_outputs": true,
-        "auto_spawn_observer": false,
-        "log_level": "info",
-        "track_context_size": true,
-        "track_tool_usage": true
-      }
-    },
     "hooks": {
       "enabled": false,
       "scope": "project",
@@ -51,7 +39,9 @@
       "path": ".claude-library/agents/core/framework-system-architect.md",
       "type": "core",
       "domain": "architecture",
-      "tools": ["Grep", "Glob", "Read", "Write", "Edit", "Task"],
+      "tools": ["Grep", "Glob", "Read", "Write", "Edit", "Agent"],
+      "model": "opus",
+      "effort": "xhigh",
       "triggers": [
         "design", "architecture", "system", "structure", "pattern",
         "framework architecture", "agent system", "workflow design"
@@ -68,7 +58,9 @@
       "path": ".claude-library/agents/core/framework-senior-engineer.md",
       "type": "core",
       "domain": "implementation",
-      "tools": ["Read", "Write", "Edit", "MultiEdit", "Grep", "Glob", "Bash", "Task"],
+      "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Agent"],
+      "model": "opus",
+      "effort": "high",
       "triggers": [
         "implement", "build", "create", "develop", "code",
         "framework implementation", "agent development", "workflow creation"
@@ -86,7 +78,9 @@
       "path": ".claude-library/agents/core/framework-code-reviewer.md",
       "type": "core",
       "domain": "quality_assurance",
-      "tools": ["Grep", "Glob", "Read", "Bash", "Task"],
+      "tools": ["Grep", "Glob", "Read", "Bash", "Agent"],
+      "model": "opus",
+      "effort": "high",
       "restrictions": ["Write", "Edit"],
       "triggers": [
         "review", "validate", "check", "audit", "quality",
@@ -104,7 +98,9 @@
       "path": ".claude-library/agents/specialized/documentation-specialist.md",
       "type": "specialized",
       "domain": "documentation",
-      "tools": ["Read", "Write", "Edit", "MultiEdit", "Grep", "Glob"],
+      "tools": ["Read", "Write", "Edit", "Grep", "Glob"],
+      "model": "sonnet",
+      "effort": "medium",
       "triggers": [
         "document", "docs", "guide", "tutorial", "readme",
         "framework documentation", "user guide", "api docs"
@@ -122,6 +118,8 @@
       "type": "specialized",
       "domain": "testing",
       "tools": ["Read", "Bash", "Grep", "Glob", "Write", "Edit"],
+      "model": "sonnet",
+      "effort": "medium",
       "triggers": [
         "test", "validate", "benchmark", "measure", "verify",
         "framework testing", "performance validation", "quality assurance"
@@ -135,43 +133,13 @@
       "specialization": "Framework testing and performance validation"
     },
 
-    "example-generator": {
-      "path": ".claude-library/agents/specialized/example-generator.md",
-      "type": "specialized",
-      "domain": "examples",
-      "tools": ["Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob"],
-      "triggers": [
-        "example", "demo", "tutorial", "showcase", "sample",
-        "framework example", "implementation demo", "usage tutorial"
-      ],
-      "contexts": [
-        "framework-architecture.md",
-        "framework-development-patterns.md"
-      ],
-      "priority": 3,
-      "specialization": "Framework example creation and demonstration"
-    },
-
-    "observer": {
-      "path": ".claude-library/agents/observability/observer.md",
-      "type": "observability",
-      "domain": "validation",
-      "tools": ["Read", "Bash", "Grep", "Glob"],
-      "restrictions": ["Write", "Edit"],
-      "triggers": [
-        "validate", "observe", "verify", "check outputs",
-        "workflow validation", "output verification"
-      ],
-      "priority": 3,
-      "specialization": "Workflow output validation and verification",
-      "requires_observability": true
-    },
-
     "framework-research-specialist": {
       "path": ".claude-library/agents/specialized/framework-research-specialist.md",
       "type": "specialized",
       "domain": "research_documentation",
       "tools": ["Read", "WebFetch", "Write", "Edit", "Grep", "Glob"],
+      "model": "sonnet",
+      "effort": "low",
       "triggers": [
         "research", "documentation", "best practices", "update docs",
         "claude code docs", "fetch documentation", "official patterns"
@@ -192,6 +160,8 @@
       "type": "specialized",
       "domain": "quality_assurance_compliance",
       "tools": ["Read", "Grep", "Glob", "Bash"],
+      "model": "sonnet",
+      "effort": "medium",
       "restrictions": ["Write", "Edit"],
       "triggers": [
         "audit", "compliance", "best practices", "quality check",
@@ -212,9 +182,19 @@
       "path": ".claude-library/agents/specialized/framework-feature-builder.md",
       "type": "specialized",
       "domain": "meta_building_coordination",
-      "tools": ["Task", "Read", "Write", "Edit", "Grep", "Glob", "Bash"],
+      "tools": ["Agent", "Read", "Write", "Edit", "Grep", "Glob", "Bash"],
+      "model": "opus",
+      "effort": "xhigh",
+      "model_escalation": {
+        "model": "fable",
+        "opt_in_flag": "--model fable",
+        "scope": "coordinator_only",
+        "when": "Multi-subsystem features where the design phase has already failed on opus, or long-horizon refactors spanning >10 files.",
+        "cost": "2x opus ($10/$50 per 1M vs $5/$25). Thinking is always on and turns run substantially longer.",
+        "constraint": "Never propagates to sub-agents - they keep their own registry tiers."
+      },
       "triggers": [
-        "build feature", "self-improve", "meta-build", "coordinate agents",
+        "build feature", "meta-build", "coordinate agents",
         "framework development", "self-building", "feature coordination"
       ],
       "contexts": [
@@ -236,6 +216,8 @@
       "type": "specialized",
       "domain": "best_practices_ingestion",
       "tools": ["Read", "Write", "WebFetch", "Grep", "Glob"],
+      "model": "sonnet",
+      "effort": "medium",
       "triggers": [
         "analyze best practice", "extract principles", "ingest documentation",
         "anthropic document", "best practice ingestion"
@@ -253,6 +235,8 @@
       "type": "specialized",
       "domain": "best_practices_gap_analysis",
       "tools": ["Read", "Grep", "Glob", "Write"],
+      "model": "opus",
+      "effort": "xhigh",
       "restrictions": ["Edit", "Bash"],
       "triggers": [
         "gap analysis", "compare framework", "identify gaps",
@@ -270,34 +254,6 @@
   },
 
   "commands": {
-    "pattern": {
-      "path": ".claude/commands/pattern.md",
-      "description": "Create new agent patterns or improve existing ones",
-      "agents": ["framework-system-architect", "framework-senior-engineer", "framework-code-reviewer", "documentation-specialist"],
-      "workflow": "parallel-sequential"
-    },
-
-    "validate": {
-      "path": ".claude/commands/validate.md",
-      "description": "Comprehensive testing and validation of framework components",
-      "agents": ["framework-validation-engineer", "framework-code-reviewer"],
-      "workflow": "parallel"
-    },
-
-    "example": {
-      "path": ".claude/commands/example.md",
-      "description": "Generate comprehensive examples and tutorials",
-      "agents": ["example-generator", "documentation-specialist", "framework-validation-engineer"],
-      "workflow": "parallel-sequential"
-    },
-
-    "test-framework": {
-      "path": ".claude/commands/test-framework.md",
-      "description": "Comprehensive self-testing of the Claude Agent Framework",
-      "agents": ["framework-validation-engineer", "framework-code-reviewer"],
-      "workflow": "sequential-parallel-sequential"
-    },
-
     "update-docs": {
       "path": ".claude/commands/update-docs.md",
       "description": "Fetch latest Claude Code documentation and update framework context files",
@@ -322,13 +278,6 @@
         "framework-best-practice-auditor", "documentation-specialist"
       ],
       "workflow": "mixed-parallel-sequential"
-    },
-
-    "self-improve": {
-      "path": ".claude/commands/self-improve.md",
-      "description": "Analyze observability data to identify and implement framework improvements",
-      "agents": ["framework-feature-builder"],
-      "workflow": "sequential"
     },
 
     "ingest-best-practice": {

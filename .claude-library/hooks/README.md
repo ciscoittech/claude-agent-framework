@@ -23,7 +23,6 @@ The Hooks Pattern provides deterministic control over Claude Code's behavior thr
 - Simple single-agent workflows
 - Rapid prototyping phase
 - Learning the framework basics
-- When you need detailed analytics (use Observability instead)
 
 ### What You Get
 
@@ -46,7 +45,7 @@ The Hooks Pattern provides deterministic control over Claude Code's behavior thr
 
 ### No External Dependencies!
 
-Unlike observability (which requires Logfire), hooks are completely self-contained:
+Hooks are completely self-contained:
 - ✅ Uses standard shell commands
 - ✅ No API keys needed
 - ✅ No external services
@@ -585,53 +584,6 @@ Different workflows can have different hook configurations:
 
 ---
 
-## Hooks vs Observability: When to Use Each
-
-| Scenario | Hooks | Observability | Both |
-|----------|-------|---------------|------|
-| **Auto-format code** | ✅ Perfect | ❌ Overkill | - |
-| **Block dangerous commands** | ✅ Perfect | ❌ Can't block | - |
-| **Track timing metrics** | ✅ Simple | ✅ Rich data | ✅ Best |
-| **Debug complex workflows** | ❌ Limited | ✅ Perfect | - |
-| **Team notifications** | ✅ Perfect | ⚠️ Possible | ✅ Best |
-| **No external dependencies** | ✅ Yes | ❌ Needs Logfire | - |
-| **Quality gates** | ✅ Perfect | ❌ Can't block | - |
-| **Visual trace analysis** | ❌ No | ✅ Perfect | - |
-| **Lightweight metrics** | ✅ Perfect | ❌ Overkill | - |
-| **Production monitoring** | ⚠️ Basic | ✅ Advanced | ✅ Best |
-
----
-
-## Combined Pattern: Hooks + Observability
-
-For maximum control and visibility:
-
-```json
-{
-  "settings": {
-    "hooks": {
-      "enabled": true,
-      "configs": [
-        "hooks/configs/code-quality.json",
-        "hooks/configs/security.json"
-      ]
-    },
-    "observability": {
-      "enabled": true,
-      "provider": "logfire"
-    }
-  }
-}
-```
-
-**Result:**
-- Hooks enforce quality gates (blocking)
-- Observability tracks what happened (monitoring)
-- Hooks handle immediate actions
-- Observability provides deep insights
-
----
-
 ## Troubleshooting
 
 ### Hook Not Executing
@@ -728,8 +680,7 @@ fi
 │   │   └── run_tests.sh                 # Test execution
 │   └── patterns/                         # Integration examples
 │       ├── workflow-gates.md            # Quality gate patterns
-│       ├── agent-validation.md          # Agent output validation
-│       └── lightweight-observability.md # Hooks-based metrics
+│       └── agent-validation.md          # Agent output validation
 ```
 
 ---
@@ -743,17 +694,6 @@ fi
 3. Test with simple workflow
 4. Set `enabled: true`
 5. Add more configs as needed
-
-### From Observability → Hooks
-
-If you're currently using observability but want simpler metrics:
-
-1. Keep observability for complex workflows
-2. Add hooks for quality gates
-3. Use hooks for lightweight workflows
-4. Both can coexist
-
----
 
 ## Performance Impact
 
