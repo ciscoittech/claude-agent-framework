@@ -97,10 +97,26 @@ read on demand.
 `REGISTRY.json` is the source of truth for tiers; the stubs are generated to match it, and
 `test_v2_structure.py` fails if the two drift.
 
+## Checks
+
+`python3 run_checks.py` runs everything, and is what both CI and the live hook run:
+
+| Suite | What it proves |
+|---|---|
+| `test_v2_structure.py` | Structure, and that the docs' own examples satisfy the contract those docs state |
+| `test_generated_system.py` | A system built to the contract validates, every documented deviation is caught, and every registry example in the docs can actually be built |
+| `test_hooks.py` | The hook scripts, executed against real payloads |
+
+**A check counts only once it has been seen to fail.** Every check here was run
+against a deliberately broken version first — a hook reading argv, a security
+gate exiting 1, a validator with one comparison removed. A suite that has only
+ever passed is evidence of nothing; two of this framework's worst bugs shipped
+green under tests that never exercised the real path.
+
 **Hooks belong in `.claude/settings.json`, not `REGISTRY.json`.** Claude Code never reads
 `REGISTRY.json` — that is framework metadata. This repo ships one live hook: after any
-edit under `.claude/` or `.claude-library/`, `test_v2_structure.py` runs and any failure
-is reported back immediately. Hooks receive their payload as JSON on stdin, never as
+edit under `.claude/`, `.claude-library/`, or a root document, `run_checks.py` runs and
+any failure is reported back immediately. Hooks receive their payload as JSON on stdin, never as
 shell variables; see `.claude-library/hooks/README.md` § Hook Input Contract.
 
 `.claude/rules/` and `.claude/MEMORY.md` are supported by Claude Code but not used here —

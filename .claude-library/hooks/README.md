@@ -95,8 +95,10 @@ Pre-built configurations available:
 - `notifications.json` - Team alerts
 
 This repo ships one live hook in `.claude/settings.json`: `check_structure.sh` runs
-`test_v2_structure.py` after any edit under `.claude/` or `.claude-library/` and feeds
-failures back so they get fixed immediately.
+`run_checks.py` after any edit under `.claude/`, `.claude-library/`, or a root document,
+and feeds failures back so they get fixed immediately. `test_hooks.py` — one of the
+suites it runs — executes every script in `scripts/` against real payloads, so a hook
+that quietly stops working fails a check rather than going unnoticed.
 
 ### Step 3: Verify It Actually Fires
 

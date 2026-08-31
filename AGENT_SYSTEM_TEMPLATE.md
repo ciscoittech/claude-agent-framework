@@ -412,21 +412,35 @@ names (`Agent`, not `Task`; `Edit`, not `MultiEdit`), and never `["*"]`.
   "commands": {
     "build": {
       "path": ".claude/commands/build.md",
-      "description": "Build features with TDD",
       "agents": ["architect", "engineer", "reviewer"],
       "workflow": "parallel-sequential"
     },
     "debug": {
       "path": ".claude/commands/debug.md",
-      "description": "Debug issues",
       "agents": ["engineer"],
       "workflow": "single"
     },
     "review": {
       "path": ".claude/commands/review.md",
-      "description": "Review code",
       "agents": ["reviewer"],
       "workflow": "single"
+    }
+  },
+  "skills": {
+    "build": {
+      "path": ".claude/commands/build.md",
+      "description": "Build features with TDD, using the project's agents",
+      "allowed_tools": ["Agent", "Read", "Write", "Edit", "Grep", "Glob"]
+    },
+    "debug": {
+      "path": ".claude/commands/debug.md",
+      "description": "Diagnose a failing test or reported bug and fix it",
+      "allowed_tools": ["Read", "Edit", "Grep", "Glob", "Bash(pytest:*)"]
+    },
+    "review": {
+      "path": ".claude/commands/review.md",
+      "description": "Review the current changes for bugs, security, and quality",
+      "allowed_tools": ["Read", "Grep", "Glob", "Bash(git diff:*)"]
     }
   },
   "contexts": {
@@ -438,14 +452,16 @@ names (`Agent`, not `Task`; `Edit`, not `MultiEdit`), and never `["*"]`.
       "path": ".claude-library/contexts/patterns.md",
       "description": "Code patterns and conventions"
     }
-  },
-  "settings": {
-    "auto_load_agents": false,
-    "max_parallel_agents": 3,
-    "cache_loaded_agents": true
   }
 }
 ```
+
+Every command needs a matching `skills` entry - the `description` and
+`allowed_tools` live there, once, and must equal the command file's frontmatter.
+A command with no `skills` entry has no frontmatter to match, and
+`validate_agent_system.py` fails on it. There is no top-level `settings` block:
+hooks and permissions go in `.claude/settings.json`, which is the only file the
+harness reads.
 
 ### Step 6: Create Project Context
 

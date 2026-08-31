@@ -306,7 +306,7 @@ when the decision depends on the state of the codebase.
 
 | Script | Event | Behavior |
 |---|---|---|
-| `check_structure.sh` | PostToolUse, `Write\|Edit` | Runs `test_v2_structure.py` after edits under `.claude/` or `.claude-library/`; reports failures with `decision: block`. **Wired live** |
+| `check_structure.sh` | PostToolUse, `Write\|Edit` | Runs `run_checks.py` after edits under `.claude/`, `.claude-library/`, or a root document; reports failures with `decision: block`. **Wired live** |
 | `security_check.py` | PreToolUse, `Bash` | Denies destructive commands; exit 2 |
 | `run_tests.sh` | PostToolUse, `Write\|Edit` | Runs the relevant suite; reports a red suite with `decision: block` |
 | `format_code.sh` | PostToolUse, `Write\|Edit` | Formats the edited file; never blocks |

@@ -150,6 +150,14 @@ for doc in CONTRACT_DOCS:
                 check(ref in agents,
                       f"{doc}: command example '{cname}' references agent "
                       f"'{ref}' not defined in the same example")
+            # A command with no skills entry has no frontmatter, so the
+            # validator the same document tells you to run rejects it.
+            check(cname in (block.get('skills') or {}),
+                  f"{doc}: command example '{cname}' has no matching skills entry")
+        # Top level is version/agents/commands/contexts/skills. A `settings`
+        # block here is read by nothing - hooks live in .claude/settings.json.
+        check('settings' not in block,
+              f"{doc}: registry example has a top-level 'settings' block")
 print("✓ Doc registry examples satisfy their own stated contract")
 
 # === 5f. Agent-file examples must show frontmatter ===

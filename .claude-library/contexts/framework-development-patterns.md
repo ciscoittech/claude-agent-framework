@@ -158,9 +158,12 @@ relevant sections first, then Read them.
   Complexity must be justified by a demonstrated failure of the simpler approach.
 - **Referential integrity.** Adding an agent, command, or context means adding it to
   `REGISTRY.json` — and every `path` and `contexts[]` entry must resolve to a real file.
-- **Test what you change.** `python3 test_v2_structure.py` validates structure,
-  referential integrity, and agent tiers. Tests are self-contained scripts that exit
-  non-zero on failure. No pytest.
+- **Test what you change.** `python3 run_checks.py` runs every suite: structure and
+  doc examples, generated-system validation, and hook execution. Self-contained scripts
+  that exit non-zero on failure. No pytest.
+- **Prove the check fails first.** Break the thing deliberately, watch the new check go
+  red, then fix it. A check that has only ever passed has not been tested — it is the
+  reason two fail-open bugs shipped green.
 - **Keep `.claude/` lean.** It is auto-loaded. Depth belongs in `.claude-library/`.
 
 ---

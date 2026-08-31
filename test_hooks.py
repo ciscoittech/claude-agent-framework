@@ -167,29 +167,44 @@ CHECK_STRUCTURE = os.path.join(SCRIPTS, 'check_structure.sh')
 STUB_FAIL = "import sys\nprint('STRUCTURE IS BROKEN')\nsys.exit(1)\n"
 STUB_PASS = "print('all good')\n"
 
+# The script finds the repo root by walking up to run_checks.py, so that is the
+# marker a fixture has to provide.
+ROOT_MARKER = 'run_checks.py'
+
 for stub, expect_block, label in ((STUB_FAIL, True, 'failing'), (STUB_PASS, False, 'passing')):
     with tempfile.TemporaryDirectory() as tmp:
         # realpath: macOS /var -> /private/var, and the script walks up by
         # dirname, so a symlinked prefix must not break the root search
         tmp = os.path.realpath(tmp)
-        write(os.path.join(tmp, 'test_v2_structure.py'), stub)
+        write(os.path.join(tmp, ROOT_MARKER), stub)
         edited = write(os.path.join(tmp, '.claude', 'agents', 'x.md'), "---\nname: x\n---\n")
         r = run_hook(['bash', CHECK_STRUCTURE], {'tool_input': {'file_path': edited}}, cwd=tmp)
         decision = block_decision(r.stdout)
         check(bool(decision) == expect_block,
-              f"{label} structure test -> {'block' if expect_block else 'silence'}",
+              f"{label} check run -> {'block' if expect_block else 'silence'}",
               f"exit={r.returncode} stdout={r.stdout!r} stderr={r.stderr.strip()!r}")
         if expect_block and decision:
             check('STRUCTURE IS BROKEN' in decision.get('reason', ''),
                   "block reason carries the failure output", decision.get('reason', '')[:200])
 
+# A root document is exactly what the doc-example checks cover, so editing one
+# must trigger them. This was the gap: the hook watched .claude/ only, while the
+# checks most likely to regress are the ones about the root documents.
 with tempfile.TemporaryDirectory() as tmp:
     tmp = os.path.realpath(tmp)
-    write(os.path.join(tmp, 'test_v2_structure.py'), STUB_FAIL)
-    # Edits outside .claude/ are not framework config and must be ignored
+    write(os.path.join(tmp, ROOT_MARKER), STUB_FAIL)
+    edited = write(os.path.join(tmp, 'AGENT_PATTERNS.md'), "# Patterns\n")
+    r = run_hook(['bash', CHECK_STRUCTURE], {'tool_input': {'file_path': edited}}, cwd=tmp)
+    check(block_decision(r.stdout) is not None,
+          "a root document edit runs the checks", repr(r.stdout))
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmp = os.path.realpath(tmp)
+    write(os.path.join(tmp, ROOT_MARKER), STUB_FAIL)
+    # A project's own source is none of this hook's business
     edited = write(os.path.join(tmp, 'src', 'app.py'), "x = 1\n")
     r = run_hook(['bash', CHECK_STRUCTURE], {'tool_input': {'file_path': edited}}, cwd=tmp)
-    check(not r.stdout.strip(), "ignores edits outside .claude/", repr(r.stdout))
+    check(not r.stdout.strip(), "ignores edits to project source", repr(r.stdout))
 
 
 # ------------------------------------------------------------ security_check.py
@@ -348,7 +363,7 @@ if os.path.exists(settings_path):
     # exit 127 and "No such file"; that is the bug $CLAUDE_PROJECT_DIR fixes.
     with tempfile.TemporaryDirectory() as elsewhere, tempfile.TemporaryDirectory() as proj:
         proj = os.path.realpath(proj)
-        write(os.path.join(proj, 'test_v2_structure.py'), STUB_PASS)
+        write(os.path.join(proj, ROOT_MARKER), STUB_PASS)
         edited = write(os.path.join(proj, '.claude', 'agents', 'x.md'), "---\nname: x\n---\n")
         for cmd in wired:
             r = subprocess.run(
