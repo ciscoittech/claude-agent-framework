@@ -1,8 +1,15 @@
 #!/bin/bash
 # Auto-format code based on file type
-# Usage: format_code.sh <file_path>
+# Usage: reads the hook payload as JSON on stdin (Claude Code's actual contract),
+#        or accepts a path as $1 for direct testing.
+#
+# A config passing "$file_path" hands this script nothing - that shell variable is
+# never set by the harness - so the payload must be parsed from stdin instead.
 
 file_path="$1"
+if [ -z "$file_path" ] && [ ! -t 0 ]; then
+    file_path=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty' 2>/dev/null)
+fi
 
 if [ -z "$file_path" ] || [ ! -f "$file_path" ]; then
     exit 0

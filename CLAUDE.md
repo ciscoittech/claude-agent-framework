@@ -78,9 +78,7 @@ Generated systems follow this pattern:
 .claude/                    # Auto-loaded — keep lean
 ├── agents/                # Subagent definitions (frontmatter + brief persona)
 ├── commands/              # User workflows, invoked as /command-name
-├── rules/                 # Path-specific rules (optional)
-├── settings.json          # Project metadata, permissions, hooks
-└── MEMORY.md              # Cross-conversation memory index
+└── settings.json          # Hooks and permissions - the file the harness reads
 
 .claude-library/           # On-demand — size is not a constraint here
 ├── REGISTRY.json         # Central configuration and source of truth
@@ -98,6 +96,15 @@ read on demand.
 
 `REGISTRY.json` is the source of truth for tiers; the stubs are generated to match it, and
 `test_v2_structure.py` fails if the two drift.
+
+**Hooks belong in `.claude/settings.json`, not `REGISTRY.json`.** Claude Code never reads
+`REGISTRY.json` — that is framework metadata. This repo ships one live hook: after any
+edit under `.claude/` or `.claude-library/`, `test_v2_structure.py` runs and any failure
+is reported back immediately. Hooks receive their payload as JSON on stdin, never as
+shell variables; see `.claude-library/hooks/README.md` § Hook Input Contract.
+
+`.claude/rules/` and `.claude/MEMORY.md` are supported by Claude Code but not used here —
+add them if a project needs them.
 
 ## Common Development Tasks
 

@@ -7,9 +7,32 @@ Blocks dangerous operations that could damage the system
 import sys
 import re
 import os
+import json
 from datetime import datetime
 
-command = sys.argv[1] if len(sys.argv) > 1 else ""
+
+def read_command():
+    """
+    Claude Code delivers the hook payload as JSON on stdin - NOT as argv.
+    A config passing "$command" hands this script an empty string, which used to
+    mean every command was approved: a security hook that silently allowed
+    everything. argv is kept as a fallback for direct testing.
+    """
+    if len(sys.argv) > 1 and sys.argv[1]:
+        return sys.argv[1]
+    if sys.stdin.isatty():
+        return ""
+    raw = sys.stdin.read()
+    if not raw.strip():
+        return ""
+    try:
+        return json.loads(raw).get("tool_input", {}).get("command", "")
+    except (json.JSONDecodeError, AttributeError):
+        # Not JSON - treat the raw text as the command rather than failing open
+        return raw.strip()
+
+
+command = read_command()
 
 # Dangerous command patterns to block
 DANGEROUS_PATTERNS = [

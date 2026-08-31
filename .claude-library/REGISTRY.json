@@ -8,17 +8,7 @@
     "auto_load_agents": false,
     "max_parallel_agents": 5,
     "cache_loaded_agents": true,
-    "hooks": {
-      "enabled": false,
-      "scope": "project",
-      "configs": [],
-      "allow_blocking": true,
-      "timeout_ms": 5000,
-      "log_hook_output": true,
-      "log_file": ".claude-metrics/hooks.log",
-      "fail_on_timeout": false,
-      "parallel_hook_execution": false
-    }
+    "_hooks_note": "Hooks are NOT configured here. Claude Code reads them from .claude/settings.json; this file is framework metadata the harness never loads. See .claude-library/hooks/README.md."
   },
 
   "agent_defaults": {
@@ -175,7 +165,7 @@
         "performance-optimization.md"
       ],
       "priority": 2,
-      "specialization": "Audits framework against Claude Code best practices, 8-category scoring, compliance reports"
+      "specialization": "Audits framework against Claude Code best practices, 7-category scoring, compliance reports"
     },
 
     "framework-feature-builder": {
