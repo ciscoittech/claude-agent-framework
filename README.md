@@ -1,232 +1,199 @@
 # Claude Agent Framework
 
-### Transform any project into an AI-powered development powerhouse in 2 minutes
+### Turn a project into a working team of Claude Code subagents
 
-[![Framework Version](https://img.shields.io/badge/version-2.0-blue)]()
+[![Framework Version](https://img.shields.io/badge/version-2.2-blue)]()
 [![Setup Time](https://img.shields.io/badge/setup-2%20minutes-green)]()
-[![Performance](https://img.shields.io/badge/speed-3--6x%20faster-orange)]()
-[![Context Reduction](https://img.shields.io/badge/context-97%25%20smaller-red)]()
+[![Checks](https://img.shields.io/badge/checks-run__checks.py-orange)]()
 
 ---
 
-## What is Claude Agent Framework?
+## What this is
 
-Claude Agent Framework is a battle-tested system that transforms Claude Code into a team of specialized AI agents working in parallel on your project. Whether you're building a startup MVP, enterprise system, or personal project, this framework adapts to your stack and your patterns.
+A generator and a contract. Point it at your project and it writes a `.claude/` and
+`.claude-library/` pair configured for your stack: subagents with declared model and
+effort tiers, commands that orchestrate them, and a registry the framework's own
+validator holds to a contract.
 
-**One prompt. Two minutes. Full agent team.**
+The generator is a prompt, not a program. What makes the output trustworthy is not the
+prompt — it is that the result is validated, and that the same checks run against this
+repository's own documentation, so the examples cannot drift from the contract they teach.
 
 ---
 
-## The 2-Minute Setup
+## Two things people get wrong
+
+Read these before anything else. Both fail silently, which is why they are here and not
+further down.
+
+**1. Model and effort are two independent dials.**
+
+`model` sets the capability floor — `haiku` → `sonnet` → `opus` → `fable`.
+`effort` sets reasoning depth — `low` → `medium` → `high` → `xhigh` → `max`.
+
+An Opus agent at `low` effort and a Haiku agent are different things. Declare both, in
+`.claude/agents/<name>.md` frontmatter *and* in `REGISTRY.json` — they must agree, or the
+tier is prose that nothing enforces. See [MODEL_SELECTION.md](./MODEL_SELECTION.md).
+
+**2. Hooks go in `.claude/settings.json`. Never `REGISTRY.json`.**
+
+Claude Code does not read `REGISTRY.json` — that is framework metadata, for the validator
+and the generator. A hook declared there never fires, and a hook that never fires looks
+exactly like one that always passes. This framework shipped a security hook that approved
+every command for precisely that reason.
+
+A hook also receives its payload as **JSON on stdin**, never as shell variables. A command
+written `script.sh "$file_path"` passes an empty string.
+
+---
+
+## Setup
 
 ```bash
 # In your project directory
 $ claude
 
-# Paste this:
-"I want to set up Claude Agent Framework for my project.
-Please read the SYSTEM_GENERATOR_PROMPT.md from ./claude-agent-framework/
-and create my custom agent system."
-
-# That's it. You're done.
+> Read SYSTEM_GENERATOR_PROMPT.md from ./claude-agent-framework/
+  and generate my agent system.
 ```
 
-Your custom agent team is now ready with:
-- Agents that understand your tech stack
-- Commands tailored to your workflow
-- Patterns extracted from your codebase
-- Parallel execution for 3-6x speed boost
+Generation is not the end of it. Three things follow, in this order:
+
+**1. Validate.** The generator's last step, and yours if you are checking its work:
+
+```bash
+python3 /path/to/claude-agent-framework/validate_agent_system.py .
+```
+
+It resolves every declared path and context, checks that each agent's frontmatter agrees
+with its registry entry, and rejects wildcard tool grants. A system that does not validate
+does not load correctly — do not skip this because the files look right.
+
+**2. Read `GETTING_STARTED.md`.** The generator writes it into your project root,
+describing the system it actually built: which agents you got, what tier each runs at and
+why, how to launch one by `subagent_type`, and how to add the next one.
+
+**3. Add only what you need.** You start with one command. A test command when there are
+tests to run, a deploy command when there is something to deploy. See
+[SIMPLICITY_ENFORCEMENT.md](./SIMPLICITY_ENFORCEMENT.md) — complexity is earned.
 
 ---
 
-## From Zero to Hero
-
-### Start Small (Minute 0-2)
-Run the generator. Get instant:
-- `/build` - Parallel TDD development
-- `/debug` - Smart debugging
-- `/test` - Comprehensive testing
-- `/deploy` - One-command deployment
-
-### Grow Naturally (Day 1-7)
-Your system learns and adapts:
-- Agents understand your code patterns
-- Commands evolve with your workflow
-- Context stays minimal (<10KB)
-- Speed increases as patterns emerge
-
-### Expand as Needed (Week 2+)
-Build your dream team:
-- Add specialized agents for new domains
-- Create custom workflows for your process
-- Integrate with your CI/CD pipeline
-- Scale to any project size
-
----
-
-## Why Claude Agent Framework?
-
-### The Problem
-- **Manual Claude setup** takes hours of context building
-- **Sequential execution** wastes time on independent tasks
-- **Context overload** (250KB+) slows every interaction
-- **Repetitive prompts** for common workflows
-
-### The Solution
-- **2-minute setup** with intelligent auto-configuration
-- **Parallel agents** work simultaneously (3-6x faster)
-- **Minimal context** (<10KB auto-loaded)
-- **Smart commands** that orchestrate complex workflows
-
----
-
-## What Gets Built
+## What gets built
 
 ```
 your-project/
-├── .claude/                    # Ultra-light core (<10KB)
-│   ├── settings.json          # Hooks and permissions - what the harness reads
-│   ├── agents/                # Subagent definitions: frontmatter + persona
-│   │   ├── architect.md      # model + effort declared here, or not at all
+├── GETTING_STARTED.md          # What was created, and how to verify it
+├── .claude/                    # Auto-loaded every session - keep it lean
+│   ├── settings.json          # Hooks and permissions. The file the harness reads
+│   ├── agents/                # Subagent definitions: frontmatter + short persona
+│   │   ├── architect.md      # model + effort declared here, or nowhere
 │   │   ├── engineer.md
 │   │   └── reviewer.md
-│   └── commands/              # Your power tools, invoked as /name
+│   └── commands/              # Invoked as /name
 │       └── build.md          # Start with one; earn the rest
 │
-└── .claude-library/           # On-demand specialists
-    ├── REGISTRY.json         # Central configuration (v2.0)
+└── .claude-library/           # Read on demand - size is not a constraint here
+    ├── REGISTRY.json         # Source of truth for tiers and wiring
     ├── agents/               # Full playbooks - depth lives here
-    ├── contexts/             # Shared knowledge
+    ├── contexts/             # Project knowledge
     └── hooks/                # Optional deterministic control
 ```
 
----
-
-## Framework Documentation
-
-| Document | Purpose | When to Read |
-|----------|---------|--------------|
-| [SIMPLICITY_ENFORCEMENT.md](./SIMPLICITY_ENFORCEMENT.md) | Circuit breakers | Read first |
-| [SYSTEM_GENERATOR_PROMPT.md](./SYSTEM_GENERATOR_PROMPT.md) | Auto-generate system | Start here (2 min) |
-| [CLAUDE_AGENT_FRAMEWORK.md](./CLAUDE_AGENT_FRAMEWORK.md) | Architecture guide | Learn the system |
-| [AGENT_PATTERNS.md](./AGENT_PATTERNS.md) | Implementation patterns | Optimize |
-| [AGENT_SYSTEM_TEMPLATE.md](./AGENT_SYSTEM_TEMPLATE.md) | Manual setup | Custom control |
-| [MODEL_SELECTION.md](./MODEL_SELECTION.md) | Model and effort tiers, cost levers | Choosing a tier |
+**Agents live in two places on purpose.** The `.claude/agents/` stub is the real subagent
+definition — its body becomes that agent's system prompt and is paid on every launch, so
+it stays short. The playbook in `.claude-library/agents/` is read only when needed.
 
 ---
 
-## Your Stack, Your Rules
+## Documentation
 
-Claude Agent Framework automatically adapts to:
-
-**Frontend:** React, Vue, Angular, Svelte, Next.js, Nuxt, SvelteKit
-**Backend:** Node.js, Python, Go, Rust, Java, C#, Ruby
-**Databases:** PostgreSQL, MySQL, MongoDB, Redis, SQLite
-**Cloud:** AWS, GCP, Azure, Vercel, Netlify, Cloudflare
-**Testing:** Jest, Pytest, Playwright, Cypress, Vitest
-**AI/ML:** OpenAI, Anthropic, LangChain, HuggingFace, LocalLLMs
-
----
-
-## The Philosophy
-
-> "Start simple. Ship fast. Scale infinitely."
-
-1. **Progressive Enhancement** - Start with basics, add complexity as needed
-2. **Context Minimalism** - Load only what's essential
-3. **Parallel Everything** - Why wait when agents can work together?
-4. **Your Patterns First** - Adapt to your code, not the other way around
+| Document | Purpose | When to read |
+|---|---|---|
+| [SIMPLICITY_ENFORCEMENT.md](./SIMPLICITY_ENFORCEMENT.md) | Circuit breakers against over-engineering | First |
+| [SYSTEM_GENERATOR_PROMPT.md](./SYSTEM_GENERATOR_PROMPT.md) | Generate a system (§4.6b is the normative contract) | Start here |
+| [MODEL_SELECTION.md](./MODEL_SELECTION.md) | Model and effort tiers, rates, cost levers | Choosing a tier |
+| [CLAUDE_AGENT_FRAMEWORK.md](./CLAUDE_AGENT_FRAMEWORK.md) | Architecture and principles | Understanding it |
+| [AGENT_PATTERNS.md](./AGENT_PATTERNS.md) | Implementation patterns | Optimizing |
+| [AGENT_SYSTEM_TEMPLATE.md](./AGENT_SYSTEM_TEMPLATE.md) | Manual setup, step by step | Building by hand |
+| [hooks/README.md](./.claude-library/hooks/README.md) | Hook configuration and the input contract | Adding a hook |
+| [CHANGELOG.md](./CHANGELOG.md) | What changed and why | After an upgrade |
 
 ---
 
-## Performance Metrics
+## Checks
 
-| Metric | Traditional | Claude Agent Framework | Improvement |
-|--------|------------|------------|-------------|
-| Setup Time | 2+ hours | 2 minutes | 60x faster |
-| Context Size | 250KB+ | <10KB | 97% smaller |
-| Execution | Sequential | Parallel | 3-6x faster |
-| Learning Curve | Days | Minutes | Instant |
-
----
-
-## Getting Started
-
-### Option 1: Instant Generation (Recommended)
 ```bash
-claude> Use Claude Agent Framework SYSTEM_GENERATOR_PROMPT.md to set up my project
+python3 run_checks.py          # everything, ~1.5 seconds
 ```
 
-### Option 2: Guided Setup (30 min)
-```bash
-claude> Follow AGENT_SYSTEM_TEMPLATE.md for manual configuration
-```
+| Suite | What it proves |
+|---|---|
+| `test_v2_structure.py` | Structure, and that the docs' own examples satisfy the contract those docs state |
+| `test_generated_system.py` | A system built to the contract validates; every documented deviation is caught; every registry example in the docs can actually be built |
+| `test_hooks.py` | The hook scripts, executed against real payloads |
 
-### Option 3: Full Customization (Advanced)
-```bash
-claude> Study CLAUDE_AGENT_FRAMEWORK.md and build custom system
-```
+These run in CI on every push and pull request, and on edit via a `PostToolUse` hook.
 
----
-
-## What's New in v2.0
-
-### Slim-Down
-- 9 files archived, 50% fewer root docs
-- REGISTRY.json slimmed 64% (1,154 -> 421 lines)
-- 10+ new Claude Code features integrated
-
-### New Capabilities
-- **Agent Teams**: Custom subagent types in `.claude/agents/`
-- **Path-Specific Rules**: `.claude/rules/` with glob-based targeting
-- **Auto Memory**: Persistent cross-conversation knowledge via MEMORY.md
-- **Extended Context**: 1M token context window
-- **MCP Tool Search**: Deferred tool loading via ToolSearch
-- **Model + Effort**: two independent dials — `model` sets capability (`haiku`/`sonnet`/`opus`/`fable`), `effort` sets reasoning depth (`low`-`max`)
-- **Worktree Isolation**: `isolation: "worktree"` for safe parallel work
-- **Background Agents**: `run_in_background: true` for async execution
-- **Managed Settings**: Centralized permission and model configuration
-- **Skills with context:fork**: Branch context for skill execution
+**A check counts only once it has been seen to fail.** Every one here was run against a
+deliberately broken version first. Two of this framework's worst bugs — a security hook
+that approved everything, and its first fix, which printed a block banner and let the
+command run anyway — shipped green under tests that never exercised the real path.
 
 ---
 
-## Optional Patterns
+## Your stack
 
-### Hooks
-Add deterministic control: auto-format, block dangerous operations, validate outputs.
-[Learn more ->](./.claude-library/hooks/README.md)
+The generator reads your project rather than matching it against a list, so it adapts to
+whatever is there — React or Rails, Postgres or SQLite, pytest or Vitest. What it produces
+is shaped by your `CLAUDE.md`, your directory layout, and the patterns already in your
+code.
 
-Disabled by default. Zero overhead when off.
+---
+
+## What's new
+
+**2.2** — Rewrote the hooks context, which documented an API that does not exist and was
+loaded by three agents as official documentation. Anchored every hook path with
+`$CLAUDE_PROJECT_DIR`; relative paths broke whenever a session started in a subdirectory.
+Fixed the framework documents that contradicted the generator contract, and added checks
+so they cannot drift back. Added the generated-system and hook-execution suites, plus CI.
+Verified the rate table against the price card and pinned it.
+
+**2.1** — Model and effort separated into two independent dials. Real subagent definitions
+in `.claude/agents/` with enforced frontmatter. Hooks moved to `.claude/settings.json` and
+made to actually fire. Commands became real skills with frontmatter.
+`validate_agent_system.py` extracted so it runs against any generated system.
+
+Full detail in [CHANGELOG.md](./CHANGELOG.md).
+
+---
+
+## A note on context size
+
+Earlier versions of this README led with "97% smaller context (250KB → 8KB)". That was the
+right optimization when context was scarce and every token billed fresh. It is no longer
+the metric that matters most: current models other than Haiku have a 1M window, and cached
+reads bill at roughly a tenth of fresh input.
+
+Minimizing bytes and maximizing cache hits pull in opposite directions. A context set
+assembled fresh per task is small but never caches; for an agent that runs repeatedly, a
+larger *stable* bundle costs less than a smaller one rebuilt each call. `.claude/` stays
+lean because it loads on every session. Beyond that, optimize for prefix stability.
 
 ---
 
 ## Contributing
 
-Claude Agent Framework is built from real-world patterns used in production:
-
-- **Share your patterns** - Add to AGENT_PATTERNS.md
-- **Submit improvements** - Make it better for everyone
-- **Report issues** - Help us fix what's broken
-
----
+- **Patterns** — add to `AGENT_PATTERNS.md`, with the failure mode it avoids
+- **Fixes** — every change runs `python3 run_checks.py`; a new check must be shown to fail
+  against the bug it catches before it counts
+- **Issues** — [report what broke](https://github.com/ciscoittech/claude-agent-framework/issues)
 
 ## License
 
-MIT License - Use freely in your projects, commercial or otherwise.
+MIT.
 
 ---
 
-<div align="center">
-
-**Stop reading. Start building.**
-
-```bash
-$ claude
-> "Set up Claude Agent Framework for my project"
-```
-
-*Claude Agent Framework v2.0 | Built by developers, for developers*
-
-[Documentation](./CLAUDE_AGENT_FRAMEWORK.md) | [Examples](./AGENT_PATTERNS.md) | [Support](https://github.com/ciscoittech/claude-agent-framework/issues)
-
-</div>
+*Claude Agent Framework v2.2*
