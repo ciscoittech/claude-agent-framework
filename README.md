@@ -47,6 +47,25 @@ written `script.sh "$file_path"` passes an empty string.
 
 ---
 
+## Which surface?
+
+Before building anything, decide where the work actually goes. Ask these in order and take
+the first "yes":
+
+1. **Must this happen every time, even if the model is convinced otherwise?** → **Hook**
+2. **A short fact, true on every turn?** → **`CLAUDE.md`**
+3. **Would it flood your context with output you'll never read again?** → **Subagent**
+4. **A procedure with known steps, started by name?** → **Skill**
+5. **None of the above?** → **Neither.** Type the command.
+
+Step 5 is the most common correct answer. A skill that wraps one tool call is worse than the
+tool call.
+
+Full reasoning, the cost model behind it, and a worked example:
+**[learn/01-four-surfaces.md](./learn/01-four-surfaces.md)**.
+
+---
+
 ## Setup
 
 ```bash
@@ -110,6 +129,7 @@ it stays short. The playbook in `.claude-library/agents/` is read only when need
 
 | Document | Purpose | When to read |
 |---|---|---|
+| [learn/](./learn/README.md) | Which surface work belongs on, and when the answer is "neither" | Before anything else |
 | [SIMPLICITY_ENFORCEMENT.md](./SIMPLICITY_ENFORCEMENT.md) | Circuit breakers against over-engineering | First |
 | [SYSTEM_GENERATOR_PROMPT.md](./SYSTEM_GENERATOR_PROMPT.md) | Generate a system (§4.6b is the normative contract) | Start here |
 | [MODEL_SELECTION.md](./MODEL_SELECTION.md) | Model and effort tiers, rates, cost levers | Choosing a tier |
@@ -131,6 +151,7 @@ python3 run_checks.py          # everything, ~1.5 seconds
 |---|---|
 | `test_v2_structure.py` | Structure, and that the docs' own examples satisfy the contract those docs state |
 | `test_generated_system.py` | A system built to the contract validates; every documented deviation is caught; every registry example in the docs can actually be built |
+| `test_learning_docs.py` | Every frontmatter example in the docs satisfies the validator's own predicates; the decision material stays linked |
 | `test_hooks.py` | The hook scripts, executed against real payloads |
 
 These run in CI on every push and pull request, and on edit via a `PostToolUse` hook.

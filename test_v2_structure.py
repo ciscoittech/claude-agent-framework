@@ -217,6 +217,14 @@ targets = {
     'AGENT_SYSTEM_TEMPLATE.md': (550, 750),
     'README.md': (180, 300),
     'CLAUDE.md': (100, 200),
+    # A lesson that grows stops being read. Same belief the files above encode.
+    'learn/01-four-surfaces.md': (120, 260),
+    'learn/02-skills.md': (70, 220),
+    'learn/03-subagents.md': (60, 190),
+    'learn/04-composition.md': (60, 150),
+    'learn/05-hooks-and-memory.md': (50, 140),
+    'learn/06-worked-example.md': (100, 260),
+    'learn/README.md': (20, 100),
 }
 for fname, (lo, hi) in targets.items():
     path = os.path.join(ROOT, fname)
