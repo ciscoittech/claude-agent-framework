@@ -1,11 +1,14 @@
 ---
 name: which-surface
 description: Decide whether a piece of work belongs in a skill, a subagent, a hook, CLAUDE.md, or none of them
-argument-hint: [what you want to make repeatable]
 allowed-tools: Read, Grep, Glob
 ---
 
-Decide where a piece of work belongs. Most of the time the answer is "nowhere new."
+Decide where a piece of work belongs, given what you want to make repeatable.
+Most of the time the answer is "nowhere new."
+
+Frontmatter is restricted to the six Agent Skills spec fields on purpose, so this
+skill uploads to claude.ai unchanged. `argument-hint` would be a hard error there.
 
 Deliberately model-invocable: the moment this is useful is when someone asks
 "should I make an agent for this?", which means the description has to be in

@@ -95,6 +95,41 @@ The directory form lets a skill carry references it does not pay for on every re
 
 Use `${CLAUDE_SKILL_DIR}` to reference bundled files regardless of the working directory.
 
+## Portability: skills are the only surface that travels
+
+Of the four surfaces, **only skills exist outside Claude Code.** They follow the
+[Agent Skills](https://agentskills.io) open standard, so the same `SKILL.md` runs in
+claude.ai, the Desktop app, Cowork, and the Skills API.
+
+Nothing else ports. There are no hooks in the Claude app, no `.claude/agents/`, no
+`settings.json`. `CLAUDE.md` has a rough analogue in project instructions and that is all.
+**Outside Claude Code there is no deterministic enforcement layer at all** — which means
+every rule is a request, and the ladder in [01](./01-four-surfaces.md) collapses to two
+options: a skill, or nothing.
+
+### The six-field subset
+
+claude.ai upload and the Skills API accept only the spec fields:
+
+`name` · `description` · `license` · `compatibility` · `metadata` · `allowed-tools`
+
+Everything else — `argument-hint`, `context`, `agent`, `disable-model-invocation`,
+`user-invocable`, `model`, `effort`, `paths`, `hooks` — is a Claude Code extension. Using
+one is **not** ignored on upload. It is a hard error:
+
+```text
+Unexpected key(s) in SKILL.md frontmatter: argument-hint. Allowed properties are:
+allowed-tools, compatibility, description, license, metadata, name
+```
+
+Claude Code-only body features, such as dynamic context injection, also do nothing in
+claude.ai chat or through the API. They fail quietly rather than loudly.
+
+So decide early who the skill is for. A deploy runbook that only ever runs in a terminal
+can use the full field set. A skill teaching a convention, that colleagues should get in the
+Desktop app, is worth restricting to the six. `/which-surface` in this repo is restricted
+deliberately, and `test_learning_docs.py` fails the build if that stops being true.
+
 ## When it stops working
 
 If a skill seems to stop influencing behavior after the first response, its content is

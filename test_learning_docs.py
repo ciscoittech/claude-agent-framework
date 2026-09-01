@@ -197,6 +197,31 @@ elif len(hits) == 1:
 else:
     print("✓ C5: no canonical table yet (not written)")
 
+# === C7: skills stay uploadable to claude.ai ===
+# The Agent Skills spec subset accepted by claude.ai upload and the Skills API.
+# Any other key is a HARD ERROR on upload, not an ignored field:
+#   "Unexpected key(s) in SKILL.md frontmatter: argument-hint."
+# A skill that only works in Claude Code is a skill most people cannot run.
+SPEC_KEYS = {'name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools'}
+skills_root = os.path.join(ROOT, '.claude/skills')
+c7 = 0
+if os.path.isdir(skills_root):
+    for d in sorted(os.listdir(skills_root)):
+        sp = os.path.join(skills_root, d, 'SKILL.md')
+        if not os.path.isfile(sp):
+            continue
+        c7 += 1
+        m = re.match(r'^---\n(.*?)\n---', open(sp, encoding='utf-8').read(), re.S)
+        if not m:
+            err(f".claude/skills/{d}/SKILL.md has no frontmatter")
+            continue
+        keys = {ln.split(':', 1)[0].strip() for ln in m.group(1).splitlines()
+                if ln and not ln.startswith((' ', '-', '#')) and ':' in ln}
+        for bad in sorted(keys - SPEC_KEYS):
+            err(f".claude/skills/{d}/SKILL.md: `{bad}` is not an Agent Skills spec field - "
+                f"uploading this skill to claude.ai fails with a hard error")
+print(f"✓ C7: {c7} skills checked for claude.ai portability")
+
 # === report ===
 print()
 for w in WARNINGS:
