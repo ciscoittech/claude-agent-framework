@@ -9,6 +9,7 @@ The suites, in the order they run:
 
   test_v2_structure.py     structure, doc examples, stale claims   (~0.05s)
   test_generated_system.py builds whole systems and validates them (~0.1s)
+  test_learning_docs.py    doc examples satisfy the real contract  (~0.05s)
   test_hooks.py            executes the hook scripts for real      (~1.5s)
 
 This is what CI runs and what the PostToolUse hook runs. Adding a suite here is
@@ -23,6 +24,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 SUITES = [
     ('test_v2_structure.py', 'structure and documentation', True),
     ('test_generated_system.py', 'generated systems', True),
+    ('test_learning_docs.py', 'learning docs', True),
     ('test_hooks.py', 'hook execution', False),  # spawns subprocesses
 ]
 

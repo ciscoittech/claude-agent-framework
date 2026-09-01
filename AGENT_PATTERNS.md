@@ -1176,16 +1176,25 @@ Agents can persist findings across sessions:
 
 Skills can use `context: fork` to branch the conversation context, allowing exploration without polluting the main thread:
 
+`.claude/skills/explore-alternatives/SKILL.md`:
+
 ```markdown
 ---
 name: explore-alternatives
 description: Explore implementation alternatives without affecting main context
+allowed-tools: Read, Grep, Glob
 context: fork
+agent: Explore
 ---
 
 Explore 3 different approaches to implement this feature.
 Compare trade-offs. Report back the recommended approach only.
 ```
+
+**`context: fork` needs actual instructions.** Fork a skill that is only guidelines -
+"prefer composition over inheritance" - and the forked context gets a system prompt, a page
+of advice, and nothing to do. It returns nothing useful and does not error. If the skill has
+no imperative sentences, it is reference content, and reference content is not forkable.
 
 **When to use `context: fork`:**
 - Exploratory research that generates lots of noise
