@@ -1,59 +1,76 @@
 #!/bin/bash
-# Run tests for changed files
-# Usage: run_tests.sh <file_path>
+# PostToolUse hook: run the tests relevant to an edited file and feed any
+# failure back so it gets fixed immediately.
+#
+# Reads the hook payload as JSON on stdin (Claude Code's actual contract).
+# A config passing "$file_path" hands this script nothing - that shell variable
+# is never set by the harness. $1 is still accepted for direct testing.
+#
+# Exits 0 always. PostToolUse fires after the edit has already happened, so
+# blocking the tool call is meaningless; a failing suite is reported with
+# decision:block, which surfaces the output to Claude and lets the turn
+# continue - the same contract check_structure.sh uses. Swallowing the failure
+# instead (the old `|| true` + `2>/dev/null`) makes the hook look like it ran
+# tests when nothing ever saw the result.
 
 file_path="$1"
+if [ -z "$file_path" ] && [ ! -t 0 ]; then
+    file_path=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty' 2>/dev/null)
+fi
 
-if [ -z "$file_path" ]; then
+if [ -z "$file_path" ] || [ ! -f "$file_path" ]; then
     exit 0
 fi
 
-# Determine test command based on file type and project structure
+output=""
+status=0
+ran="none"
+
 case "$file_path" in
   *.py)
-    # Python tests
-    if [ -f "pytest.ini" ] || [ -d "tests" ]; then
-        # Try to find corresponding test file
-        test_file=$(echo "$file_path" | sed 's/\.py$//' | sed 's|^src/|tests/|' | sed 's|^|tests/test_|')_test.py
-
-        if [ -f "$test_file" ]; then
-            pytest "$test_file" --quiet 2>/dev/null || true
-        else
-            # Run all tests if specific test not found
-            pytest --quiet --exitfirst 2>/dev/null || true
-        fi
+    # `python3 -m pytest`, not `pytest`: pytest is frequently importable in the
+    # active interpreter while no console script is on PATH.
+    if python3 -c 'import pytest' 2>/dev/null \
+       && { [ -f pytest.ini ] || [ -f pyproject.toml ] || [ -d tests ]; }; then
+        output=$(python3 -m pytest --quiet --exitfirst 2>&1)
+        status=$?
+        ran="pytest"
     fi
     ;;
 
   *.js|*.jsx|*.ts|*.tsx)
-    # JavaScript/TypeScript tests
-    if [ -f "package.json" ]; then
-        # Check if jest is configured
-        if grep -q "jest" package.json; then
-            npm test -- --findRelatedTests "$file_path" --bail 2>/dev/null || true
-        fi
+    if [ -f package.json ] && grep -q '"jest"' package.json; then
+        output=$(npx jest --findRelatedTests "$file_path" --bail 2>&1)
+        status=$?
+        ran="jest"
     fi
     ;;
 
   *.go)
-    # Go tests
     package_dir=$(dirname "$file_path")
-    if [ -f "${package_dir}/go.mod" ]; then
-        go test "$package_dir" 2>/dev/null || true
+    if [ -f go.mod ] || [ -f "${package_dir}/go.mod" ]; then
+        output=$(go test "./${package_dir#./}" 2>&1)
+        status=$?
+        ran="go test"
     fi
     ;;
 
   *.rs)
-    # Rust tests
-    if [ -f "Cargo.toml" ]; then
-        cargo test --quiet 2>/dev/null || true
+    if [ -f Cargo.toml ]; then
+        output=$(cargo test --quiet 2>&1)
+        status=$?
+        ran="cargo test"
     fi
     ;;
 esac
 
-# Log test execution
 if [ ! -z "$CLAUDE_HOOKS_LOG" ]; then
-    echo "$(date -Iseconds) | run_tests | $file_path | completed" >> "$CLAUDE_HOOKS_LOG"
+    echo "$(date -Iseconds) | run_tests | $file_path | $ran | exit=$status" >> "$CLAUDE_HOOKS_LOG"
 fi
 
-exit 0  # Never block on test failures in hooks
+if [ "$ran" != "none" ] && [ "$status" -ne 0 ]; then
+    jq -n --arg r "$output" --arg f "$file_path" \
+      '{decision:"block", reason:("Tests FAILED after editing " + $f + ":\n\n" + $r)}'
+fi
+
+exit 0

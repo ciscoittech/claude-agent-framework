@@ -8,7 +8,7 @@ import sys
 import json
 import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add observability library to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from db_helper import (
     update_execution,
     insert_metrics,
+    get_execution,
     get_current_execution_id,
     clear_current_execution_id
 )
@@ -26,6 +27,7 @@ def extract_token_metrics(tool_result):
     tokens_input = 0
     tokens_output = 0
     tokens_cached = 0
+    tokens_cache_write = 0
 
     # Check for usage data in result
     if isinstance(tool_result, dict):
@@ -33,24 +35,9 @@ def extract_token_metrics(tool_result):
         tokens_input = usage.get('input_tokens', 0)
         tokens_output = usage.get('output_tokens', 0)
         tokens_cached = usage.get('cache_read_input_tokens', 0)
+        tokens_cache_write = usage.get('cache_creation_input_tokens', 0)
 
-    return tokens_input, tokens_output, tokens_cached
-
-
-def calculate_cost(tokens_input, tokens_output, tokens_cached):
-    """Calculate approximate USD cost based on Claude Sonnet 4.5 pricing"""
-    # Sonnet 4.5 pricing (approximate)
-    COST_PER_M_INPUT = 3.00    # $3 per million input tokens
-    COST_PER_M_OUTPUT = 15.00   # $15 per million output tokens
-    COST_PER_M_CACHED = 0.30    # $0.30 per million cached tokens
-
-    cost = (
-        (tokens_input / 1_000_000 * COST_PER_M_INPUT) +
-        (tokens_output / 1_000_000 * COST_PER_M_OUTPUT) +
-        (tokens_cached / 1_000_000 * COST_PER_M_CACHED)
-    )
-
-    return round(cost, 6)
+    return tokens_input, tokens_output, tokens_cached, tokens_cache_write
 
 
 def main():
@@ -62,8 +49,11 @@ def main():
         sys.exit(0)
 
     # Check if this is a Task tool
+    # The subagent tool is named 'Agent'; 'Task' is its former name, accepted so
+    # older Claude Code versions keep working. Gating on 'Task' alone silently
+    # disabled every one of these hooks.
     tool_name = hook_input.get('tool', {}).get('name')
-    if tool_name != 'Task':
+    if tool_name not in ('Agent', 'Task'):
         sys.exit(0)
 
     # Get current execution ID
@@ -87,12 +77,39 @@ def main():
         status = 'success'
         error_message = None
 
-    # Calculate duration (if start time available)
+    # Calculate duration. Prefer the harness-supplied start time; fall back to the
+    # row's own started_at, which observe_task_start.py always writes. Without the
+    # fallback, duration is silently lost whenever the hook payload omits it.
+    #
+    # Timezones matter here: SQLite's CURRENT_TIMESTAMP is UTC, while a
+    # harness-supplied timestamp is local (or carries an explicit offset).
+    # Comparing a UTC start against a local now yields a negative duration.
     duration_ms = None
+    started, started_is_utc = None, False
+
     if 'started_at' in hook_input:
-        started = datetime.fromisoformat(hook_input['started_at'])
-        ended = datetime.now()
-        duration_ms = int((ended - started).total_seconds() * 1000)
+        try:
+            started = datetime.fromisoformat(hook_input['started_at'])
+        except (ValueError, TypeError):
+            started = None
+
+    if started is None and execution_id:
+        row = get_execution(execution_id)
+        if row and row['started_at']:
+            try:
+                started = datetime.fromisoformat(row['started_at'])
+                started_is_utc = True  # SQLite CURRENT_TIMESTAMP is naive UTC
+            except (ValueError, TypeError):
+                started = None
+
+    if started is not None:
+        if started.tzinfo is not None:
+            now = datetime.now(timezone.utc)
+        elif started_is_utc:
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+        else:
+            now = datetime.now()
+        duration_ms = max(0, int((now - started).total_seconds() * 1000))
 
     try:
         # Update execution record
@@ -104,23 +121,24 @@ def main():
         )
 
         # Extract and insert metrics
-        tokens_input, tokens_output, tokens_cached = extract_token_metrics(tool_result)
-        if tokens_input or tokens_output or tokens_cached:
-            cost_usd = calculate_cost(tokens_input, tokens_output, tokens_cached)
-
+        tokens_input, tokens_output, tokens_cached, tokens_cache_write = extract_token_metrics(tool_result)
+        if tokens_input or tokens_output or tokens_cached or tokens_cache_write:
+            # cost_usd is deliberately omitted: insert_metrics prices the run from
+            # the model tier recorded at task start, via pricing.py. Passing a cost
+            # here would override that with a tier-blind number.
             insert_metrics(
                 execution_id=execution_id,
                 tokens_input=tokens_input,
                 tokens_output=tokens_output,
                 tokens_cached=tokens_cached,
-                cost_usd=cost_usd
+                tokens_cache_write=tokens_cache_write
             )
 
             # Output metrics for logging
             print(f"✅ Completed: {status}", file=sys.stderr)
             if duration_ms:
                 print(f"   Duration: {duration_ms}ms", file=sys.stderr)
-            print(f"   Tokens: {tokens_input + tokens_output} (${cost_usd:.4f})", file=sys.stderr)
+            print(f"   Tokens: {tokens_input + tokens_output} in+out, {tokens_cached} cache-read, {tokens_cache_write} cache-write", file=sys.stderr)
         else:
             print(f"✅ Completed: {status}", file=sys.stderr)
 

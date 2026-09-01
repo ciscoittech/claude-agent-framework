@@ -5,11 +5,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Task",
+        "matcher": "Agent|Task",
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/track_timing.sh start \"$description\"",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/track_timing.sh start",
             "description": "Log agent start time"
           }
         ]
@@ -17,11 +17,11 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Task",
+        "matcher": "Agent|Task",
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/track_timing.sh end \"$description\"",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/track_timing.sh end",
             "description": "Log agent end time"
           }
         ]

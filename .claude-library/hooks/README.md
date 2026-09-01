@@ -2,7 +2,7 @@
 
 **Status:** Optional Pattern
 **Complexity:** Low-Medium
-**Dependencies:** None (self-contained)
+**Dependencies:** None (self-contained; requires `jq` for payload parsing)
 
 ## Overview
 
@@ -23,7 +23,6 @@ The Hooks Pattern provides deterministic control over Claude Code's behavior thr
 - Simple single-agent workflows
 - Rapid prototyping phase
 - Learning the framework basics
-- When you need detailed analytics (use Observability instead)
 
 ### What You Get
 
@@ -46,7 +45,7 @@ The Hooks Pattern provides deterministic control over Claude Code's behavior thr
 
 ### No External Dependencies!
 
-Unlike observability (which requires Logfire), hooks are completely self-contained:
+Hooks are completely self-contained:
 - ✅ Uses standard shell commands
 - ✅ No API keys needed
 - ✅ No external services
@@ -58,24 +57,34 @@ Unlike observability (which requires Logfire), hooks are completely self-contain
 
 ### Step 1: Enable Hooks
 
-Edit `.claude-library/REGISTRY.json`:
+Hooks go in **`.claude/settings.json`** — the file Claude Code actually reads.
+
+> **This is the step that used to be wrong.** Earlier versions of this guide told you
+> to enable hooks in `.claude-library/REGISTRY.json`. Claude Code never reads that file,
+> so nothing fired. `REGISTRY.json` is framework metadata; `.claude/settings.json` is
+> harness configuration. Only the latter runs anything.
 
 ```json
 {
-  "settings": {
-    "hooks": {
-      "enabled": true,
-      "scope": "project",
-      "configs": [
-        ".claude-library/hooks/configs/code-quality.json"
-      ],
-      "allow_blocking": true,
-      "timeout_ms": 5000,
-      "log_hook_output": true
-    }
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
   }
 }
 ```
+
+The configs in `configs/` are **reference shapes**, not loadable files — copy the
+`hooks` block you want from one into `.claude/settings.json`.
 
 ### Step 2: Choose Hook Configurations
 
@@ -85,15 +94,81 @@ Pre-built configurations available:
 - `performance.json` - Track timing metrics
 - `notifications.json` - Team alerts
 
-### Step 3: Test It
+This repo ships one live hook in `.claude/settings.json`: `check_structure.sh` runs
+`run_checks.py` after any edit under `.claude/`, `.claude-library/`, or a root document,
+and feeds failures back so they get fixed immediately. `test_hooks.py` — one of the
+suites it runs — executes every script in `scripts/` against real payloads, so a hook
+that quietly stops working fails a check rather than going unnoticed.
+
+### Step 3: Verify It Actually Fires
+
+A hook that silently does nothing looks identical to one that works. Prove it:
 
 ```bash
-# Make a code change - hooks will auto-format
-claude> "Add a new function to src/utils.py"
+# 1. Pipe the payload straight in - does the command work at all?
+echo '{"tool_input":{"file_path":"'"$PWD"'/.claude-library/REGISTRY.json"}}' \
+  | bash "$PWD"/.claude-library/hooks/scripts/check_structure.sh
 
-# Hooks automatically run prettier, eslint, etc.
-# View hook logs in .claude-metrics/hooks.log
+# 2. Validate the settings nesting (exit 0 = correct)
+jq -e '.hooks.PostToolUse[] | select(.matcher == "Write|Edit")
+       | .hooks[] | .command' .claude/settings.json
 ```
+
+Then edit a file under `.claude-library/` and confirm the hook ran. If the pipe test
+passes but the hook never fires, Claude Code may not be watching `.claude/` yet — open
+`/hooks` once to reload, or restart the session.
+
+---
+
+## Hook Input Contract (read this before writing a hook)
+
+**Claude Code delivers the hook payload as JSON on stdin. It does not set shell
+variables.** A command written as `my_script.sh "$file_path"` receives an empty
+string, because `$file_path` is never defined by the harness.
+
+This is the single most common way a hook silently does nothing. It bit this
+framework four separate times: the observability hooks gated on a retired tool name,
+the enablement path pointed at a file the harness never reads, `performance.json`
+matched `Task` instead of `Agent`, and `security.json` passed `"$command"` to a
+security checker — which then received an empty string and **approved everything**.
+
+Read the payload instead:
+
+```bash
+# shell
+file=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty')
+```
+```python
+# python
+import sys, json
+payload = json.load(sys.stdin)
+command = payload.get("tool_input", {}).get("command", "")
+```
+
+Useful payload fields:
+
+| Field | Present on |
+|---|---|
+| `tool_name` | all events |
+| `tool_input.file_path` | `Write`, `Edit` |
+| `tool_input.command` | `Bash` |
+| `tool_input.subagent_type` / `.description` | `Agent` |
+| `tool_response` | `PostToolUse` only |
+
+**A hook that fails open is worse than no hook.** If your script cannot determine what
+it is checking it must block, not proceed. Test with the payload the harness
+actually sends, not with argv.
+
+**Exit codes decide whether a `PreToolUse` hook actually blocks:**
+
+| Exit | Effect |
+|---|---|
+| `0` | Proceed |
+| **`2`** | **Blocking error — the tool call is stopped** |
+| any other non-zero | *Non-blocking* error; the tool call **proceeds** |
+
+Exiting `1` does not block. A hook that prints a block banner and exits 1
+announces a block that never happened.
 
 ---
 
@@ -159,7 +234,8 @@ Automatically format and lint code after changes:
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/format_code.sh \"$file_path\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh",
+            "description": "Auto-format code based on file type"
           }
         ]
       }
@@ -190,7 +266,8 @@ Block dangerous operations before they execute:
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude-library/hooks/scripts/security_check.py \"$command\""
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/security_check.py",
+            "description": "Validate bash command safety"
           }
         ]
       }
@@ -218,22 +295,24 @@ Lightweight metrics without external services:
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Task",
+        "matcher": "Agent|Task",
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"$(date +%s%3N) START $description\" >> .claude-metrics/timing.log"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/track_timing.sh start",
+            "description": "Log agent start time"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Task",
+        "matcher": "Agent|Task",
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"$(date +%s%3N) END $description\" >> .claude-metrics/timing.log"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/track_timing.sh end",
+            "description": "Log agent end time"
           }
         ]
       }
@@ -265,7 +344,7 @@ Alert team on workflow completion:
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/notify_team.sh \"$workflow_name\" \"completed\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/notify_team.sh 'workflow' 'completed'"
           }
         ]
       }
@@ -343,7 +422,7 @@ DANGEROUS_PATTERNS = [
 for pattern in DANGEROUS_PATTERNS:
     if re.search(pattern, command, re.IGNORECASE):
         print(f"🚫 BLOCKED: Dangerous command detected: {command}", file=sys.stderr)
-        sys.exit(1)  # Non-zero exit blocks the command
+        sys.exit(2)  # exit 2 blocks; exit 1 would NOT block
 
 # Log all bash commands for audit
 with open('.claude-metrics/bash_commands.log', 'a') as f:
@@ -423,7 +502,7 @@ Different workflows can have different hook configurations:
             "hooks": [
               {
                 "type": "command",
-                "command": "bash .claude-library/hooks/scripts/notify_team.sh 'Build' 'completed'"
+                "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/notify_team.sh 'Build' 'completed'"
               }
             ]
           }
@@ -458,7 +537,7 @@ Different workflows can have different hook configurations:
             "hooks": [
               {
                 "type": "command",
-                "command": "bash .claude-library/hooks/scripts/notify_team.sh 'Deployment' 'completed'"
+                "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/notify_team.sh 'Deployment' 'completed'"
               }
             ]
           }
@@ -526,7 +605,7 @@ Different workflows can have different hook configurations:
         "hooks": [
           {
             "type": "command",
-            "command": "if [ \"$ENVIRONMENT\" = \"production\" ]; then python scripts/strict_security.py \"$command\"; else exit 0; fi"
+            "command": "if [ \"$ENVIRONMENT\" = \"production\" ]; then python3 scripts/strict_security.py; else exit 0; fi"
           }
         ]
       }
@@ -546,15 +625,11 @@ Different workflows can have different hook configurations:
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/format_code.sh \"$file_path\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh"
           },
           {
             "type": "command",
-            "command": "bash .claude-library/hooks/scripts/lint_code.sh \"$file_path\""
-          },
-          {
-            "type": "command",
-            "command": "bash .claude-library/hooks/scripts/run_tests.sh \"$file_path\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/run_tests.sh"
           }
         ]
       }
@@ -574,7 +649,7 @@ Different workflows can have different hook configurations:
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude-library/hooks/scripts/validate_agent_output.py"
+            "command": "python \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/validate_agent_output.py"
           }
         ]
       }
@@ -582,53 +657,6 @@ Different workflows can have different hook configurations:
   }
 }
 ```
-
----
-
-## Hooks vs Observability: When to Use Each
-
-| Scenario | Hooks | Observability | Both |
-|----------|-------|---------------|------|
-| **Auto-format code** | ✅ Perfect | ❌ Overkill | - |
-| **Block dangerous commands** | ✅ Perfect | ❌ Can't block | - |
-| **Track timing metrics** | ✅ Simple | ✅ Rich data | ✅ Best |
-| **Debug complex workflows** | ❌ Limited | ✅ Perfect | - |
-| **Team notifications** | ✅ Perfect | ⚠️ Possible | ✅ Best |
-| **No external dependencies** | ✅ Yes | ❌ Needs Logfire | - |
-| **Quality gates** | ✅ Perfect | ❌ Can't block | - |
-| **Visual trace analysis** | ❌ No | ✅ Perfect | - |
-| **Lightweight metrics** | ✅ Perfect | ❌ Overkill | - |
-| **Production monitoring** | ⚠️ Basic | ✅ Advanced | ✅ Best |
-
----
-
-## Combined Pattern: Hooks + Observability
-
-For maximum control and visibility:
-
-```json
-{
-  "settings": {
-    "hooks": {
-      "enabled": true,
-      "configs": [
-        "hooks/configs/code-quality.json",
-        "hooks/configs/security.json"
-      ]
-    },
-    "observability": {
-      "enabled": true,
-      "provider": "logfire"
-    }
-  }
-}
-```
-
-**Result:**
-- Hooks enforce quality gates (blocking)
-- Observability tracks what happened (monitoring)
-- Hooks handle immediate actions
-- Observability provides deep insights
 
 ---
 
@@ -728,8 +756,7 @@ fi
 │   │   └── run_tests.sh                 # Test execution
 │   └── patterns/                         # Integration examples
 │       ├── workflow-gates.md            # Quality gate patterns
-│       ├── agent-validation.md          # Agent output validation
-│       └── lightweight-observability.md # Hooks-based metrics
+│       └── agent-validation.md          # Agent output validation
 ```
 
 ---
@@ -743,17 +770,6 @@ fi
 3. Test with simple workflow
 4. Set `enabled: true`
 5. Add more configs as needed
-
-### From Observability → Hooks
-
-If you're currently using observability but want simpler metrics:
-
-1. Keep observability for complex workflows
-2. Add hooks for quality gates
-3. Use hooks for lightweight workflows
-4. Both can coexist
-
----
 
 ## Performance Impact
 
@@ -819,7 +835,7 @@ echo "$(date) | $USER | $hook_name | $status" >> .claude-metrics/audit.log
         "hooks": [
           {
             "type": "command",
-            "command": "black \"$file_path\" && isort \"$file_path\" && mypy \"$file_path\""
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f; black \\"$f\\" && isort \\"$f\\" && mypy \\"$f\\"; } 2>/dev/null || true"
           }
         ]
       }
@@ -839,7 +855,7 @@ echo "$(date) | $USER | $hook_name | $status" >> .claude-metrics/audit.log
         "hooks": [
           {
             "type": "command",
-            "command": "npx prettier --write \"$file_path\" && npx eslint --fix \"$file_path\""
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f; npx prettier --write \\"$f\\" && npx eslint --fix \\"$f\\"; } 2>/dev/null || true"
           }
         ]
       }
@@ -870,7 +886,7 @@ echo "$(date) | $USER | $hook_name | $status" >> .claude-metrics/audit.log
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$command\" | grep -q 'kubectl.*production'; then python scripts/require_approval.py; fi"
+            "command": "jq -r '.tool_input.command // empty' | { read -r c; if echo \\"$c\\" | grep -q 'kubectl.*production'; then python3 scripts/require_approval.py; fi; }"
           }
         ]
       }

@@ -1,0 +1,33 @@
+name: checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # test_hooks.py executes the hook scripts for real: jq parses the payload
+      # in the shell hooks, and pytest is what run_tests.sh invokes on a Python
+      # project. Without them those checks skip, and a skipped check is the
+      # failure mode this whole suite exists to prevent.
+      - name: Install hook dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y jq
+          python -m pip install --quiet pytest
+
+      - name: Confirm the dependencies are actually present
+        run: |
+          jq --version
+          python -c 'import pytest; print("pytest", pytest.__version__)'
+
+      - name: Run all framework checks
+        run: python3 run_checks.py

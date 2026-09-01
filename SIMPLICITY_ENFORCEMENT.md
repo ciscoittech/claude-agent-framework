@@ -82,8 +82,11 @@ Used in first session: [NO = don't create yet]
 **Start with ONLY:**
 ```
 .claude/
-├── agent-launcher.md (1KB)
-├── settings.json (0.5KB)
+├── settings.json (0.5KB)     # hooks + permissions, or omit it entirely
+├── agents/                   # frontmatter + a short persona each
+│   ├── architect.md (1KB)
+│   ├── engineer.md (1KB)
+│   └── reviewer.md (1KB)
 └── commands/
     └── build.md (1KB)
 ```

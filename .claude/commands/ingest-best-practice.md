@@ -1,3 +1,8 @@
+---
+description: Ingest an Anthropic best-practice document, extract principles, and analyze gaps
+allowed-tools: WebFetch, Read, Write, Agent
+---
+
 # /ingest-best-practice Command
 
 **Purpose**: Ingest new Anthropic best practice documents, extract principles, analyze gaps, and prepare for testing

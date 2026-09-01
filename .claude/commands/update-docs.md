@@ -1,3 +1,8 @@
+---
+description: Fetch the latest Claude Code documentation and refresh framework context files
+allowed-tools: WebFetch, Read, Write, Edit, Agent
+---
+
 # /update-docs - Update Claude Code Documentation
 
 **Purpose**: Fetch latest Claude Code documentation and update framework context files
@@ -207,13 +212,6 @@ Update docs before building features to use latest patterns:
 /build-feature my-new-feature
 ```
 
-### With `/self-improve`
-Keep framework current with latest optimizations:
-```bash
-/update-docs
-/self-improve
-```
-
 ---
 
 ## Performance Targets
@@ -311,27 +309,6 @@ Completed in 1.8 minutes
 
 Next: Review HIGH priority recommendations
 ```
-
----
-
-## Observability
-
-This command is tracked by local observability:
-
-```bash
-# View update-docs performance
-python3 .claude-library/observability/obs.py recent
-
-# See metrics
-python3 .claude-library/observability/obs.py execution <id>
-```
-
-**Tracked Metrics**:
-- Duration per documentation source
-- Total update time
-- Changes detected count
-- Tokens used
-- Cost per update
 
 ---
 

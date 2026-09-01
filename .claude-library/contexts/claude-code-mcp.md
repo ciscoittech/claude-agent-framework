@@ -246,7 +246,7 @@ async def list_tools():
     return [
         Tool(
             name="query_agent_performance",
-            description="Query agent performance metrics from observability DB",
+            description="Query agent performance metrics from the project metrics DB",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -280,29 +280,28 @@ async def call_tool(name: str, arguments: dict):
         return {"content": [{"type": "text", "text": results}]}
 ```
 
-### Integration with Observability
+### Integration with a Local Database
 
 ```python
-# MCP server wrapping observability database
-from observability.db_helper import (
-    get_recent_executions,
-    get_agent_performance,
-    get_daily_summary
-)
+# MCP server wrapping any project-local SQLite database
+import sqlite3, json
+
+DB = ".claude-metrics/project.db"
 
 @server.list_tools()
 async def list_tools():
-    return [
-        Tool(name="get_recent_executions", ...),
-        Tool(name="get_agent_performance", ...),
-        Tool(name="get_daily_summary", ...)
-    ]
+    return [Tool(name="recent_rows", ...)]
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict):
-    if name == "get_recent_executions":
-        results = get_recent_executions(limit=arguments.get("limit", 10))
-        return {"content": [{"type": "text", "text": json.dumps(results)}]}
+    if name == "recent_rows":
+        with sqlite3.connect(DB) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM events ORDER BY id DESC LIMIT ?",
+                (arguments.get("limit", 10),)
+            ).fetchall()
+        return {"content": [{"type": "text", "text": json.dumps([dict(r) for r in rows])}]}
 ```
 
 ---
@@ -395,13 +394,13 @@ async def call_tool(name: str, arguments: dict):
 ### Pattern 1: Database Access
 
 ```python
-# MCP server for observability database
+# MCP server for a project-local database
 @server.list_tools()
 async def list_tools():
     return [
         Tool(
             name="query_metrics",
-            description="Query observability metrics",
+            description="Query project metrics",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -489,7 +488,7 @@ async def read_resource(uri: str):
 ### 2. Framework Metrics Server
 
 ```python
-# Access observability data via MCP
+# Access project metrics via MCP
 @server.call_tool()
 async def call_tool(name: str, arguments: dict):
     if name == "analyze_agent_performance":
@@ -520,7 +519,7 @@ async def call_tool(name: str, arguments: dict):
 - MCP Specification: https://modelcontextprotocol.io
 
 **Framework Integration**:
-- Observability: `.claude-library/observability/`
+- Hooks: `.claude-library/hooks/`
 - Best Practices: `claude-code-best-practices.md`
 - Subagents: `claude-code-subagents.md`
 

@@ -142,7 +142,7 @@ analyzeCodeSecurity(file_path="/src/auth.ts", severity="medium")
 | **File Search** | `Grep` | `Bash("grep pattern")` |
 | **File Patterns** | `Glob` | `Bash("find . -name")` |
 | **Code Analysis** | `Read` + `Grep` | `Bash("awk/sed")` |
-| **Agent Spawning** | `Task` | Multiple sequential requests |
+| **Agent Spawning** | `Agent` | Multiple sequential requests |
 
 ---
 
@@ -287,14 +287,14 @@ Architect → Engineer → Reviewer → Deploy
 // Sequential execution with context passing
 async function sequentialWorkflow(requirements) {
   // Step 1: Architecture
-  const architecture = await runTask({
+  const architecture = await runAgent({
     type: 'general-purpose',
     description: 'Design system architecture',
     prompt: `Design architecture for: ${requirements}`
   });
 
   // Step 2: Implementation (depends on architecture)
-  const implementation = await runTask({
+  const implementation = await runAgent({
     type: 'general-purpose',
     description: 'Implement based on architecture',
     prompt: `Implement this architecture:
@@ -303,7 +303,7 @@ async function sequentialWorkflow(requirements) {
   });
 
   // Step 3: Review (depends on implementation)
-  const review = await runTask({
+  const review = await runAgent({
     type: 'general-purpose',
     description: 'Review implementation',
     prompt: `Review this implementation:
@@ -326,30 +326,30 @@ Input ───┼─ Performance Analysis ┼──→ Synthesis
 ```
 
 ```javascript
-// ALL tasks sent in SINGLE message for true parallelization
-<Task>
+// ALL Agent calls sent in a SINGLE message for true parallelization
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Security analysis</description>
   <prompt>Analyze codebase for security vulnerabilities:
     - SQL injection, XSS, auth flaws, data exposure</prompt>
-</Task>
+</Agent>
 
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Performance analysis</description>
   <prompt>Analyze codebase for performance issues:
     - N+1 queries, memory leaks, missing indexes</prompt>
-</Task>
+</Agent>
 
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Code quality analysis</description>
   <prompt>Analyze codebase for quality issues:
     - Duplication, complexity, missing tests</prompt>
-</Task>
+</Agent>
 ```
 
-> **Critical**: Send all Tasks in ONE message for true parallelization. Sending them sequentially makes execution 3x slower.
+> **Critical**: Send all Agent calls in ONE message for true parallelization. Sending them sequentially makes execution 3x slower.
 
 ### Hierarchical Workflow (Orchestrator-Workers)
 
@@ -367,7 +367,7 @@ Parent agent coordinates specialized child agents. Use for complex problems requ
 ```javascript
 async function orchestratorWorkflow(complexProblem) {
   // Orchestrator analyzes and plans
-  const plan = await runTask({
+  const plan = await runAgent({
     type: 'general-purpose',
     description: 'Problem analysis and planning',
     prompt: `You are the orchestrator. Problem: ${complexProblem}
@@ -377,7 +377,7 @@ async function orchestratorWorkflow(complexProblem) {
 
   // Spawn specialists based on plan (parallel)
   const workers = plan.specialists.map(specialist =>
-    runTask({
+    runAgent({
       type: 'general-purpose',
       description: `${specialist.role} specialist`,
       prompt: `You are a ${specialist.role} specialist.
@@ -451,13 +451,11 @@ Claude Code now supports custom `subagent_type` definitions via `.claude/agents/
 **Agent file format** (`.claude/agents/security-reviewer.md`):
 ```markdown
 ---
-name: Security Reviewer
-description: Reviews code for security vulnerabilities
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
+name: security-reviewer
+description: Reviews code for security vulnerabilities. Use for auth, input handling, and anything touching user data.
+model: sonnet
+effort: high
+tools: Read, Grep, Glob, Bash
 ---
 
 You are a security specialist. Review code for:
@@ -472,17 +470,17 @@ Output a structured report with severity ratings.
 **Usage in workflows**:
 ```javascript
 // Reference custom agent types instead of general-purpose
-<Task>
+<Agent>
   <subagent_type>security-reviewer</subagent_type>
   <description>Security review of auth module</description>
   <prompt>Review src/auth/ for vulnerabilities. Focus on JWT handling.</prompt>
-</Task>
+</Agent>
 
-<Task>
+<Agent>
   <subagent_type>frontend-engineer</subagent_type>
   <description>Implement login component</description>
   <prompt>Create React login form with proper input validation.</prompt>
-</Task>
+</Agent>
 ```
 
 ### Routing Workflow (Conditional Branching)
@@ -491,7 +489,7 @@ Classify input and route to specialized handlers.
 
 ```javascript
 async function routingWorkflow(input) {
-  const classification = await runTask({
+  const classification = await runAgent({
     type: 'general-purpose',
     description: 'Classify input type',
     prompt: `Classify this request: "${input}"
@@ -502,10 +500,10 @@ async function routingWorkflow(input) {
   const { type } = JSON.parse(classification.result);
 
   const handlers = {
-    bug_report:       () => runTask({ type: 'general-purpose', prompt: `Debug: ${input}` }),
-    feature_request:  () => runTask({ type: 'general-purpose', prompt: `Implement: ${input}` }),
-    question:         () => runTask({ type: 'general-purpose', prompt: `Answer: ${input}` }),
-    documentation:    () => runTask({ type: 'general-purpose', prompt: `Document: ${input}` })
+    bug_report:       () => runAgent({ type: 'general-purpose', prompt: `Debug: ${input}` }),
+    feature_request:  () => runAgent({ type: 'general-purpose', prompt: `Implement: ${input}` }),
+    question:         () => runAgent({ type: 'general-purpose', prompt: `Answer: ${input}` }),
+    documentation:    () => runAgent({ type: 'general-purpose', prompt: `Document: ${input}` })
   };
 
   return handlers[type]?.() || handleUnknown(input);
@@ -522,14 +520,14 @@ async function evaluatorOptimizer(task, maxIterations = 3) {
   let bestScore = 0;
 
   for (let i = 0; i < maxIterations; i++) {
-    const solution = await runTask({
+    const solution = await runAgent({
       type: 'general-purpose',
       description: `Solution generation - iteration ${i + 1}`,
       prompt: `Generate solution for: ${task}
       ${currentSolution ? `Previous feedback: ${currentSolution.feedback}` : ''}`
     });
 
-    const evaluation = await runTask({
+    const evaluation = await runAgent({
       type: 'general-purpose',
       description: `Evaluation - iteration ${i + 1}`,
       prompt: `Evaluate: ${solution.result}
@@ -558,23 +556,23 @@ Launch multiple agents simultaneously when they don't depend on each other's out
 
 ```javascript
 // All three agents start SIMULTANEOUSLY
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Security analysis</description>
   <prompt>Analyze for: SQL injection, XSS, auth flaws, data exposure</prompt>
-</Task>
+</Agent>
 
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Performance analysis</description>
   <prompt>Analyze for: N+1 queries, memory leaks, inefficient algorithms</prompt>
-</Task>
+</Agent>
 
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Code quality analysis</description>
   <prompt>Analyze for: duplication, complexity, missing tests, naming</prompt>
-</Task>
+</Agent>
 ```
 
 ### Pattern 2: Parallel Implementation with Live Review
@@ -582,19 +580,19 @@ Launch multiple agents simultaneously when they don't depend on each other's out
 One agent implements while another reviews in real-time.
 
 ```javascript
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Implementation</description>
   <prompt>[Engineer] Implement user authentication with JWT, refresh tokens,
   rate limiting, bcrypt. Follow TDD: tests first, implement, refactor.</prompt>
-</Task>
+</Agent>
 
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Real-time review</description>
   <prompt>[Reviewer] As the engineer implements, review for security
   vulnerabilities, performance issues, best practices violations.</prompt>
-</Task>
+</Agent>
 ```
 
 ### Pattern 3: Hierarchical Decomposition
@@ -645,41 +643,41 @@ async function aggregateResults(agents) {
 
 ```javascript
 // Step 1: Architecture phase (parallel - ~30 seconds)
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>API architecture design</description>
   <prompt>Design REST API for user management:
     CRUD operations, JWT auth, role-based access, rate limiting</prompt>
-</Task>
+</Agent>
 
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Database schema design</description>
   <prompt>Design database schema for:
     User profiles, sessions, permissions, audit logs</prompt>
-</Task>
+</Agent>
 
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Test plan creation</description>
   <prompt>Create test specifications for:
     API endpoints, auth flows, error cases, performance</prompt>
-</Task>
+</Agent>
 
 // Step 2: Implementation (parallel - ~45 seconds, uses Step 1 results)
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Backend implementation</description>
   <prompt>Implement based on architecture: ${architectureResults}
     Use TDD approach with provided tests</prompt>
-</Task>
+</Agent>
 
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Security review</description>
   <prompt>Review implementation for SQL injection, JWT vulnerabilities,
     rate limiting bypass, data exposure</prompt>
-</Task>
+</Agent>
 
 // Step 3: Integration (sequential - ~15 seconds)
 // Verify all endpoints, generate docs, create deployment guide
@@ -696,33 +694,53 @@ async function aggregateResults(agents) {
 
 > **Diminishing returns**: Beyond 5-7 parallel agents, coordination overhead reduces gains. The sweet spot is 3-5 parallel agents for most tasks.
 
-### Effort Levels <!-- NEW in v2.0 -->
+### Model Tiers and Effort Levels
 
-Use the `model` parameter to match agent cost/speed to task complexity:
+**These are two independent dials.** Model sets the capability floor; effort sets how hard
+the model thinks. An Opus agent at `low` effort and a Haiku agent are different things —
+choosing one does not choose the other.
 
-| Model | Use For | Speed | Cost |
-|-------|---------|-------|------|
-| `model: "haiku"` | Simple tasks: linting, formatting, file moves | Fastest | Lowest |
-| `model: "sonnet"` | Standard tasks: implementation, testing, review | Fast | Medium |
-| `model: "opus"` | Complex reasoning: architecture, debugging, security | Slower | Highest |
+**Model** — capability floor:
 
-```javascript
-// Fast/cheap: use haiku for simple file operations
-<Task>
-  <subagent_type>general-purpose</subagent_type>
-  <model>haiku</model>
-  <description>Format and lint check</description>
-  <prompt>Run linter and fix formatting issues in src/</prompt>
-</Task>
+| Model | Use for | Context | Cost /1M |
+|-------|---------|---------|----------|
+| `haiku` | Mechanical work: file existence checks, formatting, simple lookups | 200K | $1 / $5 |
+| `sonnet` | Standard work: implementation, testing, docs, research | 1M | $2 / $10 |
+| `opus` | Design, review, debugging, anything requiring judgment | 1M | $5 / $25 |
+| `fable` | Opt-in escalation only: long-horizon, multi-subsystem work | 1M | $10 / $50 |
 
-// Complex: use opus for architecture decisions
-<Task>
-  <subagent_type>general-purpose</subagent_type>
-  <model>opus</model>
-  <description>System architecture review</description>
-  <prompt>Review system architecture for scalability and security concerns</prompt>
-</Task>
+**Effort** — reasoning depth: `low` → `medium` → `high` → `xhigh` → `max`. `xhigh` is the
+Claude Code default and the sweet spot for most coding and agentic work. Use `low` for
+mechanical subagents, `high`/`xhigh` for design and review, `max` only when correctness
+matters more than cost.
+
+```python
+# Mechanical: cheap model, shallow reasoning
+Agent(
+    description="Format and lint check",
+    prompt="Run linter and fix formatting issues in src/",
+    subagent_type="general-purpose",
+    model="haiku",
+)
+
+# Judgment: capable model, deep reasoning
+Agent(
+    description="System architecture review",
+    prompt="Review system architecture for scalability and security concerns",
+    subagent_type="framework-system-architect",
+    model="opus",
+)
 ```
+
+**Two constraints worth remembering:**
+
+- Haiku is the only current model at 200K; everything else is 1M. Never route
+  long-context work to it.
+- A coordinator never propagates its own model to the agents it launches. Each sub-agent
+  runs at its own tier from `REGISTRY.json`. A coordinator escalated to `fable` that leaked
+  its tier into six sub-agents would multiply the cost of the whole workflow for no benefit.
+
+See `MODEL_SELECTION.md` for per-agent tier assignments.
 
 ---
 
@@ -917,6 +935,34 @@ class ContextHierarchy {
 | Cached Load | 0.1s | 10KB | 85% |
 | Pruned Load | 0.3s | 5KB | 60% |
 
+### Prompt Caching and Prefix Stability
+
+Cached reads bill at roughly a tenth of fresh input, which makes caching the largest cost
+lever in a multi-agent system. Caching is a **prefix match**: any byte change anywhere in
+the prefix invalidates everything after it.
+
+Assemble every agent prompt stable-first:
+
+```
+persona → pinned contexts → volatile task
+```
+
+**This is in direct tension with lazy loading.** Lazy loading minimizes bytes resident;
+caching rewards those bytes staying byte-identical between runs. Selecting a different
+context set per task produces a different prefix every time and a near-zero hit rate — so
+a larger *stable* bundle can cost less than a smaller one rebuilt each call.
+
+Resolve the tension by how often the agent runs:
+
+| Agent runs | Favor | Why |
+|---|---|---|
+| Repeatedly, same shape | Fixed context bundle | Prefix stays identical; cache hits compound |
+| Once, ad hoc | Lazy loading | No second call to amortize a cache write |
+
+Silent invalidators to audit for: a timestamp or run ID in the persona, unsorted JSON, a
+tool list whose order varies, or interpolating the task into the middle of the prompt
+instead of the end.
+
 ### Extended Context <!-- NEW in v2.0 -->
 
 Claude Code now supports up to 1M token context windows. This changes context strategy:
@@ -933,7 +979,7 @@ Claude Code now supports up to 1M token context windows. This changes context st
 | Agent persona/instructions | <2KB | Keep personas focused |
 | Project context (CLAUDE.md) | <5KB | Auto-loaded, keep lean |
 | Domain contexts | 5-20KB each | Loaded on demand |
-| Code being analyzed | Up to 100KB | Use Grep to find relevant sections first |
+| Code being analyzed | Grep first, then Read | Locate before loading; relevance beats volume |
 | Previous agent output | <10KB | Summarize, don't pass raw output |
 
 **Anti-pattern**: Loading entire codebases into context. Even with 1M tokens, relevance matters more than volume. A focused 10KB context outperforms an unfocused 500KB dump.
@@ -1076,13 +1122,13 @@ Actual time savings observed in production usage:
 Subagents can work in isolated git worktrees to prevent file conflicts:
 
 ```javascript
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <isolation>worktree</isolation>
   <description>Refactor auth module</description>
   <prompt>Refactor src/auth/ to use new token format.
   Working in isolated worktree - no conflicts with other agents.</prompt>
-</Task>
+</Agent>
 ```
 
 **When to use worktree isolation:**
@@ -1095,12 +1141,12 @@ Subagents can work in isolated git worktrees to prevent file conflicts:
 Run agents in the background for long-running tasks:
 
 ```javascript
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <run_in_background>true</run_in_background>
   <description>Full test suite</description>
   <prompt>Run complete test suite and report failures.</prompt>
-</Task>
+</Agent>
 // Continue with other work while tests run
 ```
 
@@ -1110,20 +1156,20 @@ Agents can persist findings across sessions:
 
 ```javascript
 // Agent writes findings to a known location
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Codebase analysis</description>
   <prompt>Analyze codebase architecture. Write findings to
   .claude-library/contexts/architecture-analysis.md for future agents.</prompt>
-</Task>
+</Agent>
 
 // Later agents read previous findings
-<Task>
+<Agent>
   <subagent_type>general-purpose</subagent_type>
   <description>Implementation based on analysis</description>
   <prompt>Read .claude-library/contexts/architecture-analysis.md
   and implement the recommended changes.</prompt>
-</Task>
+</Agent>
 ```
 
 ### Skills with Context: Fork <!-- NEW in v2.0 -->
@@ -1177,7 +1223,7 @@ You are a {specific_role} specializing in {domain_area}.
 - **Grep**: Search for patterns in codebase
 - **Glob**: Find files by name pattern
 - **Bash**: Run commands (use carefully)
-- **Task**: Spawn sub-agents (if orchestrator role)
+- **Agent**: Spawn subagents (if orchestrator role)
 
 ## Success Criteria
 - {Measurable outcome 1}
@@ -1285,10 +1331,10 @@ Stage 3: {Name}
 ## Implementation
 
 ### Stage 1 (Parallel)
-[Task blocks for agents A, B, C]
+[Agent calls for agents A, B, C]
 
 ### Stage 2 (Sequential, depends on Stage 1)
-[Task blocks using Stage 1 results]
+[Agent calls using Stage 1 results]
 
 ## Quality Gates
 - [ ] {Check 1}
@@ -1306,17 +1352,30 @@ Stage 3: {Name}
 {
   "agents": {
     "agent-name": {
-      "file": "agents/agent-name.md",
-      "description": "One-line description of agent purpose",
-      "triggers": ["keyword1", "keyword2"],
-      "contexts": ["context-file-1", "context-file-2"],
-      "tools": ["Read", "Edit", "Grep", "Glob", "Bash"],
+      "path": ".claude-library/agents/core/agent-name.md",
+      "type": "core",
+      "domain": "implementation",
+      "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
       "model": "sonnet",
-      "thinking_patterns": ["tool-selection", "problem-decomposition"]
+      "effort": "medium",
+      "triggers": ["keyword1", "keyword2"],
+      "contexts": ["project.md", "patterns.md"],
+      "priority": 1
     }
   }
 }
 ```
+
+Three things this shape gets right, each of which has been gotten wrong:
+
+- **`path`, not `file`, and it is repo-root-relative.** `contexts[]` is the
+  opposite convention - bare filenames resolved against
+  `.claude-library/contexts/`, extension included.
+- **`model` and `effort` are both required, and both must match the agent's
+  `.claude/agents/<name>.md` frontmatter.** A tier declared only here is a tier
+  nothing enforces; `validate_agent_system.py` fails on the disagreement.
+- **The key is `type` and `domain`.** Not `category`. Not `thinking_patterns` -
+  that was never read by anything.
 
 ---
 
@@ -1326,7 +1385,7 @@ Stage 3: {Name}
 
 - Start with the simplest approach (prompt engineering) before escalating
 - Use parallel execution for independent tasks
-- Send all parallel Tasks in a single message
+- Send all parallel Agent calls in a single message
 - Define clear agent boundaries and responsibilities
 - Implement progressive quality gates with early termination
 - Cache frequently used contexts

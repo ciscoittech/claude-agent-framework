@@ -670,7 +670,6 @@ Offer next steps: "To validate fix, run: pytest tests/test_auth.py"
    - [ ] Context optimized (<10KB auto-load)
    - [ ] Workflows follow patterns
    - [ ] Tests exist and pass
-   - [ ] Observability enabled
 
    ## Score: [X]%
 

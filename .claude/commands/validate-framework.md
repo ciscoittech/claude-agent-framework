@@ -1,3 +1,8 @@
+---
+description: Validate a best-practice improvement by running its experiment test suite
+allowed-tools: Bash(pytest:*), Bash(python3:*), Read, Grep, Glob
+---
+
 # /validate-framework Command
 
 **Purpose**: Validate framework improvements from applied best practices through comprehensive testing

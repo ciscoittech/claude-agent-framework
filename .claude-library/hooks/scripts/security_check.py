@@ -7,9 +7,32 @@ Blocks dangerous operations that could damage the system
 import sys
 import re
 import os
+import json
 from datetime import datetime
 
-command = sys.argv[1] if len(sys.argv) > 1 else ""
+
+def read_command():
+    """
+    Claude Code delivers the hook payload as JSON on stdin - NOT as argv.
+    A config passing "$command" hands this script an empty string, which used to
+    mean every command was approved: a security hook that silently allowed
+    everything. argv is kept as a fallback for direct testing.
+    """
+    if len(sys.argv) > 1 and sys.argv[1]:
+        return sys.argv[1]
+    if sys.stdin is None or sys.stdin.isatty():
+        return ""
+    raw = sys.stdin.read()
+    if not raw.strip():
+        return ""
+    try:
+        return json.loads(raw).get("tool_input", {}).get("command", "")
+    except (json.JSONDecodeError, AttributeError):
+        # Not JSON - treat the raw text as the command rather than failing open
+        return raw.strip()
+
+
+command = read_command()
 
 # Dangerous command patterns to block
 DANGEROUS_PATTERNS = [
@@ -51,25 +74,47 @@ for pattern, description in DANGEROUS_PATTERNS:
         reason = description
         break
 
-# Log all bash commands for audit trail
-log_dir = ".claude-metrics"
-os.makedirs(log_dir, exist_ok=True)
+def audit(blocked, reason, command):
+    """
+    Best-effort audit trail. NEVER let logging failure change the verdict - the
+    block must already be decided and emitted before this runs. A read-only CWD,
+    or .claude-metrics existing as a file, previously raised here and skipped the
+    block entirely.
+    """
+    try:
+        log_dir = os.getenv("CLAUDE_METRICS_DIR", ".claude-metrics")
+        os.makedirs(log_dir, exist_ok=True)
+        timestamp = datetime.now().isoformat()
+        status = "BLOCKED" if blocked else "ALLOWED"
+        with open(os.path.join(log_dir, "bash_commands.log"), 'a') as f:
+            f.write(f"{timestamp} | {status} | {command}\n")
+        if blocked:
+            hooks_log = os.getenv("CLAUDE_HOOKS_LOG", os.path.join(log_dir, "hooks.log"))
+            with open(hooks_log, 'a') as f:
+                f.write(f"{timestamp} | security_check | BLOCKED | {reason}\n")
+    except OSError:
+        pass  # auditing is best-effort; the verdict stands regardless
 
-audit_log = os.path.join(log_dir, "bash_commands.log")
-with open(audit_log, 'a') as f:
-    timestamp = datetime.now().isoformat()
-    status = "BLOCKED" if blocked else "ALLOWED"
-    f.write(f"{timestamp} | {status} | {command}\n")
 
-# If blocked, also log to hooks log
 if blocked:
-    hooks_log = os.getenv("CLAUDE_HOOKS_LOG", os.path.join(log_dir, "hooks.log"))
-    with open(hooks_log, 'a') as f:
-        f.write(f"{timestamp} | security_check | BLOCKED | {reason}\n")
-
+    # PreToolUse blocking contract: exit code 2 blocks. Exit 1 is a NON-blocking
+    # error - the tool call proceeds and only a "hook error" notice is shown. This
+    # script used to exit 1 while printing a convincing block banner, so it
+    # announced a block that never happened.
+    #
+    # The JSON permissionDecision is the explicit documented mechanism; exit 2 is
+    # the belt-and-braces fallback if stdout is not parsed. Both deny.
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": f"Blocked by security_check: {reason}",
+        }
+    }))
     print(f"🚫 SECURITY: {reason}", file=sys.stderr)
     print(f"Command blocked: {command}", file=sys.stderr)
-    sys.exit(1)  # Non-zero exit blocks the command
+    audit(blocked, reason, command)
+    sys.exit(2)
 
-# Command is safe, allow it
+audit(blocked, reason, command)
 sys.exit(0)

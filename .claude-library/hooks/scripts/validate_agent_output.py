@@ -37,7 +37,7 @@ def main():
     For now, performs basic validation checks
     """
 
-    # Check for workflow context file (if using observability pattern)
+    # Check for a workflow context file, if the workflow wrote one
     workflow_context = "/tmp/claude-workflow-context.json"
 
     if Path(workflow_context).exists():

@@ -36,13 +36,16 @@ A **subagent** is an independent Claude instance launched via the `Task` tool to
 
 ---
 
-## Task Tool Syntax
+## Agent Tool Syntax
+
+> The subagent tool is named **`Agent`**. `Task` was its former name and appears
+> in older material; hook matchers that gate on `"Task"` alone never fire.
 
 ### Basic Usage
 
 ```python
 # Launch a single subagent
-Task(
+Agent(
     description="Clear task description",
     prompt="""
     Detailed instructions for the subagent.
@@ -57,17 +60,17 @@ Task(
 ```python
 # Launch multiple subagents in parallel (single message, multiple Task calls)
 [
-    Task(
+    Agent(
         description="Research API patterns",
         prompt="Research REST API best practices for Python FastAPI",
         subagent_type="general-purpose"
     ),
-    Task(
+    Agent(
         description="Research database patterns",
         prompt="Research SQLAlchemy best practices for async operations",
         subagent_type="general-purpose"
     ),
-    Task(
+    Agent(
         description="Research testing patterns",
         prompt="Research pytest patterns for async API testing",
         subagent_type="general-purpose"
@@ -79,14 +82,14 @@ Task(
 
 ```python
 # First subagent
-result1 = Task(
+result1 = Agent(
     description="Design database schema",
     prompt="Create database schema for user authentication system",
     subagent_type="general-purpose"
 )
 
 # Use result1 in next subagent
-result2 = Task(
+result2 = Agent(
     description="Implement schema",
     prompt=f"Implement this database schema:\n{result1}\n\nUse SQLAlchemy async",
     subagent_type="general-purpose"
@@ -102,7 +105,7 @@ result2 = Task(
 **Use For**: Research, multi-step tasks, general development
 **Example**:
 ```python
-Task(
+Agent(
     description="Research authentication patterns",
     prompt="Research OAuth2 implementation patterns for FastAPI",
     subagent_type="general-purpose"
@@ -112,11 +115,11 @@ Task(
 ### Specialized Types (Framework-Specific)
 **Note**: Custom subagent types are defined in `.claude-library/REGISTRY.json`
 
-Example custom types:
-- `framework-architect`: System design
-- `framework-engineer`: Implementation
-- `framework-reviewer`: Code review
-- `framework-validator`: Testing
+Example custom types (these are the real registry agents; see `REGISTRY.json`):
+- `framework-system-architect`: System design
+- `framework-senior-engineer`: Implementation
+- `framework-code-reviewer`: Code review
+- `framework-validation-engineer`: Testing
 
 ### Custom Subagent Types (Agent Teams)
 
@@ -133,7 +136,7 @@ You are a security-focused code reviewer...
 
 **Launching**:
 ```python
-Task(
+Agent(
     description="Security review",
     prompt="Review auth module",
     subagent_type="security-reviewer"  # matches filename
@@ -153,7 +156,7 @@ Task(
 
 **Good**:
 ```python
-Task(
+Agent(
     description="Research FastAPI async patterns",
     prompt="""
     Research and summarize best practices for:
@@ -169,7 +172,7 @@ Task(
 
 **Bad**:
 ```python
-Task(
+Agent(
     description="Research stuff",
     prompt="Look into FastAPI",
     subagent_type="general-purpose"
@@ -186,7 +189,7 @@ Task(
 
 **Example**:
 ```python
-Task(
+Agent(
     description="Implement user authentication",
     prompt="""
     Implement JWT-based authentication for our FastAPI app.
@@ -215,17 +218,17 @@ Task(
 **Sequential for Dependencies**:
 ```python
 # Design first
-design = Task(description="Design", prompt="...", subagent_type="general-purpose")
+design = Agent(description="Design", prompt="...", subagent_type="general-purpose")
 
 # Implement using design
-implement = Task(
+implement = Agent(
     description="Implement",
     prompt=f"Implement this design:\n{design}",
     subagent_type="general-purpose"
 )
 
 # Test implementation
-test = Task(
+test = Agent(
     description="Test",
     prompt=f"Test this implementation:\n{implement}",
     subagent_type="general-purpose"
@@ -236,9 +239,9 @@ test = Task(
 ```python
 # Single message with multiple independent tasks
 [
-    Task(description="Build frontend", prompt="...", subagent_type="general-purpose"),
-    Task(description="Build backend API", prompt="...", subagent_type="general-purpose"),
-    Task(description="Build database schema", prompt="...", subagent_type="general-purpose")
+    Agent(description="Build frontend", prompt="...", subagent_type="general-purpose"),
+    Agent(description="Build backend API", prompt="...", subagent_type="general-purpose"),
+    Agent(description="Build database schema", prompt="...", subagent_type="general-purpose")
 ]
 ```
 
@@ -257,7 +260,6 @@ test = Task(
 **Monitor Performance**:
 - Track subagent duration
 - Measure parallel speedup
-- Use observability for insights
 
 ### Advanced Subagent Features
 
@@ -266,7 +268,7 @@ test = Task(
 #### Worktree Isolation
 Run agents in isolated git worktrees for safe parallel file editing:
 ```python
-Task(
+Agent(
     description="Refactor auth module",
     prompt="...",
     subagent_type="general-purpose",
@@ -278,7 +280,7 @@ Worktree is auto-cleaned if no changes; returns branch name if changes made.
 #### Background Agents
 Run agents asynchronously and get notified on completion:
 ```python
-Task(
+Agent(
     description="Long research task",
     prompt="...",
     subagent_type="general-purpose",
@@ -292,7 +294,7 @@ Agents can use the auto memory system (`MEMORY.md`) to persist knowledge across 
 #### Model Selection
 Override the model for specific agents:
 ```python
-Task(
+Agent(
     description="Quick formatting",
     prompt="...",
     subagent_type="general-purpose",
@@ -304,14 +306,6 @@ Available: "opus" (complex), "sonnet" (balanced), "haiku" (fast/cheap)
 ---
 
 ## Framework Integration
-
-### With Local Observability
-
-Subagents are automatically tracked:
-- `observe_task_start.py` captures launch
-- `observe_task_end.py` captures completion
-- `track_artifact.py` captures outputs
-- `validate_execution.py` validates against expectations
 
 ### With Agent Launcher
 
@@ -346,7 +340,7 @@ Define custom subagent types:
 
 Launch with:
 ```python
-Task(
+Agent(
     description="Special task",
     prompt="Do the special thing",
     subagent_type="my-specialist"  # Matches REGISTRY.json
@@ -362,29 +356,29 @@ Task(
 ```python
 # Phase 1: Research (parallel)
 research_results = [
-    Task(description="Research API", prompt="...", subagent_type="general-purpose"),
-    Task(description="Research DB", prompt="...", subagent_type="general-purpose"),
-    Task(description="Research Auth", prompt="...", subagent_type="general-purpose")
+    Agent(description="Research API", prompt="...", subagent_type="general-purpose"),
+    Agent(description="Research DB", prompt="...", subagent_type="general-purpose"),
+    Agent(description="Research Auth", prompt="...", subagent_type="general-purpose")
 ]
 
 # Phase 2: Design (sequential)
-design = Task(
+design = Agent(
     description="Design system",
     prompt=f"Design based on:\n{research_results}",
-    subagent_type="framework-architect"
+    subagent_type="framework-system-architect"
 )
 
 # Phase 3: Implement (parallel)
 implementations = [
-    Task(description="Build API", prompt=f"Implement:\n{design.api}", subagent_type="general-purpose"),
-    Task(description="Build DB", prompt=f"Implement:\n{design.db}", subagent_type="general-purpose")
+    Agent(description="Build API", prompt=f"Implement:\n{design.api}", subagent_type="general-purpose"),
+    Agent(description="Build DB", prompt=f"Implement:\n{design.db}", subagent_type="general-purpose")
 ]
 
 # Phase 4: Test (sequential)
-tests = Task(
+tests = Agent(
     description="Test all",
     prompt=f"Test:\n{implementations}",
-    subagent_type="framework-validator"
+    subagent_type="framework-validation-engineer"
 )
 ```
 
@@ -393,9 +387,9 @@ tests = Task(
 ```python
 # Implementation done, get multiple reviews in parallel
 reviews = [
-    Task(description="Security review", prompt="...", subagent_type="general-purpose"),
-    Task(description="Performance review", prompt="...", subagent_type="general-purpose"),
-    Task(description="Code quality review", prompt="...", subagent_type="general-purpose")
+    Agent(description="Security review", prompt="...", subagent_type="general-purpose"),
+    Agent(description="Performance review", prompt="...", subagent_type="general-purpose"),
+    Agent(description="Code quality review", prompt="...", subagent_type="general-purpose")
 ]
 ```
 
@@ -403,7 +397,7 @@ reviews = [
 
 ```python
 # Top-level coordination
-coordinator = Task(
+coordinator = Agent(
     description="Build feature",
     prompt="""
     Build user authentication feature.
@@ -416,7 +410,7 @@ coordinator = Task(
 
     Coordinate their work and ensure consistency.
     """,
-    subagent_type="framework-architect"
+    subagent_type="framework-system-architect"
 )
 # The coordinator launches its own subagents
 ```
@@ -433,12 +427,11 @@ coordinator = Task(
 ### Slow Execution
 - Minimize context in prompts
 - Use parallel where possible
-- Check observability for bottlenecks
 
 ### Inconsistent Results
 - Provide more context
 - Use sequential for dependencies
-- Validate outputs with observer
+- Verify claimed outputs actually exist
 
 ---
 
@@ -451,7 +444,7 @@ coordinator = Task(
 **Framework Docs**:
 - Agent Patterns: `AGENT_PATTERNS.md`
 - Performance: `performance-optimization.md`
-- Observability: `.claude-library/observability/README.md`
+- Hooks: `.claude-library/hooks/README.md`
 
 ---
 

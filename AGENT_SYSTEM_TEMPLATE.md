@@ -31,149 +31,138 @@ mkdir -p .claude/agents          # NEW: Custom subagent types
 mkdir -p .claude-library/agents/core
 ```
 
-### Step 2: Create Minimal Agent Launcher
+### Step 2: Create `.claude/settings.json`
 
-Create `.claude/agent-launcher.md` (Keep under 1KB):
+This is the file Claude Code reads for hooks and permissions. There is no
+`agent-launcher.md` — the harness routes on each agent's `description`
+frontmatter, so a hand-rolled launcher only duplicates it and drifts.
 
-```markdown
-# [PROJECT NAME] Agent Launcher
-
-Minimal agent launcher. Loads only essential agents.
-
-## Available Command
-- `/build "description"` - Build features (only command initially)
-
-## Core Agents (3 only)
-- `architect` - Design structure
-- `engineer` - Implement code
-- `reviewer` - Review quality
-
-## Simple Loading
-1. Try direct command first
-2. Load agent only if needed
-3. Keep context minimal
-
-## Simplicity First
-- Don't over-engineer
-- Start with basics
-- Add complexity only when proven necessary
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh" }
+        ]
+      }
+    ]
+  }
+}
 ```
+
+Hooks get their payload as **JSON on stdin**, never as shell variables — a
+command like `script.sh "$file_path"` receives an empty string. Parse it with
+`jq -r '.tool_input.file_path // empty'`.
+
+Skip this file entirely if you have no hooks yet.
 
 ### Step 3: Create MINIMAL Core Agents
 
-#### Minimal Architect (`.claude-library/agents/core/architect.md`)
+Each agent is a **pair**: a lean definition in `.claude/agents/` that Claude Code
+loads, and a fuller playbook in `.claude-library/agents/core/` read on demand.
+
+**The frontmatter is what makes it an agent.** Without it, Claude Code ignores
+tools listed as prose under a `## Tools` heading and the agent runs with default
+model, default effort, and every tool available.
+
+`model` and `effort` are independent dials: model sets the capability floor,
+effort sets reasoning depth. Note that **haiku is the only 200K-context model**;
+everything else is 1M.
+
+#### `.claude/agents/architect.md`
 
 ```markdown
-# Minimal Architect
+---
+name: architect
+description: Designs structure and data models. Use for design work, architectural decisions, and planning how a feature fits.
+model: opus
+effort: xhigh
+tools: Read, Write, Edit, Grep, Glob
+---
 
 Design simple, working solutions. Avoid over-engineering.
 
 ## Do
-- Design basic structure
-- Define simple data models
-- Create minimal API specs
+- Design basic structure, simple data models, minimal API specs
 
 ## Don't
-- Over-architect
-- Add unused patterns
-- Create complex hierarchies
+- Over-architect, add unused patterns, create complex hierarchies
 
-## Tools
-- Read, Write, Grep, Glob
-
-Keep it simple. Add complexity only when needed.
+Full playbook: `.claude-library/agents/core/architect.md`
 ```
 
-#### Minimal Engineer (`.claude-library/agents/core/engineer.md`)
+#### `.claude/agents/engineer.md`
 
 ```markdown
-# Minimal Engineer
+---
+name: engineer
+description: Implements features from a design. Use for building, coding, refactoring, and fixing.
+model: opus
+effort: high
+tools: Read, Write, Edit, Grep, Glob, Bash
+---
 
 Write simple, working code. Don't over-engineer.
 
 ## Do
-- Write clean code
-- Add tests if they exist
-- Handle basic errors
-- Follow existing patterns
+- Clean code, tests if they exist, basic error handling, existing patterns
 
 ## Don't
-- Over-optimize prematurely
-- Add unnecessary abstractions
-- Create complex patterns
-- Anticipate future needs
+- Over-optimize prematurely, add unnecessary abstractions, anticipate future needs
 
-## Tools
-All tools available (*)
-
-Start simple. Ship working code.
+Full playbook: `.claude-library/agents/core/engineer.md`
 ```
 
-#### Minimal Reviewer (`.claude-library/agents/core/reviewer.md`)
+Note `tools` lists what the role needs. **Never `*`** — an engineer that can do
+anything is an engineer with no boundaries.
+
+#### `.claude/agents/reviewer.md`
 
 ```markdown
-# Minimal Reviewer
+---
+name: reviewer
+description: Reviews code for correctness, security, and quality. Use for code review and pre-merge checks. Read-only.
+model: opus
+effort: high
+tools: Read, Grep, Glob
+---
 
 Review for basics. Don't nitpick.
 
 ## Check For
-- Does it work?
-- Major bugs?
-- Security issues if auth/payment code?
-- Follows existing patterns?
+- Does it work? Major bugs? Security issues in auth/payment code?
 
 ## Don't
-- Request perfection
-- Add unnecessary complexity
-- Require 80% coverage for simple project
-- Demand SOLID for 100-line script
+- Request perfection, demand SOLID for a 100-line script
 
-## Tools
-Read, Grep, Glob
+This role reports; it does not change files. Note that if `Bash` is ever added
+here it is not sandboxed — read-only would then rest on convention.
 
-Ship working code, not perfect code.
+Full playbook: `.claude-library/agents/core/reviewer.md`
 ```
 
-### Step 3b: Create Custom Subagent Types (Optional)
+### Step 3b: Launching Your Agents
 
-<!-- NEW in v2.0 -->
+Pass the filename in `.claude/agents/` as `subagent_type`. Claude Code applies
+that agent's declared model, effort, and tools automatically — you do not repeat
+them at the call site.
 
-Custom subagent types let you define specialized agents that Claude Code can launch by name.
-
-Create `.claude/agents/architect.md`:
-```markdown
-You are a system architect. Design simple, working solutions.
-
-## Focus
-- Basic structure and data models
-- Minimal API specs
-- Follow existing patterns
-
-## Tools
-Read, Write, Grep, Glob
-```
-
-Create `.claude/agents/reviewer.md`:
-```markdown
-You are a code reviewer. Check for correctness and security.
-
-## Focus
-- Does it work?
-- Major bugs or security issues?
-- Follows existing patterns?
-
-## Tools
-Read, Grep, Glob (read-only)
-```
-
-Usage in commands:
 ```python
-Task(
+Agent(
     description="Design auth system",
     prompt="Design authentication for this project",
-    subagent_type="architect"  # loads .claude/agents/architect.md
+    subagent_type="architect"          # -> .claude/agents/architect.md
 )
 ```
+
+The tool is named `Agent` (`Task` was its former name).
+
+**A coordinator never propagates its own model.** If one agent launches others,
+pass each sub-agent its own registry tier explicitly rather than letting it
+inherit — otherwise an escalated coordinator silently escalates everything it
+spawns, multiplying cost across a whole workflow for no benefit.
 
 ### Step 3c: Path-Specific Rules (Optional)
 
@@ -261,18 +250,16 @@ Add these ONLY when minimal setup proves insufficient:
 
 ```
 project-root/
-├── .claude/
-│   ├── agent-launcher.md
-│   ├── settings.json
-│   ├── MEMORY.md              # NEW: Cross-conversation memory index
-│   ├── agents/                # NEW: Custom subagent types
+├── .claude/                   # Auto-loaded - keep lean
+│   ├── agents/                # Subagent definitions (frontmatter + brief persona)
 │   │   ├── architect.md
+│   │   ├── engineer.md
 │   │   └── reviewer.md
-│   ├── rules/                 # NEW: Path-specific rules
-│   │   ├── tests.md
-│   │   └── api.md
-│   └── commands/
-│       └── build.md
+│   ├── commands/
+│   │   └── build.md
+│   ├── settings.json          # Hooks + permissions (the file the harness reads)
+│   ├── rules/                 # Optional: path-specific rules
+│   └── MEMORY.md              # Optional: cross-conversation memory index
 └── .claude-library/
     ├── REGISTRY.json
     ├── agents/
@@ -320,7 +307,7 @@ Orchestrator
 ```
 
 ## Available Tools
-- **Task**: For spawning sub-agents
+- **Agent**: For spawning sub-agents (`Task` was its former name)
 - **Read**: For reading results
 
 ## Execution Process
@@ -366,7 +353,15 @@ Build features using TDD with multiple specialized agents.
 
 ### Step 5: Create Registry
 
-Create `.claude-library/REGISTRY.json`:
+Create `.claude-library/REGISTRY.json`. Every agent needs `model` and `effort`,
+and they must match that agent's frontmatter in `.claude/agents/` exactly — if
+they disagree, the tier is prose that nothing enforces.
+
+Agent names here must match the `.claude/agents/*.md` filenames. Use current tool
+names (`Agent`, not `Task`; `Edit`, not `MultiEdit`), and never `["*"]`.
+
+**Hooks do not go in this file.** Claude Code never reads it — hooks go in
+`.claude/settings.json` (Step 2).
 
 ```json
 {
@@ -374,67 +369,78 @@ Create `.claude-library/REGISTRY.json`:
   "project": "YOUR_PROJECT_NAME",
   "description": "Agent registry for YOUR_PROJECT",
   "agents": {
-    "system-architect": {
-      "name": "system-architect",
-      "path": ".claude-library/agents/core/system-architect.md",
+    "architect": {
+      "name": "architect",
+      "path": ".claude-library/agents/core/architect.md",
       "description": "Architecture design and specifications",
-      "tools": ["Read", "Write", "Grep", "Glob"],
+      "tools": ["Read", "Write", "Edit", "Grep", "Glob"],
+      "model": "opus",
+      "effort": "xhigh",
       "triggers": ["architecture", "design", "spec", "API", "database"],
-      "category": "core",
+      "type": "core",
+      "domain": "architecture",
+      "contexts": ["project.md"],
       "priority": 1
     },
-    "senior-engineer": {
-      "name": "senior-engineer",
-      "path": ".claude-library/agents/core/senior-engineer.md",
+    "engineer": {
+      "name": "engineer",
+      "path": ".claude-library/agents/core/engineer.md",
       "description": "Full-stack development and implementation",
-      "tools": ["*"],
+      "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
+      "model": "opus",
+      "effort": "high",
       "triggers": ["implement", "code", "build", "fix", "debug"],
-      "category": "core",
+      "type": "core",
+      "domain": "implementation",
+      "contexts": ["project.md"],
       "priority": 1
     },
-    "code-reviewer": {
-      "name": "code-reviewer",
-      "path": ".claude-library/agents/core/code-reviewer.md",
+    "reviewer": {
+      "name": "reviewer",
+      "path": ".claude-library/agents/core/reviewer.md",
       "description": "Code review for quality and security",
       "tools": ["Read", "Grep", "Glob"],
+      "model": "opus",
+      "effort": "high",
       "triggers": ["review", "security", "performance", "quality"],
-      "category": "core",
+      "type": "core",
+      "domain": "quality",
+      "contexts": ["project.md"],
       "priority": 2
-    },
-    "workflow-orchestrator": {
-      "name": "workflow-orchestrator",
-      "path": ".claude-library/agents/core/workflow-orchestrator.md",
-      "description": "Coordinate multi-agent workflows",
-      "tools": ["Task", "Read"],
-      "triggers": ["orchestrate", "coordinate", "workflow", "complex"],
-      "category": "core",
-      "priority": 1
-    }
-  },
-  "skills": {
-    "agent-launcher": {
-      "path": ".claude-library/skills/agent-launcher-skill/",
-      "description": "Intelligent agent selection and routing"
     }
   },
   "commands": {
     "build": {
       "path": ".claude/commands/build.md",
-      "description": "Build features with TDD",
-      "agents": ["system-architect", "senior-engineer", "code-reviewer"],
+      "agents": ["architect", "engineer", "reviewer"],
       "workflow": "parallel-sequential"
     },
     "debug": {
       "path": ".claude/commands/debug.md",
-      "description": "Debug issues",
-      "agents": ["senior-engineer"],
+      "agents": ["engineer"],
       "workflow": "single"
     },
     "review": {
       "path": ".claude/commands/review.md",
-      "description": "Review code",
-      "agents": ["code-reviewer"],
+      "agents": ["reviewer"],
       "workflow": "single"
+    }
+  },
+  "skills": {
+    "build": {
+      "path": ".claude/commands/build.md",
+      "description": "Build features with TDD, using the project's agents",
+      "allowed_tools": ["Agent", "Read", "Write", "Edit", "Grep", "Glob"]
+    },
+    "debug": {
+      "path": ".claude/commands/debug.md",
+      "description": "Diagnose a failing test or reported bug and fix it",
+      "allowed_tools": ["Read", "Edit", "Grep", "Glob", "Bash(pytest:*)"]
+    },
+    "review": {
+      "path": ".claude/commands/review.md",
+      "description": "Review the current changes for bugs, security, and quality",
+      "allowed_tools": ["Read", "Grep", "Glob", "Bash(git diff:*)"]
     }
   },
   "contexts": {
@@ -446,14 +452,16 @@ Create `.claude-library/REGISTRY.json`:
       "path": ".claude-library/contexts/patterns.md",
       "description": "Code patterns and conventions"
     }
-  },
-  "settings": {
-    "auto_load_agents": false,
-    "max_parallel_agents": 3,
-    "cache_loaded_agents": true
   }
 }
 ```
+
+Every command needs a matching `skills` entry - the `description` and
+`allowed_tools` live there, once, and must equal the command file's frontmatter.
+A command with no `skills` entry has no frontmatter to match, and
+`validate_agent_system.py` fails on it. There is no top-level `settings` block:
+hooks and permissions go in `.claude/settings.json`, which is the only file the
+harness reads.
 
 ### Step 6: Create Project Context
 
@@ -495,19 +503,66 @@ npm run build  # Build production
 ```
 ```
 
-### Step 7: Create Settings
+### Step 7: Settings and Hooks
 
-Create `.claude/settings.json`:
+`.claude/settings.json` (created in Step 2) is the only config file Claude Code
+reads. Add hooks here when you want something to happen automatically:
 
 ```json
 {
-  "project": {
-    "name": "YOUR_PROJECT_NAME",
-    "description": "YOUR_PROJECT_DESCRIPTION",
-    "github_repo": "YOUR_GITHUB_REPO"
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude-library/hooks/scripts/format_code.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
   }
 }
 ```
+
+Two rules that decide whether a hook does anything at all:
+
+1. **Payload arrives as JSON on stdin, not as shell variables.** `script.sh
+   "$file_path"` receives an empty string — parse stdin instead.
+2. **Never fail open, and use the right exit code.** For `PreToolUse`, **exit 2
+   blocks**; exit 1 is a *non-blocking* error and the tool runs anyway. A hook
+   that prints a block banner and exits 1 announces a block that never happened.
+   Decide and emit the verdict before any logging that could throw.
+
+Verify a new hook rather than assuming it runs:
+
+```bash
+echo '{"tool_input":{"file_path":"README.md"}}' | bash your_hook.sh   # does it work?
+jq -e '.hooks.PostToolUse[0].hooks[0].command' .claude/settings.json  # exit 0 = valid
+```
+
+### Step 8: Write `GETTING_STARTED.md`
+
+Put it in the project root. This is the artifact that explains what you built — six
+months from now, or to a teammate who did not build it, the two directories alone say
+nothing about how they work or whether they still do.
+
+Cover, in this order:
+
+1. **How to verify it works** — `python3 validate_agent_system.py .` and what a pass
+   looks like. First, because it is the first thing anyone needs.
+2. **What you created** — the `.claude/` vs `.claude-library/` split and why.
+3. **The agents** — name, model/effort, and why that tier. Include the rule that a
+   coordinator never propagates its model to agents it launches.
+4. **How to use it** — available commands, and launching an agent by `subagent_type`.
+5. **How to extend it** — adding an agent, a skill, a hook.
+6. **The two rules broken most often**: registry and frontmatter must agree; hooks go in
+   `.claude/settings.json`, never `REGISTRY.json`.
+
+Describe what you actually built. A getting-started doc that does not match the system
+on disk is worse than none — it sends people looking for things that are not there.
 
 ## Customization Guide
 
@@ -586,14 +641,38 @@ Create `.claude-library/contexts/api-patterns.md`:
 
 ## Testing Your Setup
 
-### Test Agent Loading
-- `"I need to design a REST API"` -> System architect loads with API context
+### 1. Validate the system loads (do this first)
 
-### Test Command Execution
-- `/build user authentication` -> Parallel execution of architect, test planner, researcher
+```bash
+python3 validate_agent_system.py .
+```
 
-### Test Context Loading
-- `"Debug database performance"` -> Database expert loads with database patterns context
+This catches what silently breaks a system: registry paths that do not resolve,
+agents referencing missing contexts, a `subagent_type` naming an agent that does
+not exist, missing or invalid `model`/`effort`, unparseable frontmatter, and
+frontmatter that disagrees with the registry.
+
+**Exit 0 means it will load. Non-zero means agents fail at launch — fix first.**
+
+### 2. Confirm agents are registered
+
+Your agents should appear as launchable types. If an agent is missing, its
+frontmatter did not parse — check that the file opens with `---` on line 1 and
+that `name` matches the filename.
+
+### 3. Test routing by intent
+
+- `"I need to design a REST API"` -> architect
+- `"Review this for security issues"` -> reviewer
+- `/build user authentication` -> your build workflow
+
+If the wrong agent is chosen, fix its `description` — that is what the harness
+routes on, not the filename or the `triggers` array.
+
+### 4. Confirm hooks fire
+
+Edit a file the hook matches and check the side effect actually happened. A hook
+that silently does nothing looks identical to one that works.
 
 ## Scaling Your System
 
