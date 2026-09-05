@@ -222,6 +222,31 @@ if os.path.isdir(skills_root):
                 f"uploading this skill to claude.ai fails with a hard error")
 print(f"✓ C7: {c7} skills checked for claude.ai portability")
 
+# === C8: no real home directories in a public repo ===
+# Two problems when one leaks: it publishes whoever authored the line, and it is
+# wrong for every other reader - it points at a machine nobody else has. These are
+# agent playbooks, so an agent following one tries to read a path that is not there.
+PLACEHOLDER_USERS = {'dev', 'you', 'user', 'me', 'username', 'someone'}
+HOME_PATH = re.compile(r'/(?:Users|home)/([A-Za-z0-9_.-]+)')
+c8 = 0
+for dirpath, dirnames, filenames in os.walk(ROOT):
+    dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+    for fn in filenames:
+        if not fn.endswith(('.md', '.py', '.sh', '.json')):
+            continue
+        fp = os.path.join(dirpath, fn)
+        try:
+            text = open(fp, encoding='utf-8').read()
+        except (UnicodeDecodeError, OSError):
+            continue
+        for user in set(HOME_PATH.findall(text)):
+            c8 += 1
+            if user not in PLACEHOLDER_USERS:
+                err(f"{rel(fp)}: hardcoded home directory /Users/{user}/ - "
+                    f"publishes an author and points at a machine no reader has. "
+                    f"Use /absolute/path/to/... instead.")
+print(f"✓ C8: {c8} home-directory references checked")
+
 # === report ===
 print()
 for w in WARNINGS:

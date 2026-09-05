@@ -131,7 +131,7 @@ Grep(
 
 **Parameters**:
 - `file_path` (string, required): Absolute path to file
-  - Example: `"/Users/bhunt/development/claude/claude-agent-framework/CLAUDE_AGENT_FRAMEWORK.md"`
+  - Example: `"/absolute/path/to/claude-agent-framework/CLAUDE_AGENT_FRAMEWORK.md"`
   - Must be full absolute path, not relative
 - `limit` (int, optional): Maximum lines to read
   - Default: 2000 lines
@@ -277,7 +277,7 @@ Glob(pattern="**/*.json")
 
 **Parameters**:
 - `file_path` (string, required): Absolute path for new file
-  - Example: `"/Users/bhunt/.../specs/new-component-architecture.md"`
+  - Example: `"/absolute/path/to/project/specs/new-component-architecture.md"`
   - Directory must exist
   - Use absolute paths, not relative
 - `content` (string, required): Complete specification content
