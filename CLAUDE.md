@@ -25,6 +25,13 @@ The Claude Agent Framework is a comprehensive system for building intelligent mu
 - **Hooks** (`.claude-library/hooks/`): Deterministic shell commands at workflow points —
   auto-format, block dangerous operations, validate agent output. Disabled by default.
 
+## Where work goes
+
+Before adding an agent, a skill, or a hook, decide which surface the work belongs on.
+Most of the time the answer is none of them — see
+[learn/01-four-surfaces.md](./learn/01-four-surfaces.md) for the ladder and the cost model,
+and [learn/](./learn/README.md) for the rest of the curriculum.
+
 ## Working with the Framework
 
 ### Recommended Reading Order

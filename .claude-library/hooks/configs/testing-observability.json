@@ -1,0 +1,52 @@
+{
+  "name": "Testing Observability",
+  "description": "Track test sessions, analyze results, and report trends. Opt-in: copy these entries into .claude/settings.json to enable.",
+  "version": "2.0.0",
+  "_input_note": "Every script reads the payload as JSON on stdin. Shell variables like \"$output\" or \"$file_path\" are NOT set by the harness - a config passing them hands the script an empty string, which is how the v1 form silently analyzed nothing.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/testing/init_test_session.sh",
+            "description": "Start a test session record"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/testing/analyze_test_results.py",
+            "description": "Parse test output and record metrics"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/testing/track_test_changes.sh",
+            "description": "Record test file modifications"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/testing/generate_test_report.py",
+            "description": "Emit the session test report"
+          }
+        ]
+      }
+    ]
+  }
+}

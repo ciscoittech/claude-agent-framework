@@ -170,10 +170,17 @@ spawns, multiplying cost across a whole workflow for no benefit.
 
 Create `.claude/rules/` to define rules that apply only when working with specific file paths:
 
+The field is **`paths`**, not `globs` - `globs` is Cursor's spelling. A rule with no
+`paths` field is loaded unconditionally and applies to every file, so the wrong key does
+not error: it silently turns a scoped rule into a global one.
+
 Create `.claude/rules/tests.md`:
 ```markdown
 ---
-globs: ["tests/**", "**/*.test.*", "**/*.spec.*"]
+paths:
+  - "tests/**"
+  - "**/*.test.*"
+  - "**/*.spec.*"
 ---
 - Use pytest for all test files
 - Follow AAA pattern (Arrange, Act, Assert)
@@ -184,7 +191,9 @@ globs: ["tests/**", "**/*.test.*", "**/*.spec.*"]
 Create `.claude/rules/api.md`:
 ```markdown
 ---
-globs: ["src/api/**", "src/routes/**"]
+paths:
+  - "src/api/**"
+  - "src/routes/**"
 ---
 - All endpoints must have input validation
 - Return consistent error format: { error: { code, message } }
