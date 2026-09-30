@@ -298,10 +298,11 @@ Agent(
     description="Quick formatting",
     prompt="...",
     subagent_type="general-purpose",
-    model="haiku"  # fast/cheap for simple tasks
+    model="haiku"  # capability floor; effort is set separately
 )
 ```
-Available: "opus" (complex), "sonnet" (balanced), "haiku" (fast/cheap)
+Available: "haiku", "sonnet", "opus", "fable" (opt-in escalation). The model sets the
+capability floor; reasoning depth is the separate `effort` setting.
 
 ---
 

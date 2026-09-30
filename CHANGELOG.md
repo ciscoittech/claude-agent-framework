@@ -5,6 +5,43 @@ All notable changes to the Claude Agent Framework will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-09-30
+
+### Changed - Opus 5.5 model generation
+
+The tier aliases now resolve to **Claude Opus 5.5**, **Claude Sonnet 5.5** and
+**Claude Fable 5.1**. Haiku 4.5 is unchanged. Agents use aliases, so no frontmatter
+changed. What changed is the facts built on the models:
+
+- **Opus is $4/$20 per 1M**, down from $5/$25. `MODEL_SELECTION.md` and the
+  `EXPECTED_RATES` pin in `test_v2_structure.py` moved together, and the table was
+  re-verified on 2026-09-30.
+- **Fable is now 2.5x Opus**, not 2x. It is still $10/$50, but Opus got cheaper.
+  Every cost note was updated: REGISTRY `model_escalation`, `/build-feature`,
+  `/launch-agent`, the feature-builder playbook and the generator prompt.
+- **Cached reads are 0.05x input on Opus 5.5** ($0.20). They are still 0.1x on
+  Sonnet 5.5. The flat "a tenth of fresh input" claim is now "a tenth or less".
+- **Opus 5.5 always thinks.** Thinking cannot be disabled, and the API default effort
+  is `medium` (Opus 5's was `high`). Opus 5.5 at `medium` matches Opus 5 at `high`,
+  and it thinks more per level.
+- **Effort assignments are deliberately unchanged.** They were set on Opus 5.
+  `MODEL_SELECTION.md` now says to lower an Opus agent's effort one level before
+  anything else if its turns run long.
+- Fast mode on Opus 5.5 is $8/$40.
+- New stale-claim guards: `$5/$25` and `2x opus`.
+
+### Fixed - Tier drift across docs
+
+- Engineer and reviewer examples in `CLAUDE_AGENT_FRAMEWORK.md` and the
+  `test_generated_system.py` fixture said `sonnet/high`. They now say `opus/high`, to
+  match REGISTRY and `MODEL_SELECTION.md`.
+- `AGENT_PATTERNS.md`'s model decision tree routed review and implementation to
+  sonnet and ignored effort. It now mirrors the `MODEL_SELECTION.md` task table.
+- `claude-code-subagents.md` listed models without `fable` and described haiku as
+  "fast/cheap", which conflates model with effort.
+- The `/launch-agent` decision tree used `opus/medium`, which was in no tier table.
+- The feature-builder playbook named the retired `Task` tool. It now says `Agent`.
+
 ## [2.2.0] - 2026-08-31
 
 ### Fixed - Configuration the harness never reads

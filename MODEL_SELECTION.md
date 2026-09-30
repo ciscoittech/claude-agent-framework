@@ -21,15 +21,19 @@ not pick an effort; set both deliberately.
 | Model | Tier name | Context | Input $/1M | Output $/1M |
 |---|---|---|---|---|
 | Claude Haiku 4.5 | `haiku` | **200K** | $1.00 | $5.00 |
-| Claude Sonnet 5 | `sonnet` | 1M | $2.00 | $10.00 |
-| Claude Opus 5 | `opus` | 1M | $5.00 | $25.00 |
-| Claude Fable 5 | `fable` | 1M | $10.00 | $50.00 |
+| Claude Sonnet 5.5 | `sonnet` | 1M | $2.00 | $10.00 |
+| Claude Opus 5.5 | `opus` | 1M | $4.00 | $20.00 |
+| Claude Fable 5.1 | `fable` | 1M | $10.00 | $50.00 |
 
-**Last verified: 2026-08-31** against the Anthropic price card (`/claude-api`, and
+**Last verified: 2026-09-30** against the Anthropic price card (`/claude-api`, and
 https://claude.com/pricing). Every rate above was checked, not just the arithmetic built on
 it — a wrong rate makes every comparison in this file wrong in the same direction, and
 nothing here updates itself. Re-verify before relying on it for a tier decision, and move
 the date when you do.
+
+The tier names are aliases. In the API these are `claude-haiku-4-5`, `claude-sonnet-5-5`,
+`claude-opus-5-5` and `claude-fable-5-1`; the previous generation (Sonnet 5, Opus 5,
+Fable 5) is still served, but `sonnet`, `opus` and `fable` mean the models above.
 
 Rates are Anthropic first-party API prices. Claude on Microsoft Foundry bills at the same
 rates; Bedrock and Vertex are partner-operated and bill separately.
@@ -39,13 +43,29 @@ most consequential asymmetry in the table — a task that looks trivial ("rename
 everywhere") can still be a long-context task, and haiku will truncate on it.
 
 **Effort is not a dial on every model.** The levels available depend on the model:
-`low` through `max` on Opus 5, Sonnet 5 and Fable 5, but the API rejects the effort
+`low` through `max` on Opus 5.5, Sonnet 5.5 and Fable 5.1, but the API rejects the effort
 parameter outright on Haiku 4.5. Treat a haiku agent's effort declaration as unenforced —
 if the reasoning depth matters, that is the signal to move up a model tier, which is why
 the validator warns on haiku above `medium`.
 
-**Fast mode** (`/fast`, Opus 5 only) is the same model at up to 2.5x output speed, priced
-at $10/$50 — Fable rates for Opus capability. It buys latency, not capability.
+**Opus 5.5 always thinks, and effort is the only control.** Thinking cannot be disabled on
+it at any effort level. Two things differ from Opus 5, and both matter when reading the
+tier table below:
+
+- **The API default effort is `medium`**, not `high`. It does not affect this framework —
+  every agent declares its effort explicitly — but it does affect anything you call
+  without one.
+- **At a given level it thinks more than Opus 5 did**, and it is stronger per level: in
+  Anthropic's testing Opus 5.5 at `medium` matches or beats Opus 5 at `high`. The effort
+  values in this framework were set on Opus 5 and are deliberately unchanged. If an Opus
+  agent's turns run long or costly, **lower its effort one level before anything else** —
+  that is now the most likely fix.
+
+**Sonnet 5.5's effort levels were recalibrated** from Sonnet 5 (its default is still
+`high`). The same rule applies: judge by output, not by the level's name.
+
+**Fast mode** (`/fast`, Opus only) is the same model at up to 2.5x output speed, priced
+at $8/$40 on Opus 5.5 — 2x standard. It buys latency, not capability.
 
 ---
 
@@ -96,13 +116,13 @@ cost *per completed task*, not cost per call.
 
 ## The Fable Escalation
 
-Fable 5 is Anthropic's most capable widely released model, and it is an **opt-in
+Fable 5.1 is Anthropic's most capable widely released model, and it is an **opt-in
 escalation, never a routing default**.
 
 What escalating costs you:
-- 2x Opus on both input and output ($10/$50 vs $5/$25)
+- 2.5x Opus on both input and output ($10/$50 vs $4/$20)
 - Thinking is always on and cannot be disabled
-- Turns run substantially longer, so the real multiple on a full build exceeds 2x
+- Turns run substantially longer, so the real multiple on a full build exceeds 2.5x
 
 When it is justified:
 - Opus at `xhigh` has already failed on this specific task, or
@@ -124,8 +144,8 @@ Invoke it explicitly:
 **A coordinator's model applies to the coordinator alone.** Every sub-agent it launches
 runs at that sub-agent's own registry tier, passed explicitly at launch.
 
-This is the rule with real money behind it. A Fable coordinator is 2x on one agent. A Fable
-coordinator that leaks its tier into six sub-agents is 2x on an entire workflow — and buys
+This is the rule with real money behind it. A Fable coordinator is 2.5x on one agent. A Fable
+coordinator that leaks its tier into six sub-agents is 2.5x on an entire workflow — and buys
 nothing, because those sub-agents are doing bounded, well-specified work that opus and
 sonnet already handle.
 
@@ -145,8 +165,10 @@ consolidated tool calls, less preamble, terser output. Most agents do not need `
 
 ### 2. Prompt caching
 
-Cached reads bill at roughly a tenth of fresh input; **cache writes bill at about 1.25x**.
-That asymmetry is the whole game. A prefix that caches and is read many times is close to
+Cached reads bill at a small fraction of fresh input — **0.05x on Opus 5.5** ($0.20 vs
+$4), 0.1x on Sonnet 5.5 ($0.20 vs $2), 0.025x on Fable 5.1 ($0.25 vs $10) — while
+**cache writes bill at about 1.25x**. That asymmetry is the whole game, and on Opus 5.5
+it is sharper than it was: a hit is cheaper, so a miss costs relatively more. A prefix that caches and is read many times is close to
 free after the first call; a prefix that is written every run and never hit costs 25% more
 than not caching at all. Measure `cache_read_input_tokens` rather than assuming.
 
@@ -202,4 +224,4 @@ see `archive/v2-observability/`.
 
 ---
 
-*Model Selection v2.0 | Claude Agent Framework*
+*Model Selection v2.1 | Claude Agent Framework*

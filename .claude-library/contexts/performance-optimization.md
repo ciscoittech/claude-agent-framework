@@ -35,7 +35,8 @@ correctness outweighs cost.
 
 ### 2. Prompt caching
 
-Cached reads cost roughly a tenth of fresh input. Caching is a **prefix match** — any byte
+Cached reads cost a small fraction of fresh input — 0.05x on Opus 5.5, 0.1x on Sonnet 5.5
+(see `MODEL_SELECTION.md`). Caching is a **prefix match** — any byte
 change anywhere in the prefix invalidates everything after it.
 
 Assemble every agent prompt stable-first:

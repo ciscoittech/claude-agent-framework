@@ -62,5 +62,5 @@ this document drifts from them. Re-verify before relying on it, and move the dat
 
 ## Effort is not available on every model
 
-`low` through `max` on Opus 5, Sonnet 5, and Fable 5. The API rejects the effort parameter on
+`low` through `max` on Opus 5.5, Sonnet 5.5, and Fable 5.1. The API rejects the effort parameter on
 Haiku 4.5 — treat a haiku agent's effort declaration as unenforced.

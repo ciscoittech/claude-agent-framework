@@ -232,13 +232,19 @@ Can tasks run independently?
 
 ```
 What model should this agent use?
-├─ Is it a simple, mechanical task? (formatting, file moves, renaming)
-│   └─ Use haiku (fastest, cheapest)
-├─ Is it standard development work? (implementation, testing, reviews)
-│   └─ Use sonnet (balanced speed/quality)
-└─ Does it require deep reasoning? (architecture, security audit, complex debugging)
-    └─ Use opus (highest quality)
+├─ Is it a mechanical task in a small scope? (formatting, file checks, renames)
+│   └─ haiku + low   (never for long-context work - haiku is 200K)
+├─ Is it fetching, docs, tests, or structured output from settled input?
+│   └─ sonnet + low/medium
+├─ Is it implementation, review, or debugging - where being wrong is expensive?
+│   └─ opus + high
+├─ Is it design or architecture?
+│   └─ opus + xhigh   (max when correctness outweighs cost)
+└─ Has opus at xhigh already failed on a multi-subsystem task?
+    └─ fable + xhigh  (opt-in escalation only)
 ```
+
+Model and effort are separate choices - see Model Tiers and Effort Levels below.
 
 ### Workflow Composition Decision
 
@@ -705,8 +711,8 @@ choosing one does not choose the other.
 | Model | Use for | Context | Cost /1M |
 |-------|---------|---------|----------|
 | `haiku` | Mechanical work: file existence checks, formatting, simple lookups | 200K | $1 / $5 |
-| `sonnet` | Standard work: implementation, testing, docs, research | 1M | $2 / $10 |
-| `opus` | Design, review, debugging, anything requiring judgment | 1M | $5 / $25 |
+| `sonnet` | Standard work: testing, docs, research, structured output | 1M | $2 / $10 |
+| `opus` | Implementation, design, review, debugging, anything requiring judgment | 1M | $4 / $20 |
 | `fable` | Opt-in escalation only: long-horizon, multi-subsystem work | 1M | $10 / $50 |
 
 **Effort** — reasoning depth: `low` → `medium` → `high` → `xhigh` → `max`. `xhigh` is the
@@ -937,7 +943,7 @@ class ContextHierarchy {
 
 ### Prompt Caching and Prefix Stability
 
-Cached reads bill at roughly a tenth of fresh input, which makes caching the largest cost
+Cached reads bill at a tenth of fresh input or less (0.05x on Opus 5.5), which makes caching the largest cost
 lever in a multi-agent system. Caching is a **prefix match**: any byte change anywhere in
 the prefix invalidates everything after it.
 

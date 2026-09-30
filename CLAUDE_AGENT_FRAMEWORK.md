@@ -534,7 +534,7 @@ Create `.claude/agents/<agent-name>.md`:
 ---
 name: security-reviewer
 description: Reviews code for OWASP Top 10 vulnerabilities. Use for security review of auth, input handling, and anything touching user data.
-model: sonnet
+model: opus
 effort: high
 tools: Read, Grep, Glob
 ---
@@ -683,7 +683,7 @@ Structure your REGISTRY.json for fast lookup:
       "type": "core",
       "domain": "implementation",
       "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
-      "model": "sonnet",
+      "model": "opus",
       "effort": "high",
       "triggers": ["implement", "build", "fix"],
       "contexts": ["project.md"],
@@ -694,7 +694,7 @@ Structure your REGISTRY.json for fast lookup:
       "type": "core",
       "domain": "quality",
       "tools": ["Read", "Grep", "Glob"],
-      "model": "sonnet",
+      "model": "opus",
       "effort": "high",
       "triggers": ["review", "quality"],
       "contexts": ["project.md"],

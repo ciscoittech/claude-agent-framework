@@ -262,8 +262,10 @@ def live_docs():
 
 STALE_PATTERNS = [
     # (regex, why it is wrong now)
-    (r'Opus\s*\(\$15/1M', "Opus 5 is $5/$25 per 1M, not $15"),
-    (r'Claude Sonnet \(\$3/1M', "Sonnet 5 is $2/$10 per 1M, not $3"),
+    (r'Opus\s*\(\$15/1M', "Opus 5.5 is $4/$20 per 1M, not $15"),
+    (r'Claude Sonnet \(\$3/1M', "Sonnet 5.5 is $2/$10 per 1M, not $3"),
+    (r'\$5/\$25', "Opus 5's rate - Opus 5.5 is $4/$20 per 1M"),
+    (r'2x opus', "Fable is 2.5x Opus 5.5 ($10/$50 vs $4/$20), not 2x"),
     (r'`model:\s*"haiku"`\s*for fast/cheap', "conflates model tier with effort"),
     (r'qwen', "third-party routing was removed in favour of Claude-native tiers"),
     (r'MULTI_MODEL_ROUTING\.md', "renamed to MODEL_SELECTION.md"),
@@ -300,9 +302,9 @@ print(f"{'✓' if stale_hits == 0 else '✗'} Stale model claims: {stale_hits} f
 # date is what carries the claim, so it is checked for shape and for age.
 EXPECTED_RATES = {
     'Claude Haiku 4.5': ('200K', '$1.00', '$5.00'),
-    'Claude Sonnet 5': ('1M', '$2.00', '$10.00'),
-    'Claude Opus 5': ('1M', '$5.00', '$25.00'),
-    'Claude Fable 5': ('1M', '$10.00', '$50.00'),
+    'Claude Sonnet 5.5': ('1M', '$2.00', '$10.00'),
+    'Claude Opus 5.5': ('1M', '$4.00', '$20.00'),
+    'Claude Fable 5.1': ('1M', '$10.00', '$50.00'),
 }
 model_doc = os.path.join(ROOT, 'MODEL_SELECTION.md')
 if os.path.exists(model_doc):

@@ -43,9 +43,9 @@ essentially every feature build — do not change it without a reason.
 - The design phase has already failed on opus for this feature, or
 - The feature spans >10 files or multiple subsystems and needs one coherent long-horizon plan.
 
-**Cost of escalating**: Fable is $10/$50 per 1M tokens vs Opus at $5/$25 — 2x. Thinking is
+**Cost of escalating**: Fable is $10/$50 per 1M tokens vs Opus at $4/$20 — 2.5x. Thinking is
 always on (it cannot be disabled) and turns run substantially longer, so the real-world
-multiple on a full build is higher than 2x, not lower.
+multiple on a full build is higher than 2.5x, not lower.
 
 **Hard constraint — the flag never propagates.** Every sub-agent launched in Phases 1-5 keeps
 the model and effort assigned to it in `REGISTRY.json`, regardless of `--model`. A Fable
