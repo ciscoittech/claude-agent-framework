@@ -322,7 +322,7 @@ Apply these best practices to the framework:
 ### 1. Attention Budget Allocation
 
 Distribute context strategically. The window depends on the model: Claude Haiku 4.5 is
-200K; Sonnet 5, Opus 5, and Fable 5 are 1M. Budget against the model you are actually
+200K; Sonnet 5.5, Opus 5.5, and Fable 5.1 are 1M. Budget against the model you are actually
 running, and note that a large window is not a reason to fill it — relevance beats volume.
 
 ```markdown

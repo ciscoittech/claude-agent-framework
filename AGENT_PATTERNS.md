@@ -706,7 +706,7 @@ choosing one does not choose the other.
 |-------|---------|---------|----------|
 | `haiku` | Mechanical work: file existence checks, formatting, simple lookups | 200K | $1 / $5 |
 | `sonnet` | Standard work: implementation, testing, docs, research | 1M | $2 / $10 |
-| `opus` | Design, review, debugging, anything requiring judgment | 1M | $5 / $25 |
+| `opus` | Design, review, debugging, anything requiring judgment | 1M | $4 / $20 |
 | `fable` | Opt-in escalation only: long-horizon, multi-subsystem work | 1M | $10 / $50 |
 
 **Effort** — reasoning depth: `low` → `medium` → `high` → `xhigh` → `max`. `xhigh` is the
@@ -937,7 +937,7 @@ class ContextHierarchy {
 
 ### Prompt Caching and Prefix Stability
 
-Cached reads bill at roughly a tenth of fresh input, which makes caching the largest cost
+Cached reads bill at a tenth of fresh input or less, which makes caching the largest cost
 lever in a multi-agent system. Caching is a **prefix match**: any byte change anywhere in
 the prefix invalidates everything after it.
 

@@ -262,8 +262,13 @@ def live_docs():
 
 STALE_PATTERNS = [
     # (regex, why it is wrong now)
-    (r'Opus\s*\(\$15/1M', "Opus 5 is $5/$25 per 1M, not $15"),
-    (r'Claude Sonnet \(\$3/1M', "Sonnet 5 is $2/$10 per 1M, not $3"),
+    (r'Opus\s*\(\$15/1M', "Opus 5.5 is $4/$20 per 1M, not $15"),
+    (r'Claude Sonnet \(\$3/1M', "Sonnet 5.5 is $2/$10 per 1M, not $3"),
+    # The 5.5 release moved these. Each was true on 2026-08-31.
+    (r'\$5\s*/\s*\$25', "Opus 5.5 is $4/$20 - $5/$25 was Opus 5"),
+    (r'fable[^.\n]*\b2x\s+opus|\b2x\s+opus[^.\n]*fable|fable[^.\n]*twice\s+opus', "Fable 5.1 is 2.5x Opus 5.5, not 2x"),
+    (r'Fable rates for Opus', "fast mode on Opus 5.5 is $8/$40, below Fable"),
+    (r'\b(Opus|Sonnet|Fable) 5(?![.\d])', "current models are Opus 5.5, Sonnet 5.5, Fable 5.1"),
     (r'`model:\s*"haiku"`\s*for fast/cheap', "conflates model tier with effort"),
     (r'qwen', "third-party routing was removed in favour of Claude-native tiers"),
     (r'MULTI_MODEL_ROUTING\.md', "renamed to MODEL_SELECTION.md"),
@@ -300,9 +305,9 @@ print(f"{'✓' if stale_hits == 0 else '✗'} Stale model claims: {stale_hits} f
 # date is what carries the claim, so it is checked for shape and for age.
 EXPECTED_RATES = {
     'Claude Haiku 4.5': ('200K', '$1.00', '$5.00'),
-    'Claude Sonnet 5': ('1M', '$2.00', '$10.00'),
-    'Claude Opus 5': ('1M', '$5.00', '$25.00'),
-    'Claude Fable 5': ('1M', '$10.00', '$50.00'),
+    'Claude Sonnet 5.5': ('1M', '$2.00', '$10.00'),
+    'Claude Opus 5.5': ('1M', '$4.00', '$20.00'),
+    'Claude Fable 5.1': ('1M', '$10.00', '$50.00'),
 }
 model_doc = os.path.join(ROOT, 'MODEL_SELECTION.md')
 if os.path.exists(model_doc):

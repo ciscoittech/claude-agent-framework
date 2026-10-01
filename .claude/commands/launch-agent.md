@@ -57,8 +57,8 @@ hard it thinks. Adjust them independently:
 - **Haiku is 200K context; every other model is 1M.** Never route long-context work to
   haiku regardless of how simple the task looks — a "simple rename" across a large
   codebase is a long-context task.
-- **Fable is an opt-in escalation, not a tier to route to automatically.** It costs 2x opus
-  ($10/$50 vs $5/$25), always thinks, and runs substantially longer turns. Use it only when
+- **Fable is an opt-in escalation, not a tier to route to automatically.** It costs 2.5x opus
+  ($10/$50 vs $4/$20), always thinks, and runs substantially longer turns. Use it only when
   opus has already failed on this task, or when the work genuinely spans multiple
   subsystems and needs one coherent plan. When in doubt, use opus at `xhigh`.
 

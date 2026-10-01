@@ -92,7 +92,7 @@ Claude Code default and the right setting for most coding and agentic work.
 Two constraints worth remembering:
 - Haiku is the only current model with a 200K context window; everything else is 1M.
   Never route long-context work to it.
-- Fable is roughly twice Opus per token, always thinks, and runs substantially longer
+- Fable is 2.5x Opus per token, always thinks, and runs substantially longer
   turns. It is an opt-in escalation, never a default.
 
 See `MODEL_SELECTION.md` for tier assignments and the full rationale.

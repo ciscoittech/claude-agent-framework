@@ -195,7 +195,7 @@ Full detail in [CHANGELOG.md](./CHANGELOG.md).
 Earlier versions of this README led with "97% smaller context (250KB → 8KB)". That was the
 right optimization when context was scarce and every token billed fresh. It is no longer
 the metric that matters most: current models other than Haiku have a 1M window, and cached
-reads bill at roughly a tenth of fresh input.
+reads bill at a tenth of fresh input or less.
 
 Minimizing bytes and maximizing cache hits pull in opposite directions. A context set
 assembled fresh per task is small but never caches; for an agent that runs repeatedly, a
