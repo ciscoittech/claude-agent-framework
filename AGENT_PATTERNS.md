@@ -710,7 +710,8 @@ choosing one does not choose the other.
 | `fable` | Opt-in escalation only: long-horizon, multi-subsystem work | 1M | $10 / $50 |
 
 **Effort** — reasoning depth: `low` → `medium` → `high` → `xhigh` → `max`. `xhigh` is the
-Claude Code default and the sweet spot for most coding and agentic work. Use `low` for
+sweet spot for most coding and agentic work, but not the Claude Code default (`medium` on
+Opus 5.5 and Sonnet 5.5, so declare it). Use `low` for
 mechanical subagents, `high`/`xhigh` for design and review, `max` only when correctness
 matters more than cost.
 

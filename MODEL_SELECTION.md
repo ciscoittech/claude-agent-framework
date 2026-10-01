@@ -12,7 +12,9 @@ mistake, and it was baked into earlier versions of this framework.
 An Opus agent at `low` effort and a Haiku agent are different things. Picking a model does
 not pick an effort; set both deliberately.
 
-`xhigh` is the Claude Code default and the right setting for most coding and agentic work.
+`xhigh` is the right setting for most coding and agentic work. It is **not** the Claude Code
+default: Claude Code defaults to `medium` on Opus 5.5 and Sonnet 5.5 and `high` elsewhere
+(code.claude.com/docs/en/model-config, checked 2026-09-30).
 
 ---
 
@@ -50,9 +52,12 @@ parameter outright on Haiku 4.5. Treat a haiku agent's effort declaration as une
 if the reasoning depth matters, that is the signal to move up a model tier, which is why
 the validator warns on haiku above `medium`.
 
-**Opus 5.5 defaults to `medium` effort**, one level below its predecessor's `high`. An opus agent
-with no declared effort therefore got shallower on the 5.5 release without any file
-changing. This is the concrete reason every agent here declares `effort` explicitly.
+**Opus 5.5 and Sonnet 5.5 default to `medium` effort**, one level below their predecessors'
+`high`. A subagent with no `effort` key inherits the session's effort level, so on a
+default session every undeclared opus or sonnet agent got shallower on the 5.5 release
+without any file changing. This is the concrete reason every agent here declares `effort`
+explicitly: frontmatter effort overrides the session level (an environment variable
+still overrides frontmatter).
 
 **Fast mode** (`/fast`, Opus only) is the same model at up to 2.5x output speed, priced
 at $8/$40 on Opus 5.5 — 2x standard Opus. It buys latency, not capability.

@@ -19,10 +19,13 @@ went stale was every number this framework states about them.
   `REGISTRY.json` escalation cost and both copies of the feature-builder.
 - **Fast mode is $8/$40 on Opus 5.5**, so "Fable rates for Opus capability" no
   longer holds.
-- **Opus 5.5 defaults to `medium` effort** (Opus 5 defaulted to `high`). An opus
-  agent with no declared effort got shallower on release with no file changing.
-  `MODEL_SELECTION.md` now says so, since it is the strongest argument for the
-  explicit `effort` every agent here already declares.
+- **Opus 5.5 and Sonnet 5.5 default to `medium` effort** in Claude Code
+  (predecessors: `high`). A subagent without `effort` inherits the session level,
+  so on a default session every undeclared opus/sonnet agent got shallower on
+  release with no file changing. `MODEL_SELECTION.md` now says so; it is the
+  strongest argument for the explicit `effort` every agent here declares.
+- **"`xhigh` is the Claude Code default" was wrong** in four documents. Only
+  Opus 4.7 defaulted to `xhigh`. The claim is removed and guarded against.
 - Added a cache-read column. "Roughly a tenth of fresh input" became "a tenth or
   less", because Opus 5.5 cache reads are a twentieth.
 
@@ -30,7 +33,7 @@ went stale was every number this framework states about them.
 
 `STALE_PATTERNS` now fails on `$5/$25`, "2x opus" next to fable, "Fable rates
 for Opus", and a bare `Opus 5`/`Sonnet 5`/`Fable 5`. Each guard first failed on
-the 11 live occurrences it was written for. The rate pin was then checked by
+the live occurrences it was written for (11, plus 4 for the `xhigh` guard). The rate pin was then checked by
 setting Opus 5.5 back to $5.00, and it failed as expected.
 
 ## [2.2.0] - 2026-08-31

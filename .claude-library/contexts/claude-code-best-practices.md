@@ -79,7 +79,8 @@
 **Model and Effort** (two independent dials):
 - `model` sets the capability floor: `haiku` -> `sonnet` -> `opus` -> `fable`
 - `effort` sets reasoning depth: `low` -> `medium` -> `high` -> `xhigh` -> `max`
-- `xhigh` is the Claude Code default and suits most coding and agentic work
+- `xhigh` suits most coding and agentic work; it is not the default (`medium` on Opus 5.5 /
+  Sonnet 5.5). An agent with no `effort` inherits the session's level
 - Choosing a model does not choose an effort; set both deliberately
 - Haiku is the only current model at 200K context - never send long-context work to it
 
