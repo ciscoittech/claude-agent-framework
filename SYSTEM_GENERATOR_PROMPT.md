@@ -314,7 +314,7 @@ them — an opus agent at `low` effort and a haiku agent are different things.
 
 - **haiku is the only 200K model; everything else is 1M.** Never send
   long-context work there — a rename across a large codebase is long-context.
-- **fable is an opt-in escalation, never a generated default** (~2x opus, always
+- **fable is an opt-in escalation, never a generated default** (~2.5x opus, always
   thinks, much longer turns).
 - Raise **effort** before **model**. Most "not smart enough" results are
   underspecified prompts, not undermodeled ones.

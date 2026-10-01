@@ -5,6 +5,37 @@ All notable changes to the Claude Agent Framework will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-09-30
+
+### Changed - Rate table moved to the 5.5 generation (#16)
+
+Opus 5.5 and Sonnet 5.5 shipped; Fable moved to 5.1. Haiku 4.5 is unchanged.
+No agent file changed tier: `opus`/`sonnet`/`haiku` are Claude Code aliases and
+were already resolving to the new models (verified on Claude Code 2.1.285). What
+went stale was every number this framework states about them.
+
+- **Opus got cheaper**: $5/$25 → $4/$20 per 1M. Opus is now 2x Sonnet, not 2.5x.
+- **Fable is 2.5x Opus, not 2x.** Corrected in eight places, including the
+  `REGISTRY.json` escalation cost and both copies of the feature-builder.
+- **Fast mode is $8/$40 on Opus 5.5**, so "Fable rates for Opus capability" no
+  longer holds.
+- **Opus 5.5 and Sonnet 5.5 default to `medium` effort** in Claude Code
+  (predecessors: `high`). A subagent without `effort` inherits the session level,
+  so on a default session every undeclared opus/sonnet agent got shallower on
+  release with no file changing. `MODEL_SELECTION.md` now says so; it is the
+  strongest argument for the explicit `effort` every agent here declares.
+- **"`xhigh` is the Claude Code default" was wrong** in four documents. Only
+  Opus 4.7 defaulted to `xhigh`. The claim is removed and guarded against.
+- Added a cache-read column. "Roughly a tenth of fresh input" became "a tenth or
+  less", because Opus 5.5 cache reads are a twentieth.
+
+### Added - Guards for this release's stale claims
+
+`STALE_PATTERNS` now fails on `$5/$25`, "2x opus" next to fable, "Fable rates
+for Opus", and a bare `Opus 5`/`Sonnet 5`/`Fable 5`. Each guard first failed on
+the live occurrences it was written for (11, plus 4 for the `xhigh` guard). The rate pin was then checked by
+setting Opus 5.5 back to $5.00, and it failed as expected.
+
 ## [2.2.0] - 2026-08-31
 
 ### Fixed - Configuration the harness never reads
