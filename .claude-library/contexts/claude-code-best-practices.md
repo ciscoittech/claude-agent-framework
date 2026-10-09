@@ -82,7 +82,7 @@
 - `xhigh` suits most coding and agentic work; it is not the default (`medium` on Opus 5.5 /
   Sonnet 5.5). An agent with no `effort` inherits the session's level
 - Choosing a model does not choose an effort; set both deliberately
-- Haiku is the only current model at 200K context - never send long-context work to it
+- Every current model is 1M context; haiku bills 5x once a prompt passes 100K tokens
 
 **Extended Context** (NEW):
 - Claude Code supports up to 1M tokens of context

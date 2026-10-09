@@ -161,8 +161,8 @@ The framework aims for:
 **On the context-reduction target.** Earlier versions led with "97% reduction in
 auto-loaded context (250KB -> 8KB)". That was the right optimization when context was
 scarce and every token was billed fresh. It is no longer the metric that matters most:
-all current models except Haiku 4.5 have a 1M window, and cached reads bill at a tenth of
-fresh input or less.
+every current model has a 1M window, and cached reads bill at a tenth of fresh input or
+less (5% on Opus 5.5 and Sonnet 5.5).
 
 Minimizing bytes and maximizing cache hits pull in opposite directions — a context set
 assembled fresh per task is small but never caches. For an agent that runs repeatedly, a

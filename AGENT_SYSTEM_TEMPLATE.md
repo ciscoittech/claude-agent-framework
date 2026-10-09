@@ -68,8 +68,8 @@ tools listed as prose under a `## Tools` heading and the agent runs with default
 model, default effort, and every tool available.
 
 `model` and `effort` are independent dials: model sets the capability floor,
-effort sets reasoning depth. Note that **haiku is the only 200K-context model**;
-everything else is 1M.
+effort sets reasoning depth. Every current model is 1M context; haiku's limit is
+price — it bills 5x once a request's prompt passes 100K tokens.
 
 #### `.claude/agents/architect.md`
 

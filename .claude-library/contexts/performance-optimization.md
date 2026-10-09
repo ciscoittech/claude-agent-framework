@@ -69,11 +69,12 @@ escalating a coordinator *and* everything it spawns is not.
 | Code under analysis | Grep first, then Read | Locate before loading |
 | Prior agent output | < 10KB | Summarize; never pass raw output forward |
 
-**Relevance beats volume.** All current models except Haiku 4.5 have a 1M context window,
+**Relevance beats volume.** Every current model has a 1M context window,
 which removes the old pressure to prune aggressively — but a focused 10KB context still
 outperforms an unfocused 500KB dump. The window being large is not a reason to fill it.
 
-Haiku 4.5 remains at 200K. Never route long-context work to it.
+Haiku 5.5 bills 5x once a request's prompt passes 100K tokens — for haiku, relevance is
+also the price lever.
 
 ---
 

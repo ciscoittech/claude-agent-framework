@@ -60,7 +60,7 @@ this document drifts from them. Re-verify before relying on it, and move the dat
   **`allowed_tools`** (underscore). Same values, different key, and they must match.
 - Path scoping in `.claude/rules/`: **`paths`**, never `globs`. `globs` is Cursor's spelling.
 
-## Effort is not available on every model
+## Effort is available on every current model
 
-`low` through `max` on Opus 5.5, Sonnet 5.5, and Fable 5.1. The API rejects the effort parameter on
-Haiku 4.5 — treat a haiku agent's effort declaration as unenforced.
+`low` through `max` on Haiku 5.5, Sonnet 5.5, Opus 5.5, and Fable 5.1. Defaults differ —
+`medium` on Opus, Sonnet and Haiku 5.5, `high` on Fable 5.1 (Claude Code defaults) — so declare it.

@@ -90,8 +90,8 @@ An Opus agent at `low` effort and a Haiku agent are different things. `xhigh` is
 right setting for most coding and agentic work, and is not the Claude Code default.
 
 Two constraints worth remembering:
-- Haiku is the only current model with a 200K context window; everything else is 1M.
-  Never route long-context work to it.
+- Every current model is 1M context. Haiku bills 5x once a request's prompt passes 100K
+  tokens, so cheap haiku workers want bounded slices.
 - Fable is 2.5x Opus per token, always thinks, and runs substantially longer
   turns. It is an opt-in escalation, never a default.
 

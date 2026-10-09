@@ -321,12 +321,12 @@ Apply these best practices to the framework:
 
 ### 1. Attention Budget Allocation
 
-Distribute context strategically. The window depends on the model: Claude Haiku 4.5 is
-200K; Sonnet 5.5, Opus 5.5, and Fable 5.1 are 1M. Budget against the model you are actually
-running, and note that a large window is not a reason to fill it — relevance beats volume.
+Distribute context strategically. Every current model has a 1M window, but Claude Haiku
+5.5 bills 5x once a prompt passes 100K tokens, so a haiku agent has a practical budget
+well below its window. A large window is not a reason to fill it — relevance beats volume.
 
 ```markdown
-Total Budget: 200K tokens (haiku; scale proportionally on a 1M model)
+Total Budget: 200K tokens (illustrative; for a haiku agent keep it under 100K)
 
 Allocation:
 - System Prompt: 10K (5%)

@@ -16,6 +16,9 @@ def check(condition, msg, warn=False):
     if not condition:
         (warnings if warn else errors).append(msg)
 
+def repo_files(exts):
+    return validate_agent_system.repo_files(ROOT, exts)
+
 # === 1. Root doc count ===
 root_mds = [f for f in os.listdir(ROOT) if f.endswith('.md') and os.path.isfile(os.path.join(ROOT, f))]
 check(len(root_mds) <= 10, f"Root docs: {len(root_mds)} (expected ≤10)")
@@ -190,20 +193,15 @@ for doc in CONTRACT_DOCS:
 # `agent-launcher.md` is forbidden by §4.1. Naming it to say so is fine; showing
 # it in a directory tree is what teaches people to build one.
 LAUNCHER_IN_TREE = re.compile(r'^[\s│├└─]*agent-launcher\.md', re.M)
-for dirpath, dirnames, filenames in os.walk(ROOT):
-    dirnames[:] = [d for d in dirnames if d not in {'archive', '.git', '__pycache__'}]
-    for fn in filenames:
-        if not fn.endswith('.md'):
-            continue
-        rel = os.path.relpath(os.path.join(dirpath, fn), ROOT)
-        if rel == 'CHANGELOG.md':
-            continue
-        try:
-            content = open(os.path.join(dirpath, fn), encoding='utf-8').read()
-        except (OSError, UnicodeDecodeError):
-            continue
-        check(not LAUNCHER_IN_TREE.search(content),
-              f"{rel}: shows agent-launcher.md in a directory tree (§4.1 forbids it)")
+for rel in repo_files(('.md',)):
+    if rel == 'CHANGELOG.md':
+        continue
+    try:
+        content = open(os.path.join(ROOT, rel), encoding='utf-8').read()
+    except (OSError, UnicodeDecodeError):
+        continue
+    check(not LAUNCHER_IN_TREE.search(content),
+          f"{rel}: shows agent-launcher.md in a directory tree (§4.1 forbids it)")
 print("✓ Doc agent examples carry real frontmatter")
 
 # === 6. Line count targets ===
@@ -253,12 +251,9 @@ print(f"✓ v2.0 features check complete")
 # These were the specific wrong statements the v2.1 model pass removed. They are
 # cheap to reintroduce by copy-paste, so guard them explicitly.
 def live_docs():
-    """Every tracked .md/.py outside archive/ (archive is history, left as-is)."""
-    for dirpath, dirnames, filenames in os.walk(ROOT):
-        dirnames[:] = [d for d in dirnames if d not in {'archive', '.git', '__pycache__', '.claude-metrics'}]
-        for fn in filenames:
-            if fn.endswith(('.md', '.py', '.json')):
-                yield os.path.join(dirpath, fn)
+    """Every tracked .md/.py/.json outside archive/ (archive is history, left as-is)."""
+    for rel in repo_files(('.md', '.py', '.json')):
+        yield os.path.join(ROOT, rel)
 
 STALE_PATTERNS = [
     # (regex, why it is wrong now)
@@ -270,6 +265,14 @@ STALE_PATTERNS = [
     (r'xhigh`? is the\s+Claude Code default', "Claude Code defaults to medium on Opus/Sonnet 5.5, high elsewhere"),
     (r'Fable rates for Opus', "fast mode on Opus 5.5 is $8/$40, below Fable"),
     (r'\b(Opus|Sonnet|Fable) 5(?![.\d])', "current models are Opus 5.5, Sonnet 5.5, Fable 5.1"),
+    # Haiku 5.5 (2026-10-07) is 1M with effort.
+    (r'haiku[^.\n]{0,40}\b200K', "Haiku 5.5 is 1M; its constraint is the 100K price threshold"),
+    (r'only (current )?model (at|with a) 200K', "every current model is 1M"),
+    (r'rejects the effort\s+parameter[^.]{0,30}Haiku', "Haiku 5.5 supports effort"),
+    (r'except Haiku 4\.5', "every current model is 1M"),
+    # Claude Code's default, not the API's: Sonnet 5.5 is `medium` here, `high` on the API.
+    (r'`high` on Sonnet 5\.5|Sonnet 5\.5 and Fable 5\.1 to `high`|on Opus 5\.5 and Sonnet 5\.5 and `high` elsewhere',
+     "Claude Code defaults Opus, Sonnet and Haiku 5.5 to medium"),
     (r'`model:\s*"haiku"`\s*for fast/cheap', "conflates model tier with effort"),
     (r'qwen', "third-party routing was removed in favour of Claude-native tiers"),
     (r'MULTI_MODEL_ROUTING\.md', "renamed to MODEL_SELECTION.md"),
@@ -305,7 +308,7 @@ print(f"{'✓' if stale_hits == 0 else '✗'} Stale model claims: {stale_hits} f
 # Pinning them here does not make them true - it makes a change deliberate. The
 # date is what carries the claim, so it is checked for shape and for age.
 EXPECTED_RATES = {
-    'Claude Haiku 4.5': ('200K', '$1.00', '$5.00'),
+    'Claude Haiku 5.5': ('1M', '$0.10', '$0.50'),
     'Claude Sonnet 5.5': ('1M', '$2.00', '$10.00'),
     'Claude Opus 5.5': ('1M', '$4.00', '$20.00'),
     'Claude Fable 5.1': ('1M', '$10.00', '$50.00'),

@@ -38,6 +38,24 @@ SUBAGENT_PATTERN = re.compile(r'subagent_type[=:]\s*["\']([a-zA-Z0-9_-]+)["\']')
 MAX_STUB_LINES = 100
 
 
+
+def repo_files(root, exts):
+    """Tracked plus untracked-not-ignored files under root, relative, archive/ excluded.
+    Walking the disk instead picked up ignored local clones and worktrees, so the
+    checks failed on a developer machine but not in CI."""
+    import subprocess
+    try:
+        out = subprocess.run(['git', 'ls-files', '--cached', '--others', '--exclude-standard'],
+                             cwd=root, capture_output=True, text=True, check=True).stdout
+        rels = out.splitlines()
+    except (OSError, subprocess.CalledProcessError):
+        rels = [os.path.relpath(os.path.join(d, f), root)
+                for d, _, fs in os.walk(root) if '.git' not in d for f in fs]
+    for rel in rels:
+        if rel.endswith(exts) and not rel.startswith('archive/') \
+                and os.path.isfile(os.path.join(root, rel)):
+            yield rel
+
 def load_registry(root):
     """Load REGISTRY.json. Returns (registry, error) - registry is {} on failure."""
     path = os.path.join(root, '.claude-library/REGISTRY.json')
@@ -148,8 +166,8 @@ def check_tiers(root, registry):
             errors.append(f"Agent '{name}' has no effort tier")
         elif effort not in VALID_EFFORT:
             errors.append(f"Agent '{name}' invalid effort '{effort}' (allowed: {sorted(VALID_EFFORT)})")
-        # Haiku is the only 200K model; deep reasoning there is a tier mistake
-        if model == 'haiku' and effort not in {'low', 'medium'}:
+        # Haiku 5.5 honors effort, but needing xhigh/max is the signal to move up a tier
+        if model == 'haiku' and effort in {'xhigh', 'max'}:
             warnings.append(
                 f"Agent '{name}': haiku at effort '{effort}' - use a higher model tier instead")
         for dead in DEPRECATED_TOOLS:

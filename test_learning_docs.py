@@ -24,7 +24,7 @@ sys.path.insert(0, ROOT)
 
 # Reuse the real validator's predicates so the doc check and the live check
 # can never drift apart.
-from validate_agent_system import _split_tools, _grants_wildcard  # noqa: E402
+from validate_agent_system import _split_tools, _grants_wildcard, repo_files  # noqa: E402
 
 ERRORS = []
 WARNINGS = []
@@ -38,16 +38,10 @@ def warn(msg):
     WARNINGS.append(msg)
 
 
-SKIP_DIRS = {'.git', 'archive', 'node_modules', '__pycache__', '.claude-metrics'}
-
-
 def live_docs():
     """Every markdown file that is not archived."""
-    for dirpath, dirnames, filenames in os.walk(ROOT):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-        for fn in filenames:
-            if fn.endswith('.md'):
-                yield os.path.join(dirpath, fn)
+    for r in repo_files(ROOT, ('.md',)):
+        yield os.path.join(ROOT, r)
 
 
 def rel(path):
@@ -93,13 +87,9 @@ def docs_to_scan():
         p = os.path.join(ROOT, name)
         if os.path.exists(p):
             yield p
-    learn = os.path.join(ROOT, 'learn')
-    if os.path.isdir(learn):
-        for dirpath, dirnames, filenames in os.walk(learn):
-            dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-            for fn in filenames:
-                if fn.endswith('.md'):
-                    yield os.path.join(dirpath, fn)
+    for r in repo_files(ROOT, ('.md',)):
+        if r.startswith('learn/'):
+            yield os.path.join(ROOT, r)
 
 
 # === C0: skill frontmatter examples satisfy the real predicates ===
@@ -229,22 +219,18 @@ print(f"✓ C7: {c7} skills checked for claude.ai portability")
 PLACEHOLDER_USERS = {'dev', 'you', 'user', 'me', 'username', 'someone'}
 HOME_PATH = re.compile(r'/(?:Users|home)/([A-Za-z0-9_.-]+)')
 c8 = 0
-for dirpath, dirnames, filenames in os.walk(ROOT):
-    dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-    for fn in filenames:
-        if not fn.endswith(('.md', '.py', '.sh', '.json')):
-            continue
-        fp = os.path.join(dirpath, fn)
-        try:
-            text = open(fp, encoding='utf-8').read()
-        except (UnicodeDecodeError, OSError):
-            continue
-        for user in set(HOME_PATH.findall(text)):
-            c8 += 1
-            if user not in PLACEHOLDER_USERS:
-                err(f"{rel(fp)}: hardcoded home directory /Users/{user}/ - "
-                    f"publishes an author and points at a machine no reader has. "
-                    f"Use /absolute/path/to/... instead.")
+for r in repo_files(ROOT, ('.md', '.py', '.sh', '.json')):
+    fp = os.path.join(ROOT, r)
+    try:
+        text = open(fp, encoding='utf-8').read()
+    except (UnicodeDecodeError, OSError):
+        continue
+    for user in set(HOME_PATH.findall(text)):
+        c8 += 1
+        if user not in PLACEHOLDER_USERS:
+            err(f"{rel(fp)}: hardcoded home directory /Users/{user}/ - "
+                f"publishes an author and points at a machine no reader has. "
+                f"Use /absolute/path/to/... instead.")
 print(f"✓ C8: {c8} home-directory references checked")
 
 # === report ===

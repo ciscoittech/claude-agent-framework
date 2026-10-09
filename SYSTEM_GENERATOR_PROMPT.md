@@ -305,17 +305,19 @@ them — an opus agent at `low` effort and a haiku agent are different things.
 
 | Role | model / effort |
 |---|---|
-| Mechanical (formatting, file checks) | haiku / low |
+| Mechanical (formatting, file checks), classification, extraction | haiku / low |
 | Research, summarizing, fetching | sonnet / low |
 | Docs, tests, structured output | sonnet / medium |
 | Implementation, review, debugging | opus / high |
 | Architecture and planning | opus / xhigh |
 | Correctness outweighs cost (security, migrations) | opus / max |
 
-- **haiku is the only 200K model; everything else is 1M.** Never send
-  long-context work there — a rename across a large codebase is long-context.
+- **Every current model is 1M context, and effort works on all of them.** Haiku's
+  constraint is price, not size: it bills 5x for any request whose prompt exceeds
+  100K tokens. Cheap haiku workers want bounded slices, not whole-repo sweeps.
 - **fable is an opt-in escalation, never a generated default** (~2.5x opus, always
   thinks, much longer turns).
+- **Always declare effort.** Opus, Sonnet and Haiku 5.5 default to `medium`, not `high`.
 - Raise **effort** before **model**. Most "not smart enough" results are
   underspecified prompts, not undermodeled ones.
 

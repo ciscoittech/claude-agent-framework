@@ -420,6 +420,19 @@ post_mutation("subagent_type names an agent that does not exist", lambda root: w
     + '\nLaunch with subagent_type="does-not-exist".\n'))
 
 
+# ------------------------------------------------------ 2b. haiku effort tier
+# Haiku 5.5 honors effort, so `high` is a legitimate choice; xhigh/max still warns.
+print("\nhaiku effort warning (Haiku 5.5 honors effort)")
+for effort, should_warn in (('high', False), ('max', True)):
+    reg = json.loads(json.dumps(CANONICAL))
+    reg['agents']['architect'].update(model='haiku', effort=effort)
+    _, w, r = build(registry=reg, settings=SETTINGS)
+    warned = any("haiku at effort" in x for x in w)
+    check(warned == should_warn,
+          f"haiku/{effort} {'warns' if should_warn else 'does not warn'}", "\n      ".join(w))
+    shutil.rmtree(r, ignore_errors=True)
+
+
 # ---------------------------------------------------- 3. doc-derived systems
 print("\ndoc-derived systems (every registry example, built and validated)")
 
