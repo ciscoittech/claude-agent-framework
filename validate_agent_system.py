@@ -37,6 +37,12 @@ SUBAGENT_PATTERN = re.compile(r'subagent_type[=:]\s*["\']([a-zA-Z0-9_-]+)["\']')
 # The stub body becomes the subagent's system prompt and is paid on every launch.
 MAX_STUB_LINES = 100
 
+# Optional harness fields: registry key -> frontmatter key. Both sides must agree.
+HARNESS_FIELDS = {'isolation': 'isolation', 'max_turns': 'maxTurns'}
+VALID_ISOLATION = {'worktree'}
+# Agent-scoped hooks accept only these; Stop becomes SubagentStop at runtime.
+AGENT_HOOK_EVENTS = {'PreToolUse', 'PostToolUse', 'Stop'}
+EDITING_TOOLS = {'Edit', 'Write', 'NotebookEdit'}
 
 
 def repo_files(root, exts):
@@ -55,6 +61,7 @@ def repo_files(root, exts):
         if rel.endswith(exts) and not rel.startswith('archive/') \
                 and os.path.isfile(os.path.join(root, rel)):
             yield rel
+
 
 def load_registry(root):
     """Load REGISTRY.json. Returns (registry, error) - registry is {} on failure."""
@@ -170,6 +177,18 @@ def check_tiers(root, registry):
         if model == 'haiku' and effort in {'xhigh', 'max'}:
             warnings.append(
                 f"Agent '{name}': haiku at effort '{effort}' - use a higher model tier instead")
+        if 'isolation' in cfg:
+            if cfg['isolation'] not in VALID_ISOLATION:
+                errors.append(f"Agent '{name}' invalid isolation '{cfg['isolation']}' "
+                              f"(allowed: {sorted(VALID_ISOLATION)})")
+            elif not EDITING_TOOLS & set(cfg.get('tools', [])):
+                # a worktree costs setup and disk; an agent that cannot edit gains nothing
+                warnings.append(f"Agent '{name}': isolation 'worktree' on an agent with no "
+                                f"editing tools - it only adds setup cost")
+        if 'max_turns' in cfg:
+            mt = cfg['max_turns']
+            if not isinstance(mt, int) or isinstance(mt, bool) or mt < 1:
+                errors.append(f"Agent '{name}' max_turns must be a positive integer, got {mt!r}")
         for dead in DEPRECATED_TOOLS:
             if dead in cfg.get('tools', []):
                 errors.append(f"Agent '{name}' uses deprecated tool name '{dead}' (use Agent / Edit)")
@@ -214,11 +233,92 @@ def check_subagent_definitions(root, registry):
         if fm_tools != set(cfg.get('tools', [])):
             errors.append(
                 f".claude/agents/{name}.md tools {sorted(fm_tools)} != registry {sorted(cfg.get('tools', []))}")
+        for reg_key, fm_key in HARNESS_FIELDS.items():
+            want = cfg.get(reg_key)
+            have = fm.get(fm_key)
+            if (None if want is None else str(want)) != have:
+                errors.append(f".claude/agents/{name}.md {fm_key} {have!r} != registry "
+                              f"{reg_key} {want!r}")
+        errors += check_agent_hooks(path, name)
         nlines = sum(1 for _ in open(path, encoding='utf-8'))
         if nlines > MAX_STUB_LINES:
             warnings.append(
                 f".claude/agents/{name}.md is {nlines} lines "
                 f"(keep stubs <={MAX_STUB_LINES}; depth belongs in .claude-library/)")
+    return errors, warnings
+
+
+def check_agent_hooks(path, name):
+    """
+    `hooks:` in agent frontmatter is the one nested block the contract allows. The
+    flat parser skips it, so read the event names and commands directly. Two ways
+    it fails silently: an event the agent scope does not fire (SubagentStop is
+    written as Stop here), and a relative script path that breaks from a subdirectory.
+    """
+    errors = []
+    with open(path, encoding='utf-8-sig') as f:
+        lines = f.read().split('\n')
+    in_hooks = False
+    for line in lines[1:] if lines and lines[0].strip() == '---' else []:
+        if line.strip() == '---':
+            break
+        if not line.startswith((' ', '\t')):
+            in_hooks = line.split(':')[0].strip() == 'hooks'
+            continue
+        if not in_hooks:
+            continue
+        ev = re.match(r'^  ([A-Za-z]+):\s*$', line)
+        if ev and ev.group(1) not in AGENT_HOOK_EVENTS:
+            hint = " - write Stop; it becomes SubagentStop at runtime" \
+                if ev.group(1) == 'SubagentStop' else ""
+            errors.append(f".claude/agents/{name}.md: hook event '{ev.group(1)}' does not fire "
+                          f"in agent scope (allowed: {sorted(AGENT_HOOK_EVENTS)}){hint}")
+        cmd = re.match(r'^\s+command:\s*["\']?(.*?)["\']?\s*$', line)
+        if cmd and re.search(r'(^|\s)(\./|\.claude/)', cmd.group(1)) \
+                and 'CLAUDE_PROJECT_DIR' not in cmd.group(1):
+            errors.append(f".claude/agents/{name}.md: hook command uses a relative path - "
+                          f'anchor it with "$CLAUDE_PROJECT_DIR"')
+    return errors
+
+
+def check_workflows(root, registry):
+    """
+    `.claude/workflows/*.js` become /<meta.name> commands. Each rule here is one
+    Claude Code applies at load or run time, where breaking it fails quietly:
+    a non-literal meta drops the command from autocomplete, Date.now() and
+    Math.random() throw mid-run, and an agentType naming no agent fails on launch.
+    """
+    errors, warnings = [], []
+    wf_dir = os.path.join(root, '.claude/workflows')
+    if not os.path.isdir(wf_dir):
+        return errors, warnings
+    known = set(registry.get('agents', {})) | BUILTIN_AGENTS
+    for fn in sorted(os.listdir(wf_dir)):
+        if not fn.endswith('.js'):
+            continue
+        rel = f".claude/workflows/{fn}"
+        with open(os.path.join(wf_dir, fn), encoding='utf-8') as f:
+            src = f.read()
+        body = re.sub(r'^\s*(//[^\n]*\n\s*)*', '', src)
+        if not body.startswith('export const meta = {'):
+            errors.append(f"{rel}: first statement must be `export const meta = {{...}}`")
+            continue
+        meta = body[:body.find('\n}') + 2]
+        for key in ('name', 'description'):
+            if not re.search(rf'^\s+{key}:', meta, re.M):
+                errors.append(f"{rel}: meta has no {key}")
+        if '`' in meta or '...' in meta:
+            errors.append(f"{rel}: meta must be a plain literal - no template strings or spreads")
+        for bad in ('Date.now(', 'Math.random(', 'new Date()'):
+            if bad in src:
+                errors.append(f"{rel}: {bad.rstrip('(')} throws inside a workflow - pass it in via args")
+        if re.search(r'^\s*import\b|\bimport\(', src, re.M):
+            errors.append(f"{rel}: workflows cannot load modules")
+        titles = set(re.findall(r"title:\s*'([^']+)'", meta))
+        for t in sorted(set(re.findall(r"phase\(\s*'([^']+)'", src)) - titles):
+            warnings.append(f"{rel}: phase('{t}') has no entry in meta.phases")
+        for a in sorted(set(re.findall(r"agentType:\s*'([^']+)'", src)) - known):
+            errors.append(f"{rel}: agentType '{a}' is not a registry or built-in agent")
     return errors, warnings
 
 
@@ -469,6 +569,9 @@ def validate(root, registry):
     errors += e
     warnings += w
     e, w = check_settings(root, registry)
+    errors += e
+    warnings += w
+    e, w = check_workflows(root, registry)
     errors += e
     warnings += w
     return errors, warnings

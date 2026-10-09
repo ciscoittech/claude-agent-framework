@@ -338,6 +338,28 @@ if os.path.exists(model_doc):
               f"({verified}) - re-check them against the price card", warn=True)
         print(f"✓ Rate table pinned, last verified {verified} ({age}d ago)")
 
+# === 8d. Shipped workflows parse ===
+# The validator checks the rules Claude Code applies; only a JS parser catches a
+# syntax error, which otherwise surfaces when someone runs the command. The body
+# uses top-level await and return, so it is checked wrapped in an async function.
+import shutil, subprocess, tempfile
+node = shutil.which('node')
+wf_dir = os.path.join(ROOT, '.claude/workflows')
+if node and os.path.isdir(wf_dir):
+    for fn in sorted(f for f in os.listdir(wf_dir) if f.endswith('.js')):
+        src = open(os.path.join(wf_dir, fn), encoding='utf-8').read()
+        wrapped = ("async function __workflow(agent, parallel, pipeline, phase, log, args, budget) {\n"
+                   + src.replace('export const meta', 'const meta', 1) + "\n}\n")
+        with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False) as t:
+            t.write(wrapped)
+        res = subprocess.run([node, '--check', t.name], capture_output=True, text=True)
+        os.unlink(t.name)
+        check(res.returncode == 0, f".claude/workflows/{fn} does not parse: "
+              f"{next((l for l in res.stderr.splitlines() if 'Error' in l), res.stderr.strip())}")
+    print("✓ Shipped workflows parse")
+elif os.path.isdir(wf_dir):
+    check(False, "node not found - shipped workflows were not syntax-checked", warn=True)
+
 # === 9. Context files updated ===
 contexts_dir = os.path.join(ROOT, '.claude-library/contexts')
 for ctx in ['claude-code-subagents.md', 'claude-code-best-practices.md', 'claude-code-mcp.md']:

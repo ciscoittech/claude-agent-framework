@@ -72,6 +72,8 @@ Each agent entry carries:
 | `triggers` | Keywords that route work here |
 | `contexts` | Context files to load for this agent |
 | `priority` | Routing precedence (1 = highest) |
+| `isolation` | Optional. `worktree` for agents that edit files in parallel |
+| `max_turns` | Optional. Turn cap, mirrored to frontmatter `maxTurns` |
 
 **Referential integrity is a hard requirement.** Every `path` and every entry in a
 `contexts[]` array must resolve to a file that exists. An agent told to load a missing
