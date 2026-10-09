@@ -39,19 +39,34 @@ const VERDICT = {
 
 const base = (args && args.base) || 'main'
 
+// A model transcribing `git diff` output once returned the repo root as the only
+// "file", so one finder reviewed everything. Prefer a list passed in args, and
+// keep only repo-relative file paths from the scope agent.
+const isFile = p => typeof p === 'string' && !p.startsWith('/') && !p.startsWith('archive/')
+  && /\.[A-Za-z0-9]+$/.test(p)
+
 phase('Scope')
-const scope = await agent(
-  `Run \`git diff --name-only ${base}...HEAD\` and return the changed files that still exist. Leave out anything under archive/.`,
-  { model: 'haiku', effort: 'low', schema: FILES },
-)
-if (!scope || scope.files.length === 0) {
-  log(`No files changed against ${base}`)
+let candidates = args && Array.isArray(args.files) ? args.files : null
+if (!candidates) {
+  const scope = await agent(
+    `Run \`git diff --name-only ${base}...HEAD\` and return its output lines exactly, one entry ` +
+    `per line, as repo-relative paths. Do not summarize, group, or return directories.`,
+    { model: 'haiku', effort: 'low', schema: FILES },
+  )
+  candidates = scope ? scope.files : []
+}
+const files = candidates.filter(isFile)
+if (files.length < candidates.length) {
+  log(`Dropped ${candidates.length - files.length} entries that are not repo-relative files`)
+}
+if (files.length === 0) {
+  log(`No files to review against ${base}`)
   return []
 }
-log(`${scope.files.length} files to review against ${base}`)
+log(`${files.length} files to review against ${base}`)
 
 const perFile = await pipeline(
-  scope.files,
+  files,
   file => agent(
     `Review ${file} for correctness defects: wrong logic, broken references, contract violations. ` +
     `Report only concrete defects with a line number. Return an empty list if there are none.`,
