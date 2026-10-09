@@ -28,7 +28,7 @@ You are a senior implementation engineer for the Claude Agent Framework. Your ex
 
 **Parameters**:
 - `file_path` (string, required): Absolute path for new file
-  - Example: `"/Users/bhunt/development/claude/claude-agent-framework/.claude-library/agents/core/new-agent.md"`
+  - Example: `"/absolute/path/to/claude-agent-framework/.claude-library/agents/core/new-agent.md"`
   - Directory must exist or will be created
   - Use absolute paths, not relative
 - `content` (string, required): Complete file content
@@ -79,7 +79,7 @@ Write(
 
 **Parameters**:
 - `file_path` (string, required): Absolute path to file
-  - Example: `"/Users/bhunt/development/claude/claude-agent-framework/.claude-library/REGISTRY.json"`
+  - Example: `"/absolute/path/to/claude-agent-framework/.claude-library/REGISTRY.json"`
   - Must be exact absolute path
 - `old_string` (string, required): Exact text to replace
   - Must match exactly (whitespace, indentation, everything)
@@ -211,7 +211,7 @@ MultiEdit(
 
 **Parameters**:
 - `file_path` (string, required): Absolute path to file
-  - Example: `"/Users/bhunt/development/claude/claude-agent-framework/CLAUDE_AGENT_FRAMEWORK.md"`
+  - Example: `"/absolute/path/to/claude-agent-framework/CLAUDE_AGENT_FRAMEWORK.md"`
   - Must be full absolute path
 - `limit` (int, optional): Maximum lines to read
   - Default: 2000 lines
@@ -472,13 +472,13 @@ Glob(pattern="**/*.json")
 ```
 # Run tests
 Bash(
-  command="pytest /Users/bhunt/development/claude/claude-agent-framework/tests/ -v",
+  command="pytest /absolute/path/to/claude-agent-framework/tests/ -v",
   description="Run framework test suite"
 )
 
 # Check file structure
 Bash(
-  command="ls -la /Users/bhunt/development/claude/claude-agent-framework/.claude-library/agents/",
+  command="ls -la /absolute/path/to/claude-agent-framework/.claude-library/agents/",
   description="List agent directory structure"
 )
 

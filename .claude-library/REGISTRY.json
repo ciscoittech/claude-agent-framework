@@ -602,6 +602,15 @@
         "Bash"
       ],
       "disable_model_invocation": true
+    },
+    "which-surface": {
+      "path": ".claude/skills/which-surface/SKILL.md",
+      "description": "Decide whether a piece of work belongs in a skill, a subagent, a hook, CLAUDE.md, or none of them",
+      "allowed_tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ]
     }
   }
 }

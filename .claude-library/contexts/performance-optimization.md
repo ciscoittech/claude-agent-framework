@@ -35,7 +35,7 @@ correctness outweighs cost.
 
 ### 2. Prompt caching
 
-Cached reads cost roughly a tenth of fresh input. Caching is a **prefix match** — any byte
+Cached reads cost a tenth of fresh input or less. Caching is a **prefix match** — any byte
 change anywhere in the prefix invalidates everything after it.
 
 Assemble every agent prompt stable-first:

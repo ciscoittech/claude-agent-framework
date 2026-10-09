@@ -326,6 +326,33 @@ _skill_without_file.post = lambda root: os.remove(
     os.path.join(root, '.claude/commands/deploy.md'))
 deviate(_skill_without_file, "registry skill with no command file")
 
+# --- the SKILL.md form (issue #11) -------------------------------------------
+# Both forms create /name. A SKILL.md wins over a same-named command file, so a
+# project carrying both has a command file that looks live and is dead.
+
+def _skill_md_both_forms(reg, root):
+    """SKILL.md alongside the command file of the same name."""
+    d = os.path.join(root, '.claude/skills/build')
+    os.makedirs(d, exist_ok=True)
+    open(os.path.join(d, 'SKILL.md'), 'w').write(
+        "---\nname: build\ndescription: %s\nallowed-tools: %s\n---\nbody\n"
+        % (reg['skills']['build']['description'],
+           ', '.join(reg['skills']['build']['allowed_tools'])))
+deviate(_skill_md_both_forms, "skill exists as both SKILL.md and a command file")
+
+
+def _skill_md_name_mismatch(reg, root):
+    """SKILL.md whose name: disagrees with its directory."""
+    reg['skills']['audit'] = dict(reg['skills']['build'],
+                                  path='.claude/skills/audit/SKILL.md')
+    d = os.path.join(root, '.claude/skills/audit')
+    os.makedirs(d, exist_ok=True)
+    open(os.path.join(d, 'SKILL.md'), 'w').write(
+        "---\nname: not-audit\ndescription: %s\nallowed-tools: %s\n---\nbody\n"
+        % (reg['skills']['build']['description'],
+           ', '.join(reg['skills']['build']['allowed_tools'])))
+deviate(_skill_md_name_mismatch, "SKILL.md name does not match its directory")
+
 def _wildcard_bash(reg, root):
     reg['skills']['build']['allowed_tools'] = ['Bash(*)']
 deviate(_wildcard_bash, "command pre-approves unrestricted Bash(*)")

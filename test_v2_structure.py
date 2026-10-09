@@ -17,19 +17,7 @@ def check(condition, msg, warn=False):
         (warnings if warn else errors).append(msg)
 
 def repo_files(exts):
-    """Tracked plus untracked-not-ignored files. Walking the disk instead picked up
-    ignored local clones and worktrees, so the check failed locally but not in CI."""
-    import subprocess
-    try:
-        out = subprocess.run(['git', 'ls-files', '--cached', '--others', '--exclude-standard'],
-                             cwd=ROOT, capture_output=True, text=True, check=True).stdout
-        rels = out.splitlines()
-    except (OSError, subprocess.CalledProcessError):
-        rels = [os.path.relpath(os.path.join(d, f), ROOT)
-                for d, dn, fs in os.walk(ROOT) if '.git' not in d for f in fs]
-    for rel in rels:
-        if rel.endswith(exts) and not rel.startswith('archive/') and os.path.isfile(os.path.join(ROOT, rel)):
-            yield rel
+    return validate_agent_system.repo_files(ROOT, exts)
 
 # === 1. Root doc count ===
 root_mds = [f for f in os.listdir(ROOT) if f.endswith('.md') and os.path.isfile(os.path.join(ROOT, f))]
@@ -227,6 +215,14 @@ targets = {
     'AGENT_SYSTEM_TEMPLATE.md': (550, 750),
     'README.md': (180, 300),
     'CLAUDE.md': (100, 200),
+    # A lesson that grows stops being read. Same belief the files above encode.
+    'learn/01-four-surfaces.md': (120, 260),
+    'learn/02-skills.md': (70, 220),
+    'learn/03-subagents.md': (60, 190),
+    'learn/04-composition.md': (60, 150),
+    'learn/05-hooks-and-memory.md': (50, 140),
+    'learn/06-worked-example.md': (100, 260),
+    'learn/README.md': (20, 100),
 }
 for fname, (lo, hi) in targets.items():
     path = os.path.join(ROOT, fname)
@@ -263,13 +259,17 @@ STALE_PATTERNS = [
     # (regex, why it is wrong now)
     (r'Opus\s*\(\$15/1M', "Opus 5.5 is $4/$20 per 1M, not $15"),
     (r'Claude Sonnet \(\$3/1M', "Sonnet 5.5 is $2/$10 per 1M, not $3"),
-    # The 5.5 pass: Haiku 5.5 is 1M with effort, and Opus dropped to $4/$20.
+    # The 5.5 release moved these. Each was true on 2026-08-31.
+    (r'\$5\s*/\s*\$25', "Opus 5.5 is $4/$20 - $5/$25 was Opus 5"),
+    (r'fable[^.\n]*\b2x\s+opus|\b2x\s+opus[^.\n]*fable|fable[^.\n]*twice\s+opus', "Fable 5.1 is 2.5x Opus 5.5, not 2x"),
+    (r'xhigh`? is the\s+Claude Code default', "Claude Code defaults to medium on Opus/Sonnet 5.5, high elsewhere"),
+    (r'Fable rates for Opus', "fast mode on Opus 5.5 is $8/$40, below Fable"),
+    (r'\b(Opus|Sonnet|Fable) 5(?![.\d])', "current models are Opus 5.5, Sonnet 5.5, Fable 5.1"),
+    # Haiku 5.5 (2026-10-07) is 1M with effort.
     (r'haiku[^.\n]{0,40}\b200K', "Haiku 5.5 is 1M; its constraint is the 100K price threshold"),
     (r'only (current )?model (at|with a) 200K', "every current model is 1M"),
     (r'rejects the effort\s+parameter[^.]{0,30}Haiku', "Haiku 5.5 supports effort"),
-    (r'\$10/\$50[^.\n]{0,20}vs \$5/\$25', "Opus 5.5 is $4/$20 - Fable is 2.5x, not 2x"),
     (r'except Haiku 4\.5', "every current model is 1M"),
-    (r'(~|costs |roughly )(2x|twice) opus', "Fable is 2.5x Opus 5.5"),
     (r'`model:\s*"haiku"`\s*for fast/cheap', "conflates model tier with effort"),
     (r'qwen', "third-party routing was removed in favour of Claude-native tiers"),
     (r'MULTI_MODEL_ROUTING\.md', "renamed to MODEL_SELECTION.md"),

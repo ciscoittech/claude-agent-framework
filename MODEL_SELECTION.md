@@ -12,7 +12,9 @@ mistake, and it was baked into earlier versions of this framework.
 An Opus agent at `low` effort and a Haiku agent are different things. Picking a model does
 not pick an effort; set both deliberately.
 
-`xhigh` is the Claude Code default and the right setting for most coding and agentic work.
+`xhigh` is the right setting for most coding and agentic work. It is **not** the Claude Code
+default: Claude Code defaults to `medium` on Opus 5.5 and Sonnet 5.5 and `high` elsewhere
+(code.claude.com/docs/en/model-config, checked 2026-09-30).
 
 ---
 
@@ -24,6 +26,13 @@ not pick an effort; set both deliberately.
 | Claude Sonnet 5.5 | `sonnet` | 1M | $2.00 | $10.00 | $0.10 | `high` |
 | Claude Opus 5.5 | `opus` | 1M | $4.00 | $20.00 | $0.20 | `medium` |
 | Claude Fable 5.1 | `fable` | 1M | $10.00 | $50.00 | $0.25 | `high` |
+
+The tier names are Claude Code aliases and resolve to the newest model in each tier, so an
+agent declaring `model: opus` moved to Opus 5.5 on release with no edit. Verified
+2026-10-09 against code.claude.com/docs/en/model-config (Claude Code 2.1.291): `haiku` →
+Haiku 5.5, `sonnet` → Sonnet 5.5, `opus` → Opus 5.5, `fable` → Fable 5.1. On 2026-09-30
+(2.1.285) `haiku` still resolved to Haiku 4.5 — the alias moves when Claude Code does. Only
+a full model ID pins a version, which is why agents here never use one.
 
 **Last verified: 2026-10-09** against the Anthropic price card
 (https://platform.claude.com/docs/en/about-claude/pricing) and models overview. Every rate
@@ -43,10 +52,15 @@ reads count toward the 100K. Below the threshold it is 20x cheaper than sonnet o
 above it, still 4x cheaper. Route long-context work to haiku when the price still wins,
 but know which side of 100K a task sits on.
 
-**Effort is a dial on every current model**, `low` through `max`. Defaults differ: Opus 5.5
-and Haiku 5.5 default to `medium`, Sonnet 5.5 and Fable 5.1 to `high`. Never rely on the
-default — every agent in this framework declares effort explicitly, and an undeclared opus
-agent now runs one level shallower than it did on Opus 5.
+**Effort is a dial on every current model**, `low` through `max` — including Haiku 5.5,
+where Haiku 4.5 rejected it.
+
+**Opus 5.5 and Haiku 5.5 default to `medium` effort**; Sonnet 5.5 and Fable 5.1 to `high`.
+A subagent with no `effort` key inherits the session's effort level, so on a default
+session an undeclared opus agent got shallower on the 5.5 release without any file
+changing. This is the concrete reason every agent here declares `effort` explicitly:
+frontmatter effort overrides the session level (an environment variable still overrides
+frontmatter).
 
 **Sonnet 5.5 recalibrated its effort levels.** The same label does not buy the same depth
 it did on Sonnet 5. Start agentic sonnet work at `medium` and re-check before raising it.
@@ -55,8 +69,8 @@ it did on Sonnet 5. Start agentic sonnet work at `medium` and re-check before ra
 and Sonnet 5.5, 2.5% on Fable 5.1. A stable, cached prefix is worth more than ever relative
 to a small fresh one — see the context-reduction note in `CLAUDE.md`.
 
-**Fast mode** (`/fast`, opus only) is the same model at up to 2.5x output speed, priced
-at $8/$40 on Opus 5.5. It buys latency, not capability.
+**Fast mode** (`/fast`, Opus only) is the same model at up to 2.5x output speed, priced
+at $8/$40 on Opus 5.5 — 2x standard Opus. It buys latency, not capability.
 
 ---
 
@@ -112,7 +126,7 @@ Fable 5.1 is Anthropic's most capable widely released model, and it is an **opt-
 escalation, never a routing default**.
 
 What escalating costs you:
-- 2.5x Opus on both input and output ($10/$50 against Opus 5.5's $4/$20)
+- 2.5x Opus on both input and output ($10/$50 vs $4/$20)
 - Thinking is always on and cannot be disabled
 - Turns run substantially longer, so the real multiple on a full build exceeds 2.5x
 

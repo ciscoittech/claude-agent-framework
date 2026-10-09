@@ -38,6 +38,24 @@ SUBAGENT_PATTERN = re.compile(r'subagent_type[=:]\s*["\']([a-zA-Z0-9_-]+)["\']')
 MAX_STUB_LINES = 100
 
 
+
+def repo_files(root, exts):
+    """Tracked plus untracked-not-ignored files under root, relative, archive/ excluded.
+    Walking the disk instead picked up ignored local clones and worktrees, so the
+    checks failed on a developer machine but not in CI."""
+    import subprocess
+    try:
+        out = subprocess.run(['git', 'ls-files', '--cached', '--others', '--exclude-standard'],
+                             cwd=root, capture_output=True, text=True, check=True).stdout
+        rels = out.splitlines()
+    except (OSError, subprocess.CalledProcessError):
+        rels = [os.path.relpath(os.path.join(d, f), root)
+                for d, _, fs in os.walk(root) if '.git' not in d for f in fs]
+    for rel in rels:
+        if rel.endswith(exts) and not rel.startswith('archive/') \
+                and os.path.isfile(os.path.join(root, rel)):
+            yield rel
+
 def load_registry(root):
     """Load REGISTRY.json. Returns (registry, error) - registry is {} on failure."""
     path = os.path.join(root, '.claude-library/REGISTRY.json')
@@ -319,6 +337,11 @@ def _grants_wildcard(tool):
 
 def check_skills(root, registry):
     """
+    A skill is `.claude/commands/<name>.md` or `.claude/skills/<name>/SKILL.md`.
+    Both create /name; the directory form additionally carries bundled files and
+    auto-activation. Never both for one name - SKILL.md wins and the command file
+    silently stops being read.
+
     Commands are only skills if they carry frontmatter. Frontmatter is what lets
     the author control the description the model matches on, pre-approve tools,
     and opt out of model invocation - none of which a bare markdown file does.
@@ -328,46 +351,77 @@ def check_skills(root, registry):
     """
     errors, warnings = [], []
     commands_dir = os.path.join(root, '.claude/commands')
+    skills_dir = os.path.join(root, '.claude/skills')
     declared = registry.get('skills', {})
 
-    if not os.path.isdir(commands_dir):
+    # Both forms create /name and behave the same way. A SKILL.md takes precedence
+    # over a same-named command file, so a project carrying both has a command file
+    # that looks live and is dead - the same class of bug as a hook that never fires.
+    on_disk = {}   # name -> relative path
+    if os.path.isdir(commands_dir):
+        for f in os.listdir(commands_dir):
+            if f.endswith('.md'):
+                on_disk[f[:-3]] = f'.claude/commands/{f}'
+    both = []
+    if os.path.isdir(skills_dir):
+        for d in os.listdir(skills_dir):
+            skill_md = os.path.join(skills_dir, d, 'SKILL.md')
+            if os.path.isfile(skill_md):
+                if d in on_disk:
+                    both.append(d)
+                on_disk[d] = f'.claude/skills/{d}/SKILL.md'
+                fm = parse_frontmatter(skill_md)
+                if fm and fm.get('name') and fm['name'] != d:
+                    errors.append(
+                        f".claude/skills/{d}/SKILL.md: name '{fm['name']}' != directory '{d}' "
+                        f"- the directory name is what /invoke resolves")
+    for name in sorted(both):
+        errors.append(
+            f"skill '{name}' exists as BOTH .claude/commands/{name}.md and "
+            f".claude/skills/{name}/SKILL.md - SKILL.md wins, so the command file is dead")
+
+    if not on_disk and not os.path.isdir(commands_dir) and not os.path.isdir(skills_dir):
         if declared:
-            errors.append("REGISTRY declares skills but .claude/commands/ does not exist")
+            errors.append(
+                "REGISTRY declares skills but neither .claude/commands/ nor "
+                ".claude/skills/ exists")
         return errors, warnings
 
-    on_disk = {f[:-3] for f in os.listdir(commands_dir) if f.endswith('.md')}
-    for orphan in sorted(on_disk - set(declared)):
-        errors.append(f".claude/commands/{orphan}.md has no REGISTRY.json skills entry")
+    for orphan in sorted(set(on_disk) - set(declared)):
+        errors.append(f"{on_disk[orphan]} has no REGISTRY.json skills entry")
     # Do not rely on check_referential_integrity for this: it only fires when the
     # entry happens to carry a `path`, which is optional.
-    for missing in sorted(set(declared) - on_disk):
-        errors.append(f"REGISTRY skill '{missing}' has no .claude/commands/{missing}.md")
+    for missing in sorted(set(declared) - set(on_disk)):
+        errors.append(
+            f"REGISTRY skill '{missing}' has no .claude/commands/{missing}.md "
+            f"or .claude/skills/{missing}/SKILL.md")
 
-    for name in sorted(set(declared) & on_disk):
-        path = os.path.join(commands_dir, f'{name}.md')
+    for name in sorted(set(declared) & set(on_disk)):
+        label = on_disk[name]
+        path = os.path.join(root, label)
         fm = parse_frontmatter(path)
         cfg = declared[name]
         if fm is None:
             errors.append(
-                f".claude/commands/{name}.md has no frontmatter - the description, "
+                f"{label} has no frontmatter - the description, "
                 f"tool pre-approval, and invocation controls are all unset")
             continue
 
         if not fm.get('description'):
-            errors.append(f".claude/commands/{name}.md missing frontmatter key: description")
+            errors.append(f"{label} missing frontmatter key: description")
         elif fm['description'] != cfg.get('description'):
-            errors.append(f".claude/commands/{name}.md description does not match REGISTRY")
+            errors.append(f"{label} description does not match REGISTRY")
 
         # Validate the frontmatter side on its own terms FIRST, so a registry that
         # omits allowed_tools cannot skip the file check entirely.
         fm_tools = _split_tools(fm.get('allowed-tools', ''))
         if not fm_tools:
             errors.append(
-                f".claude/commands/{name}.md has no allowed-tools - every tool use "
+                f"{label} has no allowed-tools - every tool use "
                 f"will prompt, or be denied outright in non-interactive runs")
         for t in fm_tools:
             if _grants_wildcard(t):
-                errors.append(f".claude/commands/{name}.md grants unrestricted '{t}'")
+                errors.append(f"{label} grants unrestricted '{t}'")
 
         reg_tools = cfg.get('allowed_tools')
         if reg_tools is None:
@@ -375,14 +429,14 @@ def check_skills(root, registry):
         elif sorted(fm_tools) != sorted(reg_tools):
             # sorted: reordering the JSON is a no-op that must not fail CI
             errors.append(
-                f".claude/commands/{name}.md allowed-tools {sorted(fm_tools)} "
+                f"{label} allowed-tools {sorted(fm_tools)} "
                 f"!= REGISTRY {sorted(reg_tools)}")
 
         declared_off = bool(cfg.get('disable_model_invocation'))
         file_off = str(fm.get('disable-model-invocation', '')).strip().lower() in TRUTHY
         if declared_off != file_off:
             errors.append(
-                f".claude/commands/{name}.md disable-model-invocation={file_off} "
+                f"{label} disable-model-invocation={file_off} "
                 f"!= REGISTRY {declared_off}")
 
         # One command, one description. Two registry sections declaring the same

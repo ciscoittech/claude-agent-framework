@@ -710,7 +710,8 @@ choosing one does not choose the other.
 | `fable` | Opt-in escalation only: long-horizon, multi-subsystem work | 1M | $10 / $50 |
 
 **Effort** — reasoning depth: `low` → `medium` → `high` → `xhigh` → `max`. `xhigh` is the
-Claude Code default and the sweet spot for most coding and agentic work. Use `low` for
+sweet spot for most coding and agentic work, but not the Claude Code default (`medium` on
+Opus 5.5 and Sonnet 5.5, so declare it). Use `low` for
 mechanical subagents, `high`/`xhigh` for design and review, `max` only when correctness
 matters more than cost.
 
@@ -937,7 +938,7 @@ class ContextHierarchy {
 
 ### Prompt Caching and Prefix Stability
 
-Cached reads bill at roughly a tenth of fresh input, which makes caching the largest cost
+Cached reads bill at a tenth of fresh input or less, which makes caching the largest cost
 lever in a multi-agent system. Caching is a **prefix match**: any byte change anywhere in
 the prefix invalidates everything after it.
 
@@ -1176,16 +1177,25 @@ Agents can persist findings across sessions:
 
 Skills can use `context: fork` to branch the conversation context, allowing exploration without polluting the main thread:
 
+`.claude/skills/explore-alternatives/SKILL.md`:
+
 ```markdown
 ---
 name: explore-alternatives
 description: Explore implementation alternatives without affecting main context
+allowed-tools: Read, Grep, Glob
 context: fork
+agent: Explore
 ---
 
 Explore 3 different approaches to implement this feature.
 Compare trade-offs. Report back the recommended approach only.
 ```
+
+**`context: fork` needs actual instructions.** Fork a skill that is only guidelines -
+"prefer composition over inheritance" - and the forked context gets a system prompt, a page
+of advice, and nothing to do. It returns nothing useful and does not error. If the skill has
+no imperative sentences, it is reference content, and reference content is not forkable.
 
 **When to use `context: fork`:**
 - Exploratory research that generates lots of noise

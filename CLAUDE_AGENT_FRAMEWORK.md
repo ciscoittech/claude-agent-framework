@@ -200,14 +200,14 @@ Organize agents by function:
    - Test Engineer: Test creation and execution
    - Deployment Manager: CI/CD and releases
 
-## Skills (Commands)
+## Skills
 
 A **skill** is a procedure a user invokes as `/name`. Two forms exist:
 
 - `.claude/commands/<name>.md` — what this framework uses and what the validator checks.
 - `.claude/skills/<name>/SKILL.md` — the richer form, supporting bundled resources and
   path-scoped auto-activation. A `SKILL.md` takes precedence over a same-named command
-  file. This repo does not use it; reach for it when a skill needs more than one file.
+  file. Reach for it when a skill needs more than one file.
 
 Either way the skill is declared in `REGISTRY.json`'s `skills` section.
 
@@ -228,6 +228,17 @@ alternatives to each other.
 
 Per SIMPLICITY_ENFORCEMENT, do not create either until the direct approach has actually
 failed. A skill that wraps one tool call is worse than the tool call.
+
+This table is the short version. [learn/01-four-surfaces.md](./learn/01-four-surfaces.md)
+adds the two surfaces it omits — hooks and `CLAUDE.md` — and the cost model that decides
+between them: a skill's body is a recurring context cost, a subagent's window is discarded,
+and a hook is the only one the model cannot skip.
+
+**On the vocabulary.** `REGISTRY.json` has a `skills{}` section and a `commands{}` section,
+and the files live in `.claude/commands/`. These are not three concepts. `skills{}` is the
+declaration that reaches the file — description, tool pre-approval, invocation control.
+`commands{}` is orchestration wiring: which agents a command drives. The directory name is
+just where this repo keeps them.
 
 ### Required frontmatter
 

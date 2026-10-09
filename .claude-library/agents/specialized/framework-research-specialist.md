@@ -96,7 +96,7 @@ WebFetch(
 
 **Parameters**:
 - `file_path` (string, required): Absolute path to context file
-  - Example: `"/Users/bhunt/development/claude/claude-agent-framework/.claude-library/contexts/claude-code-best-practices.md"`
+  - Example: `"/absolute/path/to/claude-agent-framework/.claude-library/contexts/claude-code-best-practices.md"`
 - `limit` (int, optional): Maximum lines to read (default: 2000)
 - `offset` (int, optional): Starting line (default: 1)
 
