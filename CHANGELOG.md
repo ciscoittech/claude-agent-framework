@@ -5,6 +5,36 @@ All notable changes to the Claude Agent Framework will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-10-09
+
+### Changed - The 5.5 model lineup
+
+Haiku 5.5, Sonnet 5.5, Opus 5.5 and Fable 5.1 replace the tiers' previous models.
+Rates re-verified against the price card on 2026-10-09 and re-pinned in
+`test_v2_structure.py`.
+
+- **Haiku is no longer the 200K exception.** Every current model is 1M. Haiku 5.5's
+  constraint is price: $0.10/$0.50 up to a 100K-token prompt, 5x above it (cache reads
+  count). Every "never route long context to haiku" rule is rewritten around that
+  threshold.
+- **Haiku honors effort.** The validator no longer warns on haiku at `high`; it warns at
+  `xhigh`/`max`, where moving up a tier is the better fix.
+- **Opus is cheaper: $4/$20.** Fable is now 2.5x opus, not 2x.
+- **Effort defaults moved.** Opus 5.5 and Haiku 5.5 default to `medium`; Sonnet 5.5
+  recalibrated its levels. The generator now tells every agent to declare effort.
+- **Cache reads are 5% of input on Opus 5.5 and Sonnet 5.5**, 2.5% on Fable 5.1 —
+  strengthening the stable-prefix guidance.
+
+No agent tier assignments changed. Moving agents to haiku is a measured,
+one-at-a-time decision, not part of a price update.
+
+### Fixed - Checks failed locally but not in CI
+
+`test_v2_structure.py` walked the disk, so ignored local clones (`cloned-repo/`,
+`vscode-extension/`), `.claude/worktrees/` and `.logfire/` produced ~30 errors on a
+developer machine that CI never saw — and the live hook reported them after every
+edit. The file sweeps now use `git ls-files` (tracked plus untracked-not-ignored).
+
 ## [2.2.0] - 2026-08-31
 
 ### Fixed - Configuration the harness never reads

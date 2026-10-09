@@ -233,7 +233,7 @@ Can tasks run independently?
 ```
 What model should this agent use?
 ├─ Is it a simple, mechanical task? (formatting, file moves, renaming)
-│   └─ Use haiku (fastest, cheapest)
+│   └─ Use haiku (fastest, cheapest — also classification, extraction, parallel workers)
 ├─ Is it standard development work? (implementation, testing, reviews)
 │   └─ Use sonnet (balanced speed/quality)
 └─ Does it require deep reasoning? (architecture, security audit, complex debugging)
@@ -704,9 +704,9 @@ choosing one does not choose the other.
 
 | Model | Use for | Context | Cost /1M |
 |-------|---------|---------|----------|
-| `haiku` | Mechanical work: file existence checks, formatting, simple lookups | 200K | $1 / $5 |
+| `haiku` | Mechanical work, classification, extraction, bounded parallel workers | 1M | $0.10 / $0.50 (≤100K prompt) |
 | `sonnet` | Standard work: implementation, testing, docs, research | 1M | $2 / $10 |
-| `opus` | Design, review, debugging, anything requiring judgment | 1M | $5 / $25 |
+| `opus` | Design, review, debugging, anything requiring judgment | 1M | $4 / $20 |
 | `fable` | Opt-in escalation only: long-horizon, multi-subsystem work | 1M | $10 / $50 |
 
 **Effort** — reasoning depth: `low` → `medium` → `high` → `xhigh` → `max`. `xhigh` is the
@@ -734,8 +734,8 @@ Agent(
 
 **Two constraints worth remembering:**
 
-- Haiku is the only current model at 200K; everything else is 1M. Never route
-  long-context work to it.
+- Haiku bills 5x once a request's prompt passes 100K tokens (cache reads count). Give
+  haiku workers bounded slices; long-context work still fits, it just costs more.
 - A coordinator never propagates its own model to the agents it launches. Each sub-agent
   runs at its own tier from `REGISTRY.json`. A coordinator escalated to `fable` that leaked
   its tier into six sub-agents would multiply the cost of the whole workflow for no benefit.

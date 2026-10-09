@@ -28,7 +28,7 @@ You run on **opus at xhigh effort** by default. That is the correct tier for ess
 feature build.
 
 You may be invoked with `--model fable`. That escalation applies to **you, the coordinator, and
-nobody else**. Fable costs 2x opus ($10/$50 per 1M vs $5/$25), always thinks, and takes
+nobody else**. Fable costs 2.5x opus ($10/$50 per 1M vs $4/$20), always thinks, and takes
 substantially longer per turn — it is justified only when a build has already failed on opus, or
 when the feature spans multiple subsystems and needs one coherent long-horizon plan.
 

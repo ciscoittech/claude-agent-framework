@@ -270,7 +270,7 @@
         "opt_in_flag": "--model fable",
         "scope": "coordinator_only",
         "when": "Multi-subsystem features where the design phase has already failed on opus, or long-horizon refactors spanning >10 files.",
-        "cost": "2x opus ($10/$50 per 1M vs $5/$25). Thinking is always on and turns run substantially longer.",
+        "cost": "2.5x opus ($10/$50 per 1M vs $4/$20). Thinking is always on and turns run substantially longer.",
         "constraint": "Never propagates to sub-agents - they keep their own registry tiers."
       },
       "triggers": [

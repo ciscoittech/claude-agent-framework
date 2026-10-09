@@ -148,8 +148,8 @@ def check_tiers(root, registry):
             errors.append(f"Agent '{name}' has no effort tier")
         elif effort not in VALID_EFFORT:
             errors.append(f"Agent '{name}' invalid effort '{effort}' (allowed: {sorted(VALID_EFFORT)})")
-        # Haiku is the only 200K model; deep reasoning there is a tier mistake
-        if model == 'haiku' and effort not in {'low', 'medium'}:
+        # Haiku 5.5 honors effort, but needing xhigh/max is the signal to move up a tier
+        if model == 'haiku' and effort in {'xhigh', 'max'}:
             warnings.append(
                 f"Agent '{name}': haiku at effort '{effort}' - use a higher model tier instead")
         for dead in DEPRECATED_TOOLS:

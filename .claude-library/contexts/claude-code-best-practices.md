@@ -81,7 +81,7 @@
 - `effort` sets reasoning depth: `low` -> `medium` -> `high` -> `xhigh` -> `max`
 - `xhigh` is the Claude Code default and suits most coding and agentic work
 - Choosing a model does not choose an effort; set both deliberately
-- Haiku is the only current model at 200K context - never send long-context work to it
+- Every current model is 1M context; haiku bills 5x once a prompt passes 100K tokens
 
 **Extended Context** (NEW):
 - Claude Code supports up to 1M tokens of context
