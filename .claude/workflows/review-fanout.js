@@ -37,7 +37,9 @@ const VERDICT = {
   properties: { refuted: { type: 'boolean' }, reason: { type: 'string' } },
 }
 
-const base = (args && args.base) || 'main'
+// origin/main, not main: a local main that is behind pulls already-merged work into
+// the diff. The scope step fetches first so origin/main is current too.
+const base = (args && args.base) || 'origin/main'
 
 // A model transcribing `git diff` output once returned the repo root as the only
 // "file", so one finder reviewed everything. Prefer a list passed in args, and
@@ -49,7 +51,8 @@ phase('Scope')
 let candidates = args && Array.isArray(args.files) ? args.files : null
 if (!candidates) {
   const scope = await agent(
-    `Run \`git diff --name-only ${base}...HEAD\` and return its output lines exactly, one entry ` +
+    `Run \`git fetch -q origin\` (continue if it fails), then \`git diff --name-only --diff-filter=d ${base}...HEAD\`. ` +
+    `Return its output lines exactly, one entry ` +
     `per line, as repo-relative paths. Do not summarize, group, or return directories.`,
     { model: 'haiku', effort: 'low', schema: FILES },
   )
