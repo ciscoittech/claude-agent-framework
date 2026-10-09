@@ -187,6 +187,20 @@ for doc in CONTRACT_DOCS:
                   f"{doc}:{line_no}: agent example shows tools as a YAML list; "
                   f"it must be a comma-separated string")
 
+# A command template a doc tells you to create must carry frontmatter. Without it the
+# file is not a skill, and a system built by following the doc fails the validator.
+CMD_TEMPLATE = re.compile(r"Create `(\.claude/commands/[\w-]+\.md)`[^\n]*\n+```markdown\n(.*?)```", re.S)
+for doc in ('SYSTEM_GENERATOR_PROMPT.md', 'AGENT_SYSTEM_TEMPLATE.md',
+            'CLAUDE_AGENT_FRAMEWORK.md', 'AGENT_PATTERNS.md'):
+    text = open(os.path.join(ROOT, doc), encoding='utf-8').read()
+    for m in CMD_TEMPLATE.finditer(text):
+        line_no = text[:m.start()].count('\n') + 1
+        body = m.group(2)
+        check(body.startswith('---\n') and re.search(r'^description:', body, re.M)
+              and re.search(r'^allowed-tools:', body, re.M),
+              f"{doc}:{line_no}: template for {m.group(1)} has no description/allowed-tools "
+              f"frontmatter - a system built from it fails validation")
+
 # `agent-launcher.md` is forbidden by §4.1. Naming it to say so is fine; showing
 # it in a directory tree is what teaches people to build one.
 LAUNCHER_IN_TREE = re.compile(r'^[\s│├└─]*agent-launcher\.md', re.M)
