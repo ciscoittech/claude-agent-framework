@@ -22,7 +22,9 @@ Rates re-verified against the price card on 2026-10-09 and re-pinned.
   against the old rule.
 - **Sonnet 5.5 cache reads are $0.10**, not $0.20 — 5% of input, as on Opus 5.5.
 - **Sonnet 5.5 recalibrated its effort levels**; the generator now tells every agent
-  to declare effort.
+  to declare effort. Claude Code defaults Opus, Sonnet and Haiku 5.5 to `medium` (the
+  API's Sonnet 5.5 default is `high`; an earlier draft of this release mixed the two up,
+  caught by `/review-fanout`).
 
 No agent tier assignments changed. Moving agents to haiku is a measured,
 one-at-a-time decision, not part of a price update.

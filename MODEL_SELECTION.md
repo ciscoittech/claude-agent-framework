@@ -13,17 +13,17 @@ An Opus agent at `low` effort and a Haiku agent are different things. Picking a 
 not pick an effort; set both deliberately.
 
 `xhigh` is the right setting for most coding and agentic work. It is **not** the Claude Code
-default: Claude Code defaults to `medium` on Opus 5.5 and Sonnet 5.5 and `high` elsewhere
-(code.claude.com/docs/en/model-config, checked 2026-09-30).
+default: Claude Code defaults to `medium` on Opus 5.5, Sonnet 5.5 and Haiku 5.5, and `high`
+elsewhere (code.claude.com/docs/en/model-config, checked 2026-10-09).
 
 ---
 
 ## Current Models
 
-| Model | Tier name | Context | Input $/1M | Output $/1M | Cache read $/1M | Default effort |
+| Model | Tier name | Context | Input $/1M | Output $/1M | Cache read $/1M | Claude Code default effort |
 |---|---|---|---|---|---|---|
 | Claude Haiku 5.5 | `haiku` | 1M | $0.10 (≤100K prompt) | $0.50 (≤100K prompt) | $0.01 | `medium` |
-| Claude Sonnet 5.5 | `sonnet` | 1M | $2.00 | $10.00 | $0.10 | `high` |
+| Claude Sonnet 5.5 | `sonnet` | 1M | $2.00 | $10.00 | $0.10 | `medium` |
 | Claude Opus 5.5 | `opus` | 1M | $4.00 | $20.00 | $0.20 | `medium` |
 | Claude Fable 5.1 | `fable` | 1M | $10.00 | $50.00 | $0.25 | `high` |
 
@@ -55,7 +55,8 @@ but know which side of 100K a task sits on.
 **Effort is a dial on every current model**, `low` through `max` — including Haiku 5.5,
 where Haiku 4.5 rejected it.
 
-**Opus 5.5 and Haiku 5.5 default to `medium` effort**; Sonnet 5.5 and Fable 5.1 to `high`.
+**Opus 5.5, Sonnet 5.5 and Haiku 5.5 default to `medium` effort** in Claude Code; Fable 5.1
+to `high`. (The API's own default for Sonnet 5.5 is `high` — the two surfaces differ.)
 A subagent with no `effort` key inherits the session's effort level, so on a default
 session an undeclared opus agent got shallower on the 5.5 release without any file
 changing. This is the concrete reason every agent here declares `effort` explicitly:

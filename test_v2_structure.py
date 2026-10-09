@@ -270,6 +270,9 @@ STALE_PATTERNS = [
     (r'only (current )?model (at|with a) 200K', "every current model is 1M"),
     (r'rejects the effort\s+parameter[^.]{0,30}Haiku', "Haiku 5.5 supports effort"),
     (r'except Haiku 4\.5', "every current model is 1M"),
+    # Claude Code's default, not the API's: Sonnet 5.5 is `medium` here, `high` on the API.
+    (r'`high` on Sonnet 5\.5|Sonnet 5\.5 and Fable 5\.1 to `high`|on Opus 5\.5 and Sonnet 5\.5 and `high` elsewhere',
+     "Claude Code defaults Opus, Sonnet and Haiku 5.5 to medium"),
     (r'`model:\s*"haiku"`\s*for fast/cheap', "conflates model tier with effort"),
     (r'qwen', "third-party routing was removed in favour of Claude-native tiers"),
     (r'MULTI_MODEL_ROUTING\.md', "renamed to MODEL_SELECTION.md"),
