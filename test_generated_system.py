@@ -144,7 +144,9 @@ def stub(name, cfg):
         f"model: {cfg['model']}\n"
         f"effort: {cfg['effort']}\n"
         f"tools: {', '.join(cfg['tools'])}\n"
-        "---\n\n"
+        + (f"isolation: {cfg['isolation']}\n" if 'isolation' in cfg else "")
+        + (f"maxTurns: {cfg['max_turns']}\n" if 'max_turns' in cfg else "")
+        + "---\n\n"
         f"You are the {name}.\n\n"
         "## When you are the right agent\n"
         f"{', '.join(cfg.get('triggers', []))}.\n\n"
@@ -431,6 +433,86 @@ for effort, should_warn in (('high', False), ('max', True)):
     check(warned == should_warn,
           f"haiku/{effort} {'warns' if should_warn else 'does not warn'}", "\n      ".join(w))
     shutil.rmtree(r, ignore_errors=True)
+
+
+# ---------------------------------------------------- 2c. harness fields
+# isolation / max_turns are optional; when declared, registry and stub must agree.
+print("\nharness fields (isolation, max_turns, agent-scoped hooks)")
+reg = json.loads(json.dumps(CANONICAL))
+reg['agents']['engineer'].update(isolation='worktree', max_turns=30)
+e, w, r = build(registry=reg, settings=SETTINGS)
+check(not e and not w, "engineer with isolation + max_turns validates clean", "\n      ".join(e + w))
+shutil.rmtree(r, ignore_errors=True)
+
+reg = json.loads(json.dumps(CANONICAL))
+reg['agents']['reviewer']['isolation'] = 'worktree'
+_, w, r = build(registry=reg, settings=SETTINGS)
+check(any("no editing tools" in x for x in w), "worktree on a read-only agent warns")
+shutil.rmtree(r, ignore_errors=True)
+
+
+def _bad_isolation(reg, root):
+    reg['agents']['engineer']['isolation'] = 'container'
+deviate(_bad_isolation, "isolation is not 'worktree'")
+
+def _zero_turns(reg, root):
+    reg['agents']['engineer']['max_turns'] = 0
+deviate(_zero_turns, "max_turns is not a positive integer")
+
+def _stub_drops_max_turns(root):
+    path = os.path.join(root, '.claude-library/REGISTRY.json')
+    reg = json.load(open(path))
+    reg['agents']['engineer']['max_turns'] = 30   # stub was written without it
+    write(path, json.dumps(reg))
+post_mutation("stub omits maxTurns the registry declares", _stub_drops_max_turns)
+
+HOOKED = ("---\nname: engineer\ndescription: d\nmodel: sonnet\neffort: high\n"
+          "tools: Read, Write, Edit, Grep, Glob, Bash\nhooks:\n  {event}:\n"
+          "    - hooks:\n        - type: command\n          command: \"{cmd}\"\n---\n\nBody.\n")
+post_mutation("agent hook uses SubagentStop instead of Stop", lambda root: write(
+    os.path.join(root, '.claude/agents/engineer.md'),
+    HOOKED.format(event='SubagentStop', cmd='bash $CLAUDE_PROJECT_DIR/x.sh')))
+post_mutation("agent hook command uses a relative path", lambda root: write(
+    os.path.join(root, '.claude/agents/engineer.md'),
+    HOOKED.format(event='Stop', cmd='./scripts/check.sh')))
+
+r = tempfile.mkdtemp()
+materialize(r, json.loads(json.dumps(CANONICAL)), SETTINGS)
+write(os.path.join(r, '.claude/agents/engineer.md'),
+      HOOKED.format(event='Stop', cmd='bash \\"$CLAUDE_PROJECT_DIR\\"/x.sh'))
+e, _ = V.validate(r, V.load_registry(r)[0])
+check(not e, "a correct agent-scoped Stop hook validates clean", "\n      ".join(e))
+shutil.rmtree(r, ignore_errors=True)
+
+
+# ---------------------------------------------------------- 2d. workflows
+print("\nworkflows (.claude/workflows/*.js)")
+WF = ("export const meta = {{\n  name: 'sweep',\n  description: 'd',\n"
+      "  phases: [{{ title: 'Find' }}],\n}}\n\nphase('Find')\n{body}\n")
+GOOD_BODY = "return await agent('x', { agentType: 'reviewer', model: 'haiku' })"
+
+
+def _wf(root, text):
+    write(os.path.join(root, '.claude/workflows/sweep.js'), text)
+
+
+r = tempfile.mkdtemp()
+materialize(r, json.loads(json.dumps(CANONICAL)), SETTINGS)
+_wf(r, WF.format(body=GOOD_BODY))
+e, w = V.validate(r, V.load_registry(r)[0])
+check(not e and not w, "a correct workflow validates clean", "\n      ".join(e + w))
+shutil.rmtree(r, ignore_errors=True)
+
+post_mutation("workflow does not start with export const meta", lambda root: _wf(
+    root, "const x = 1\n" + WF.format(body=GOOD_BODY)))
+post_mutation("workflow meta has no description", lambda root: _wf(
+    root, WF.format(body=GOOD_BODY).replace("  description: 'd',\n", "")))
+post_mutation("workflow meta uses a template string", lambda root: _wf(
+    root, WF.format(body=GOOD_BODY).replace("'sweep'", "`sweep`")))
+post_mutation("workflow calls Date.now()", lambda root: _wf(
+    root, WF.format(body="const t = Date.now()\n" + GOOD_BODY)))
+post_mutation("workflow agentType names no agent", lambda root: _wf(
+    root, WF.format(body=GOOD_BODY.replace("'reviewer'", "'ghost'"))))
 
 
 # ---------------------------------------------------- 3. doc-derived systems

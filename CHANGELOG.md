@@ -5,6 +5,27 @@ All notable changes to the Claude Agent Framework will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-10-09
+
+### Added - Harness frontmatter and scripted fan-out
+
+- **Optional agent fields `isolation` and `max_turns`** in `REGISTRY.json`, mirrored to
+  frontmatter `isolation` and `maxTurns` and drift-checked like `model` and `effort`.
+  The validator warns on `isolation: worktree` for an agent with no editing tools.
+- **Agent-scoped hooks are validated.** Only `PreToolUse`, `PostToolUse` and `Stop` fire
+  in agent scope (`Stop` becomes `SubagentStop`); writing `SubagentStop` is caught, and
+  so is a relative command path.
+- **`.claude/workflows/review-fanout.js`** — a haiku finder per changed file, each
+  finding refuted or confirmed by `framework-code-reviewer` at its own tier. Run as
+  `/review-fanout`. Runs only when invoked.
+- **The validator checks workflow files**: `export const meta` first, a plain literal
+  with `name` and `description`; no `Date.now()`/`Math.random()`/`new Date()`; no module
+  loading; every `agentType` names a known agent. `test_v2_structure.py` also parses
+  shipped workflows with `node --check`.
+
+Every new check was first seen failing against a validator with that rule removed.
+The generator does not emit any of this by default.
+
 ## [2.4.0] - 2026-10-09
 
 ### Changed - Haiku 5.5

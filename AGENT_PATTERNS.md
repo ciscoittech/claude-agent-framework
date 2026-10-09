@@ -351,6 +351,39 @@ Input ───┼─ Performance Analysis ┼──→ Synthesis
 
 > **Critical**: Send all Agent calls in ONE message for true parallelization. Sending them sequentially makes execution 3x slower.
 
+### Scripted Fan-Out (Dynamic Workflows)
+
+When the fan-out is dozens of items, not three, move the loop out of the conversation
+and into a workflow script. The runtime holds intermediate results in script variables,
+so the coordinator's context holds only the final answer.
+
+**Use it when** the same step runs across many items and you will run it again — a
+review of every changed file, a migration over a directory. **Don't** for three
+analyses you could send as three `Agent` calls; that is the pattern above.
+
+Haiku 5.5 is what makes this cheap: a finder per item at $0.10/$0.50, with only the
+findings escalated to an expensive verifier. The framework ships one:
+`.claude/workflows/review-fanout.js`, run as `/review-fanout`.
+
+```javascript
+const perFile = await pipeline(files,
+  file => agent(`Review ${file} for correctness defects...`,
+    { phase: 'Find', model: 'haiku', effort: 'low', schema: FINDINGS }),
+  (found, file) => parallel(found.findings.map(f => () =>
+    agent(`Try to refute: ${f.summary}`,
+      { phase: 'Verify', agentType: 'framework-code-reviewer', schema: VERDICT }))))
+```
+
+Rules the validator enforces on `.claude/workflows/*.js`:
+- `export const meta = {...}` first, a plain literal with `name` and `description`
+- no `Date.now()`, `Math.random()`, or `new Date()` — they throw so runs can resume
+- no module loading; every `agentType` names a registry or built-in agent
+
+`agentType` reuses a registry agent, so the verifier keeps its declared tier — the
+workflow equivalent of "escalation never propagates". One file per haiku finder keeps
+each prompt far below haiku's 100K price threshold. Workflows run only on request;
+the default size guideline is under 10 agents.
+
 ### Hierarchical Workflow (Orchestrator-Workers)
 
 Parent agent coordinates specialized child agents. Use for complex problems requiring decomposition and coordination.
@@ -1136,6 +1169,35 @@ Subagents can work in isolated git worktrees to prevent file conflicts:
 - Multiple agents editing overlapping files
 - Risky refactoring that might need rollback
 - Long-running tasks that shouldn't block other work
+
+#### Declared in frontmatter, not per call
+
+Isolation and turn caps that every launch of an agent needs belong in its
+`.claude/agents/<name>.md`, mirrored from `REGISTRY.json` like `model` and `effort`:
+
+```yaml
+---
+name: engineer
+description: Implements changes against a settled design. Use for build, fix, refactor.
+model: sonnet
+effort: medium
+tools: Read, Write, Edit, Grep, Glob, Bash
+isolation: worktree      # registry: "isolation": "worktree"
+maxTurns: 40             # registry: "max_turns": 40
+hooks:
+  PostToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: command
+          command: 'bash "$CLAUDE_PROJECT_DIR"/scripts/lint.sh'
+---
+```
+
+- `isolation: worktree` only on agents that edit; on a read-only agent it is pure setup cost
+  (the validator warns).
+- `maxTurns` returns partial output at the cap — a circuit breaker for cheap workers.
+- Agent-scoped hooks fire only while that agent runs: `PreToolUse`, `PostToolUse`, and
+  `Stop` (which becomes `SubagentStop`). Anchor commands with `"$CLAUDE_PROJECT_DIR"`.
 
 #### Background Agents
 
