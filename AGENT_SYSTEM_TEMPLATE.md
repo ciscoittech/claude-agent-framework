@@ -229,6 +229,11 @@ Memory files are stored in `~/.claude/projects/<project>/memory/` and indexed by
 Create `.claude/commands/build.md` (Start with ONE command only):
 
 ```markdown
+---
+description: Build the feature described, using the project's agents
+allowed-tools: Agent, Read, Write, Edit, Grep, Glob
+---
+
 # /build Command
 
 Simple build command. Start here.
@@ -243,6 +248,9 @@ Simple build command. Start here.
 
 Keep it sequential. Add parallel only if >3 independent tasks.
 ```
+
+The frontmatter is what makes this a skill: `description` is what Claude matches on, and
+`allowed-tools` pre-approves only what the command needs. Without it the file is inert.
 
 ---
 
@@ -334,6 +342,11 @@ Orchestrator
 Create `.claude/commands/build.md`:
 
 ```markdown
+---
+description: Build features with TDD, using the project's agents
+allowed-tools: Agent, Read, Write, Edit, Grep, Glob
+---
+
 # /build Command
 
 ## Purpose
@@ -601,6 +614,11 @@ You are a database specialist with expertise in schema design, query optimizatio
 Create `.claude/commands/optimize.md`:
 
 ```markdown
+---
+description: Find and fix performance bottlenecks in the area described
+allowed-tools: Agent, Read, Edit, Grep, Glob, Bash
+---
+
 # /optimize Command
 
 ## Purpose

@@ -106,14 +106,18 @@ Note the prompt order: persona and contexts are stable across runs, the task is 
 Putting the volatile part last keeps the cacheable prefix intact. Reversing this costs
 cache hits on every launch.
 
-If the matched agent has an `effort` in `REGISTRY.json`, pass it too — the registry is the
-source of truth for both dials, and a coordinator must never substitute its own tier:
+Effort is not an `Agent()` argument — only `model` is. A registry agent gets its effort
+from its own `.claude/agents/<name>.md` frontmatter, so launch it by name and let the
+frontmatter supply both dials. A coordinator must never substitute its own tier:
 
 ```python
 # Each sub-agent runs at ITS OWN registry tier, never the caller's
 for agent in matched_agents:
-    Agent(..., model=registry[agent]["model"])
+    Agent(..., subagent_type=agent)   # frontmatter carries model and effort
 ```
+
+A `general-purpose` launch with `model=` gets that model at the *session's* effort. Use it
+only when no registry agent fits.
 
 ### Step 4: Report
 

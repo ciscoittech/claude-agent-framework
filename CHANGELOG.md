@@ -334,7 +334,8 @@ the permissions shape, and where to run the validator from.
 
 **Real-World Impact**:
 - 5-agent workflow: $0.60 -> $0.005 (99.2% savings)
-- 100 workflows/month: ~$6,000/year savings
+- 100 workflows/month: ~$6,000/year savings *(correction, 2026-10-09: the figures above
+  give 1,200 workflows x $0.595 = ~$714/year)*
 - Maintains quality through strategic model assignment
 
 #### Advanced Patterns
