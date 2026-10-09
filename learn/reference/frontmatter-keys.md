@@ -63,4 +63,4 @@ this document drifts from them. Re-verify before relying on it, and move the dat
 ## Effort is available on every current model
 
 `low` through `max` on Haiku 5.5, Sonnet 5.5, Opus 5.5, and Fable 5.1. Defaults differ —
-`medium` on Haiku 5.5 and Opus 5.5, `high` on Sonnet 5.5 and Fable 5.1 — so declare it.
+`medium` on Opus, Sonnet and Haiku 5.5, `high` on Fable 5.1 (Claude Code defaults) — so declare it.

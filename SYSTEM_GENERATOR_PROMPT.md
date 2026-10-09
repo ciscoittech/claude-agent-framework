@@ -317,7 +317,7 @@ them — an opus agent at `low` effort and a haiku agent are different things.
   100K tokens. Cheap haiku workers want bounded slices, not whole-repo sweeps.
 - **fable is an opt-in escalation, never a generated default** (~2.5x opus, always
   thinks, much longer turns).
-- **Always declare effort.** Opus 5.5 and Haiku 5.5 default to `medium`, not `high`.
+- **Always declare effort.** Opus, Sonnet and Haiku 5.5 default to `medium`, not `high`.
 - Raise **effort** before **model**. Most "not smart enough" results are
   underspecified prompts, not undermodeled ones.
 
