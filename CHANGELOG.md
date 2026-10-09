@@ -5,6 +5,15 @@ All notable changes to the Claude Agent Framework will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.1] - 2026-10-09
+
+### Changed - framework-research-specialist moves to haiku
+
+Measured first: three research tasks run on both models at `low` effort. Equal accuracy
+(haiku's extra details all checked out), 47% more tokens, ~13-14x lower cost per
+completed task, every run far below haiku's 100K price threshold. Results and caveats
+in `MODEL_SELECTION.md` § Measured.
+
 ## [2.5.0] - 2026-10-09
 
 ### Added - Harness frontmatter and scripted fan-out

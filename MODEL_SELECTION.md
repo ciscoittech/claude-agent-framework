@@ -92,7 +92,26 @@ the two drift.
 | `framework-validation-engineer` | sonnet | medium | Runs suites and reports; little open judgment |
 | `best-practice-analyzer` | sonnet | medium | Extraction and structuring |
 | `framework-best-practice-auditor` | sonnet | medium | Scoring against an explicit checklist |
-| `framework-research-specialist` | sonnet | low | Fetch and summarize |
+| `framework-research-specialist` | haiku | low | Fetch and summarize — measured, see below |
+
+### Measured: research-specialist on haiku (2026-10-09)
+
+Moved from sonnet after a side-by-side run: three real research tasks (subagent
+frontmatter, the price card, workflow limits), each run once per model at `low` effort,
+answers graded against facts verified independently the same day.
+
+| | Sonnet 5.5 | Haiku 5.5 |
+|---|---|---|
+| Accuracy | 3/3 tasks fully correct | 3/3 fully correct; its extra details, checked, were all real |
+| Tokens (3 tasks) | 58,170 | 85,715 (+47%) |
+| Wall-clock | 38s | 45s |
+| Largest run | 27K tokens | 34K tokens — far below the 100K price threshold |
+
+Haiku spends more tokens and still costs roughly **13-14x less per completed task** — the
+ratio holds whether the tokens were mostly input or mostly output. The sample is small
+(n=1 per task); move it back if research output starts missing facts. Neither model
+loaded the playbook and contexts the stub lists, so a run that does will be ~20K tokens
+larger — still under 100K for single-page research.
 
 ---
 
