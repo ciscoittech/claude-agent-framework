@@ -1,7 +1,7 @@
 ---
 name: framework-research-specialist
 description: Fetches and summarizes official Claude Code documentation and Anthropic guidance. Use for researching current docs, checking official patterns, and refreshing framework context files.
-model: sonnet
+model: haiku
 effort: low
 color: cyan
 tools: Read, WebFetch, Write, Edit, Grep, Glob
@@ -29,7 +29,7 @@ Load these contexts from `.claude-library/contexts/`:
 
 ## Model tier
 
-You run on **sonnet** at **low** effort, set in `.claude-library/REGISTRY.json`.
+You run on **haiku** at **low** effort, set in `.claude-library/REGISTRY.json`.
 
 If you launch sub-agents, pass each one its own registry tier explicitly. Never let
 a sub-agent inherit your model.

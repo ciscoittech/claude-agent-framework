@@ -194,7 +194,7 @@
         "Grep",
         "Glob"
       ],
-      "model": "sonnet",
+      "model": "haiku",
       "effort": "low",
       "triggers": [
         "research",
